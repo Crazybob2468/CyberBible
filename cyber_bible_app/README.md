@@ -1,22 +1,12 @@
-# Cyber Bible
+# Cyber Bible — Developer README
 
-A free/libre and open source software (FLOSS) Bible study app built with Flutter & Dart.  
-Licensed under **GPL 3.0**. Cross-platform: Android, iOS, Windows, macOS, Linux, and Web.
+> **Main project overview:** [../../README.md](../README.md)  
+> **Full design specification:** [docs/design-document.md](docs/design-document.md)
 
-> **For full project vision and design details, see [docs/design-document.md](docs/design-document.md)**
+A FLOSS Bible study app built with Flutter & Dart. Licensed under **GPL 3.0**.  
+Cross-platform: Android, iOS, Windows, macOS, Linux, and Web.
 
 ---
-
-## Project Overview
-
-Cyber Bible aims to be a high-quality, privacy-respecting Bible study app that can display and play any of the 1,535+ Bible translations available on [eBible.org](https://ebible.org). It prioritizes offline use, attractive text formatting, easy navigation, and support for every real-world Bible versification scheme and Unicode writing system.
-
-**Key differentiators from existing apps:**
-- Fully open source (GPL 3.0) — not just free-as-in-beer
-- Privacy-first: no user tracking, personal data stays on user's device/cloud
-- Supports any Bible versification (no force-fitting into a few schemes)
-- Sources Bibles directly from eBible.org (USFX format)
-- Cross-platform from a single Flutter codebase
 
 ## Tech Stack
 
@@ -69,8 +59,9 @@ cyber_bible_app/
 
 ## Current Status
 
-**Phase 1 — Step 1.1 Complete**  
-Project structure created. App shell running with MaterialApp, theme (light/dark), and a home screen placeholder. Next: Step 1.2 — Acquire WEB Bible data.
+**Phase 1 — Step 1.1 complete.**  
+Project structure created. App shell running with MaterialApp, light/dark theme, and a home screen placeholder.  
+**Next:** Step 1.2 — Acquire WEB Bible data.
 
 ---
 
@@ -165,16 +156,15 @@ _Detailed steps to be planned when earlier phases are complete._
 | Privacy | No server-side user data | Bookmarks/notes via user's own cloud; only anonymized app metrics |
 | License | GPL 3.0 | Strong copyleft; compatible with project goals |
 
-## Getting Started (Developer Setup)
+## Developer Setup
 
 ### Prerequisites
 - [Flutter SDK](https://flutter.dev/docs/get-started/install) (latest stable)
-- [Android Studio](https://developer.android.com/studio) or VS Code with Flutter extension
-- An Android device or emulator for initial testing
+- Android Studio or VS Code with the Flutter extension
+- An Android/iOS device or emulator
 
 ### Run the app
 ```bash
-cd cyber_bible_app
 flutter pub get
 flutter run
 ```
@@ -186,13 +176,13 @@ flutter test
 
 ## Team
 
-Small team (2-5 people). Volunteer-driven, donor-funded.
+Small volunteer team (2–5 people), donor-funded.
 
 ## Related Domains
 
-- cyber.Bible
-- cyberbible.net
-- cyberbible.org
+- [cyber.Bible](https://cyber.bible)
+- [cyberbible.net](https://cyberbible.net)
+- [cyberbible.org](https://cyberbible.org)
 
 ## License
 
