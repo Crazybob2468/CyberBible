@@ -26,42 +26,19 @@ Most Bible apps are either closed-source, require constant internet access, trac
 
 ---
 
-## Features (by Phase)
+## Features
 
-### ✅ Phase 1 — Core Bible Reader *(in progress)*
-- Read any book, chapter, and verse
-- Formatted text: paragraphs, poetry, section headers, verse numbers
-- Fast chapter-to-chapter navigation
-- Bookmarks
-- Font size and light/dark theme settings
-- Internationalized UI
-
-### 🔜 Phase 2 — Study Tools
-- Footnotes with inline markers
-- Full-text search (SQLite FTS5)
-- Cross-references with navigation links
-- Navigation history
-
-### 🔜 Phase 3 — Parallel Bibles
-- Browse and download from 1,535+ eBible.org translations
-- Side-by-side parallel Bible display with versification mapping
-
-### 🔜 Phase 4 — Strong's Numbers
-- Inline Strong's number links with original language definitions
-
-### 🔜 Phase 5 — Audio Bible
-- Audio playback per chapter
-- Text-audio synchronization (verse highlighting)
-
-### 🔜 Phases 6–8 — Sharing & Notes
-- Copy/share scripture as text, audio, or video clips
-- Scripture-on-a-picture creator
-- Personal highlights and notes (stored locally or in your cloud)
-
-### 🔮 Future (Phases 9–12)
-- Peer-to-peer Bible sharing
-- Dictionary and commentary display
-- Social media features
+- **Read the Bible** — beautifully formatted text with paragraphs, poetry, section headers, and verse numbers
+- **Navigate quickly** — jump to any book, chapter, and verse; swipe between chapters
+- **Bookmarks** — save and return to passages
+- **Search** — full-text search across the entire Bible
+- **Footnotes & cross references** — inline markers with tap-to-view
+- **Parallel display** — compare translations side-by-side with versification mapping
+- **Audio Bible** — listen to chapters with text-audio synchronization
+- **Strong's numbers** — tap words for original language definitions
+- **Customizable** — font size, light/dark theme, display options
+- **Multilingual UI** — interface available in multiple languages
+- **Share scripture** — copy text, create scripture-on-a-picture, and more
 
 ---
 
@@ -71,22 +48,11 @@ Most Bible apps are either closed-source, require constant internet access, trac
 |-------|-----------|
 | Framework | Flutter (Dart) |
 | Bible source format | USFX (XML) from eBible.org |
-| Local database | SQLite (`drift` / `sqflite`) |
-| Text rendering | HTML + CSS (via `flutter_widget_from_html`) |
-| State management | Provider / Riverpod (TBD) |
+| Local database | SQLite |
+| Text rendering | HTML + CSS |
 | Internationalization | Flutter l10n (ARB files) |
-| Audio | TBD (Phase 5) |
 
-### Bible Data Pipeline
-
-```
-eBible.org
-  └── usfx.xml + metadata.xml (per translation)
-        └── Parsed & indexed → SQLite database (one file per Bible)
-              └── App reads SQLite → renders as HTML → displays in Flutter
-```
-
-The **World English Bible (WEB)** is the default bundled translation.
+The **World English Bible (WEB)** is bundled as the default translation.
 
 ---
 
@@ -121,38 +87,32 @@ flutter test
 CyberBible/
 ├── README.md                     ← You are here
 └── cyber_bible_app/
+    ├── PROJECT_STATUS.md         # Development roadmap and progress
     ├── docs/
     │   └── design-document.md    # Full design specification
     ├── lib/
     │   ├── main.dart             # App entry point
     │   ├── app.dart              # MaterialApp setup, routing, theme
-    │   ├── models/               # Data classes (Bible, Book, Chapter, Verse, etc.)
-    │   ├── services/             # Business logic (parsing, DB access, search)
+    │   ├── models/               # Data classes
+    │   ├── services/             # Business logic
     │   ├── screens/              # Full-page UI screens
     │   ├── widgets/              # Reusable UI components
-    │   └── l10n/                 # Localization (ARB files)
+    │   └── l10n/                 # Localization files
     ├── assets/
-    │   └── bibles/               # Bundled Bible data (WEB SQLite DB)
-    ├── tools/                    # Offline scripts (USFX parser, DB builder)
+    │   └── bibles/               # Bundled Bible data
+    ├── tools/                    # Offline build scripts
     └── test/                     # Unit and widget tests
 ```
 
 ---
 
-## Current Status
-
-**Phase 1 — Step 1.1 complete.** App shell is running with MaterialApp, light/dark theme, and a home screen placeholder. Next up: acquiring and bundling the WEB Bible data.
-
-See the [detailed roadmap in the developer README](cyber_bible_app/README.md) for a full step-by-step breakdown.
-
----
-
 ## Contributing
 
-This is a small volunteer team. All contributions are welcome — code, translations, testing, and documentation.
+All contributions are welcome — code, translations, testing, and documentation.
 
-- Small team (2–5 people), volunteer-driven, donor-funded
 - Please open an issue or discussion before starting large changes
+- See [PROJECT_STATUS.md](cyber_bible_app/PROJECT_STATUS.md) for the development roadmap
+- See [docs/design-document.md](cyber_bible_app/docs/design-document.md) for the full design specification
 
 ---
 
@@ -167,4 +127,4 @@ This is a small volunteer team. All contributions are welcome — code, translat
 ## License
 
 Licensed under the **GNU General Public License v3.0**.  
-See [cyber_bible_app/LICENSE](cyber_bible_app/LICENSE) for full details.
+See [LICENSE](cyber_bible_app/LICENSE) for full details.

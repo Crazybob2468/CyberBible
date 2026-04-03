@@ -1,9 +1,12 @@
-# Cyber Bible
+# Cyber Bible — Project Status & Roadmap
+
+> **AI agents and new developers: start here.** This file contains the full project
+> context, architecture decisions, current progress, and step-by-step roadmap.
+> For the public-facing project overview, see the root [README.md](../README.md).
+> For the complete design vision, see [docs/design-document.md](docs/design-document.md).
 
 A free/libre and open source software (FLOSS) Bible study app built with Flutter & Dart.  
 Licensed under **GPL 3.0**. Cross-platform: Android, iOS, Windows, macOS, Linux, and Web.
-
-> **For full project vision and design details, see [docs/design-document.md](docs/design-document.md)**
 
 ---
 
