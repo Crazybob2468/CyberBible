@@ -1,6 +1,6 @@
 # Cyber Bible
 
-A free/libre and open source (FLOSS) Bible study app built with Flutter & Dart.  
+A free/libre and open source software (FLOSS) Bible study app built with Flutter & Dart.  
 Licensed under **GPL 3.0**. Cross-platform: Android, iOS, Windows, macOS, Linux, and Web.
 
 > **For full project vision and design details, see [docs/design-document.md](docs/design-document.md)**
@@ -69,8 +69,8 @@ cyber_bible_app/
 
 ## Current Status
 
-**Phase 1 — In Progress**  
-Starting from a fresh Flutter project scaffold. No Bible data integrated yet.
+**Phase 1 — Step 1.1 Complete**  
+Project structure created. App shell running with MaterialApp, theme (light/dark), and a home screen placeholder. Next: Step 1.2 — Acquire WEB Bible data.
 
 ---
 

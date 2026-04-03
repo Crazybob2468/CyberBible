@@ -1,5 +1,5 @@
 name: cyber_bible_app
-description: "A new Flutter project."
+description: "A free/libre and open source software (FLOSS) Bible study app."
 publish_to: 'none'
 version: 0.1.0+1
 
@@ -17,3 +17,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - assets/bibles/
