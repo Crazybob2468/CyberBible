@@ -106,24 +106,6 @@ CyberBible/
 
 ---
 
-## Contributing
-
-All contributions are welcome — code, translations, testing, and documentation.
-
-- Please open an issue or discussion before starting large changes
-- See [PROJECT_STATUS.md](cyber_bible_app/PROJECT_STATUS.md) for the development roadmap
-- See [docs/design-document.md](cyber_bible_app/docs/design-document.md) for the full design specification
-
----
-
-## Domains
-
-- [cyber.Bible](https://cyber.bible)
-- [cyberbible.net](https://cyberbible.net)
-- [cyberbible.org](https://cyberbible.org)
-
----
-
 ## License
 
 Licensed under the **GNU General Public License v3.0**.  
