@@ -72,8 +72,8 @@ cyber_bible_app/
 
 ## Current Status
 
-**Phase 1 — Step 1.3 Complete**  
-Bible data models and SQLite schema designed. Four Dart data classes in `lib/models/`: `BibleInfo` (translation metadata), `Book` (biblical book with testament/ordering), `Chapter` (stores raw USFX fragment per chapter), `Verse` (plain text per verse for FTS5 search). Schema in `BibleSchema` defines tables, indexes, and FTS5 virtual table. Key decision: chapters store USFX XML (not pre-rendered HTML) so the app can apply user preferences (red letters, verse numbers, footnotes) at display time via a runtime renderer. One SQLite DB per translation module; metadata duplicated in both per-module DB and future library DB. Next: Step 1.4 — Build USFX parser.
+**Phase 1 — Step 1.4 Complete**  
+USFX parser built as a Dart CLI tool at `tools/build_bible_db.dart`. Parses the WEB USFX XML (metadata, book names, and Bible text) into our data model objects. Extracts 81 books (39 OT, 27 NT, 15 DC), 1,402 chapters (as raw USFX fragments), and 38,029 verses (as plain text for FTS5 search). Skips non-canonical matter (FRT, GLO). Added `xml` package dependency. The same tool will be extended in Step 1.5 to write parsed data into SQLite. Next: Step 1.5 — Build SQLite Bible database.
 
 ---
 
