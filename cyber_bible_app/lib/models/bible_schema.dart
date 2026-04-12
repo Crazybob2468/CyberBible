@@ -21,7 +21,8 @@ class BibleSchema {
       language_code   TEXT NOT NULL,
       language_name   TEXT NOT NULL,
       script          TEXT NOT NULL DEFAULT 'Latin',
-      script_direction TEXT NOT NULL DEFAULT 'LTR',
+      script_direction TEXT NOT NULL DEFAULT 'LTR'
+                        CHECK (script_direction IN ('LTR', 'RTL')),
       country_code    TEXT NOT NULL DEFAULT '',
       scope           TEXT NOT NULL DEFAULT '',
       copyright       TEXT NOT NULL DEFAULT ''
@@ -32,7 +33,7 @@ class BibleSchema {
     '''
     CREATE TABLE IF NOT EXISTS books (
       code          TEXT PRIMARY KEY,
-      sort_order    INTEGER NOT NULL,
+      sort_order    INTEGER NOT NULL UNIQUE,
       name_short    TEXT NOT NULL,
       name_long     TEXT NOT NULL,
       abbreviation  TEXT NOT NULL,
