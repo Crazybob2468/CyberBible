@@ -49,8 +49,5 @@ app.*.map.json
 *.env.*
 secrets/
 
-# Raw Bible data (downloaded by tools/download_web_bible.ps1, not shipped with app)
-tools/data/
-
-# Raw Bible data used for processing (large files, not shipped)
+# Raw Bible data used for download/processing (large files, not shipped with app)
 tools/data/

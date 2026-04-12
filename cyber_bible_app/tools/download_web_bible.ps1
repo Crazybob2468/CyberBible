@@ -44,17 +44,28 @@ if (-not (Test-Path $ZipFile)) {
     Write-Host "USFX zip already exists: $ZipFile (skipping download)"
 }
 
-# Extract
-if (-not (Test-Path $ExtractDir)) {
-    Write-Host "Extracting USFX zip..."
+# Extract (verify USFX XML exists, re-extract if missing/corrupt)
+$UsfxXml = $null
+if (Test-Path $ExtractDir) {
+    $UsfxXml = Get-ChildItem -Path $ExtractDir -Filter "*usfx.xml" -Recurse -File | Select-Object -First 1
+}
+
+if ((-not (Test-Path $ExtractDir)) -or (-not $UsfxXml)) {
+    if (Test-Path $ExtractDir) {
+        Write-Host "Existing extraction is missing expected USFX XML; re-extracting..."
+        Remove-Item -Path $ExtractDir -Recurse -Force
+    } else {
+        Write-Host "Extracting USFX zip..."
+    }
+
     Expand-Archive -Path $ZipFile -DestinationPath $ExtractDir -Force
     Write-Host "  Extracted to: $ExtractDir"
+    $UsfxXml = Get-ChildItem -Path $ExtractDir -Filter "*usfx.xml" -Recurse -File | Select-Object -First 1
 } else {
-    Write-Host "USFX already extracted: $ExtractDir (skipping extraction)"
+    Write-Host "USFX already extracted and verified: $ExtractDir (skipping extraction)"
 }
 
 # Verify key files exist
-$UsfxXml = Get-ChildItem -Path $ExtractDir -Filter "*usfx.xml" -Recurse | Select-Object -First 1
 if ($UsfxXml) {
     Write-Host ""
     Write-Host "SUCCESS: USFX XML found at: $($UsfxXml.FullName)"
