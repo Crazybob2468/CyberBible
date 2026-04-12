@@ -72,8 +72,8 @@ cyber_bible_app/
 
 ## Current Status
 
-**Phase 1 — Step 1.2 Complete**  
-WEB Bible USFX data acquired from eBible.org. Download script at `tools/download_web_bible.ps1` fetches and extracts the World English Bible Classic (Public Domain, includes Deuterocanon) in USFX format. Raw data lives in `tools/data/` (gitignored). Next: Step 1.3 — Design Bible data models.
+**Phase 1 — Step 1.3 Complete**  
+Bible data models and SQLite schema designed. Four Dart data classes in `lib/models/`: `BibleInfo` (translation metadata), `Book` (biblical book with testament/ordering), `Chapter` (stores raw USFX fragment per chapter), `Verse` (plain text per verse for FTS5 search). Schema in `BibleSchema` defines tables, indexes, and FTS5 virtual table. Key decision: chapters store USFX XML (not pre-rendered HTML) so the app can apply user preferences (red letters, verse numbers, footnotes) at display time via a runtime renderer. One SQLite DB per translation module; metadata duplicated in both per-module DB and future library DB. Next: Step 1.4 — Build USFX parser.
 
 ---
 
