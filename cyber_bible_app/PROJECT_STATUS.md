@@ -28,7 +28,8 @@ Cyber Bible aims to be a high-quality, privacy-respecting Bible study app that c
 | Framework | Flutter (Dart) |
 | Bible data format | USFX (XML) from eBible.org |
 | Local storage | SQLite (via `sqflite` / `drift`) |
-| Bible text display | HTML rendering (via `flutter_widget_from_html` or WebView) |
+| Bible text display | USFX → HTML at runtime (via `flutter_widget_from_html` or WebView) |
+| USFX parsing (build-time) | `package:xml` |
 | State management | TBD (likely Provider or Riverpod) |
 | Internationalization | Flutter l10n (ARB files) |
 | Audio playback | TBD (for Phase 5) |
@@ -39,8 +40,13 @@ Cyber Bible aims to be a high-quality, privacy-respecting Bible study app that c
 eBible.org
   └── usfx.xml + metadata.xml (per translation)
         └── Parse & index → SQLite database (one DB per Bible module)
-              └── App reads SQLite → renders as HTML → displays in Flutter
+              └── App reads SQLite → USFX rendered to HTML at runtime → displays in Flutter
 ```
+
+Chapters are stored as raw USFX XML fragments in SQLite so the app can apply user
+preferences (red letters, verse numbers, footnotes, section headings) dynamically
+without re-downloading or re-processing. The entire reading experience works fully
+offline — no network calls after the Bible module is downloaded.
 
 The **World English Bible (WEB)** will be the first and default bundled translation.
 
@@ -72,8 +78,8 @@ cyber_bible_app/
 
 ## Current Status
 
-**Phase 1 — Step 1.3 Complete**  
-Bible data models and SQLite schema designed. Four Dart data classes in `lib/models/`: `BibleInfo` (translation metadata), `Book` (biblical book with testament/ordering), `Chapter` (stores raw USFX fragment per chapter), `Verse` (plain text per verse for FTS5 search). Schema in `BibleSchema` defines tables, indexes, and FTS5 virtual table. Key decision: chapters store USFX XML (not pre-rendered HTML) so the app can apply user preferences (red letters, verse numbers, footnotes) at display time via a runtime renderer. One SQLite DB per translation module; metadata duplicated in both per-module DB and future library DB. Next: Step 1.4 — Build USFX parser.
+**Phase 1 — Step 1.4 Complete**  
+USFX parser built as a Dart CLI tool at `tools/build_bible_db.dart`. Parses the WEB USFX XML (metadata, book names, and Bible text) into our data model objects. Extracts 81 books (39 OT, 27 NT, 15 DC), 1,402 chapters (as raw USFX fragments), and 38,029 verses (as plain text for FTS5 search). Skips non-canonical matter and other non-book content (`FRT`, `INT`, `BAK`, `GLO`, `CNC`, `OTH`, `XXA`–`XXG`). Added `xml` package dependency. The same tool will be extended in Step 1.5 to write parsed data into SQLite. Next: Step 1.5 — Build SQLite Bible database.
 
 ---
 
