@@ -232,6 +232,7 @@ ParseResult parseUsfx(
     ));
 
     // Process each chapter.
+    var bookVerseCount = 0;
     for (final entry in chapterMap.entries) {
       final chapterNum = entry.key;
       final contentUsfx = entry.value;
@@ -245,12 +246,13 @@ ParseResult parseUsfx(
       // Extract verse plain text from the USFX fragment.
       final chapterVerses = _extractVerses(code, chapterNum, contentUsfx);
       verses.addAll(chapterVerses);
+      bookVerseCount += chapterVerses.length;
     }
 
     stdout.writeln(
       '  [$code] ${names?.short ?? code}: '
       '${chapterMap.length} chapters, '
-      '${verses.where((v) => v.bookCode == code).length} verses '
+      '$bookVerseCount verses '
       '(${testament.name.toUpperCase()})',
     );
   }
