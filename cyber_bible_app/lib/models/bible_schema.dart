@@ -80,7 +80,5 @@ class BibleSchema {
   /// Indexes for common query patterns.
   static const List<String> createIndexes = [
     'CREATE INDEX IF NOT EXISTS idx_books_sort ON books(sort_order)',
-    'CREATE INDEX IF NOT EXISTS idx_chapters_book ON chapters(book_code)',
-    'CREATE INDEX IF NOT EXISTS idx_verses_book_chapter ON verses(book_code, chapter)',
   ];
 }
