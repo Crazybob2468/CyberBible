@@ -79,7 +79,7 @@ cyber_bible_app/
 ## Current Status
 
 **Phase 1 — Step 1.4 Complete**  
-USFX parser built as a Dart CLI tool at `tools/build_bible_db.dart`. Parses the WEB USFX XML (metadata, book names, and Bible text) into our data model objects. Extracts 81 books (39 OT, 27 NT, 15 DC), 1,402 chapters (as raw USFX fragments), and 38,029 verses (as plain text for FTS5 search). Skips non-canonical matter (FRT, GLO). Added `xml` package dependency. The same tool will be extended in Step 1.5 to write parsed data into SQLite. Next: Step 1.5 — Build SQLite Bible database.
+USFX parser built as a Dart CLI tool at `tools/build_bible_db.dart`. Parses the WEB USFX XML (metadata, book names, and Bible text) into our data model objects. Extracts 81 books (39 OT, 27 NT, 15 DC), 1,402 chapters (as raw USFX fragments), and 38,029 verses (as plain text for FTS5 search). Skips non-canonical matter and other non-book content (`FRT`, `INT`, `BAK`, `GLO`, `CNC`, `OTH`, `XXA`–`XXG`). Added `xml` package dependency. The same tool will be extended in Step 1.5 to write parsed data into SQLite. Next: Step 1.5 — Build SQLite Bible database.
 
 ---
 
