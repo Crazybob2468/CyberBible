@@ -38,7 +38,7 @@ if (-not (Test-Path $DataDir)) {
 if (-not (Test-Path $ZipFile)) {
     Write-Host "Downloading WEB USFX from eBible.org..."
     Write-Host "  URL: $UsfxUrl"
-    Invoke-WebRequest -Uri $UsfxUrl -OutFile $ZipFile -UseBasicParsing
+    Invoke-WebRequest -Uri $UsfxUrl -OutFile $ZipFile
     Write-Host "  Downloaded: $ZipFile"
 } else {
     Write-Host "USFX zip already exists: $ZipFile (skipping download)"
@@ -72,9 +72,10 @@ if ($UsfxXml) {
     Write-Host "  File size: $([math]::Round($UsfxXml.Length / 1MB, 2)) MB"
 } else {
     Write-Host ""
-    Write-Host "WARNING: No usfx.xml file found in extracted archive."
+    Write-Host "ERROR: No usfx.xml file found in extracted archive."
     Write-Host "  Contents of $ExtractDir :"
     Get-ChildItem -Path $ExtractDir -Recurse | ForEach-Object { Write-Host "    $($_.FullName)" }
+    throw "No usfx.xml file found in extracted archive: $ExtractDir"
 }
 
 # List all extracted files summary
