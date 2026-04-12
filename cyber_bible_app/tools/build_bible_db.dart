@@ -337,8 +337,9 @@ final _whitespacePattern = RegExp(r'\s+');
 
 /// Extracts individual verses from a chapter's USFX fragment.
 ///
-/// Uses regex to find `<v id="N">` ... `<ve/>` ranges, then strips each
-/// verse's content down to plain text for search indexing.
+/// Uses regex to find milestone-style verse ranges that start with a
+/// self-closing `<v id="N" .../>` tag and end with `<ve/>`, then strips
+/// each verse's content down to plain text for search indexing.
 List<Verse> _extractVerses(String bookCode, int chapter, String usfx) {
   final verses = <Verse>[];
 
@@ -365,23 +366,25 @@ List<Verse> _extractVerses(String bookCode, int chapter, String usfx) {
 /// Processing order:
 ///   1. Remove footnotes (`<f>...</f>`) — editorial, not canonical text
 ///   2. Remove cross-references (`<x>...</x>`) — reference markers
-///   3. Remove all remaining XML tags — formatting, Strong's numbers, etc.
-///   4. Decode XML entities (`&amp;` → `&`, etc.)
-///   5. Collapse whitespace to single spaces
+///   3. Parse the remaining XML fragment and extract inner text
+///      (this strips all tags and decodes all XML entities and numeric
+///      character references like `&#8217;` consistently)
+///   4. Collapse whitespace to single spaces
 String _stripToPlainText(String xml) {
   var text = xml;
   // Remove footnotes and cross-references (contain non-canonical text).
   text = text.replaceAll(_footnotePattern, '');
   text = text.replaceAll(_crossRefPattern, '');
-  // Remove all remaining XML tags.
-  text = text.replaceAll(_tagPattern, '');
-  // Decode XML entities.
-  text = text
-      .replaceAll('&amp;', '&')
-      .replaceAll('&lt;', '<')
-      .replaceAll('&gt;', '>')
-      .replaceAll('&quot;', '"')
-      .replaceAll('&apos;', "'");
+  // Parse the remaining XML fragment so tags are stripped and all XML
+  // entities/character references are decoded consistently.
+  try {
+    final wrapped = '<root>$text</root>';
+    text = XmlDocument.parse(wrapped).rootElement.innerText;
+  } catch (_) {
+    // Fall back to regex-based stripping if XML parsing fails
+    // (e.g. malformed fragments in some translations).
+    text = text.replaceAll(_tagPattern, '');
+  }
   // Collapse whitespace.
   text = text.replaceAll(_whitespacePattern, ' ').trim();
   return text;
