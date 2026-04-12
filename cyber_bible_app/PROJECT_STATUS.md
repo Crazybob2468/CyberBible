@@ -28,7 +28,8 @@ Cyber Bible aims to be a high-quality, privacy-respecting Bible study app that c
 | Framework | Flutter (Dart) |
 | Bible data format | USFX (XML) from eBible.org |
 | Local storage | SQLite (via `sqflite` / `drift`) |
-| Bible text display | HTML rendering (via `flutter_widget_from_html` or WebView) |
+| Bible text display | USFX → HTML at runtime (via `flutter_widget_from_html` or WebView) |
+| USFX parsing (build-time) | `package:xml` |
 | State management | TBD (likely Provider or Riverpod) |
 | Internationalization | Flutter l10n (ARB files) |
 | Audio playback | TBD (for Phase 5) |
@@ -39,8 +40,13 @@ Cyber Bible aims to be a high-quality, privacy-respecting Bible study app that c
 eBible.org
   └── usfx.xml + metadata.xml (per translation)
         └── Parse & index → SQLite database (one DB per Bible module)
-              └── App reads SQLite → renders as HTML → displays in Flutter
+              └── App reads SQLite → USFX rendered to HTML at runtime → displays in Flutter
 ```
+
+Chapters are stored as raw USFX XML fragments in SQLite so the app can apply user
+preferences (red letters, verse numbers, footnotes, section headings) dynamically
+without re-downloading or re-processing. The entire reading experience works fully
+offline — no network calls after the Bible module is downloaded.
 
 The **World English Bible (WEB)** will be the first and default bundled translation.
 
