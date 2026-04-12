@@ -72,8 +72,8 @@ cyber_bible_app/
 
 ## Current Status
 
-**Phase 1 — Step 1.1 Complete**  
-Project structure created. App shell running with MaterialApp, theme (light/dark), and a home screen placeholder. Next: Step 1.2 — Acquire WEB Bible data.
+**Phase 1 — Step 1.2 Complete**  
+WEB Bible USFX data acquired from eBible.org. Download script at `tools/download_web_bible.ps1` fetches and extracts the World English Bible Classic (Public Domain, includes Deuterocanon) in USFX format. Raw data lives in `tools/data/` (gitignored). Next: Step 1.3 — Design Bible data models.
 
 ---
 
