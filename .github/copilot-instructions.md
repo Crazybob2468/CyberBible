@@ -48,44 +48,58 @@ wait for confirmation before proceeding.
    block have a thorough comment? The code must be fully human-readable without
    needing to inspect surrounding context.
 
-2. **[AGENT] Tests pass** — Run `flutter test` from `cyber_bible_app/`. All existing
-   tests must still pass. If the step added new testable logic, note what tests
-   should be written (test authoring is its own step).
+2. **[AGENT] New tests written** — If this step added any pure Dart logic (parsers,
+   services, utilities, model methods), write unit tests for that logic now, as part
+   of this step. UI-only steps (building a screen widget) may defer widget tests, but
+   must leave an explicit note in `PROJECT_STATUS.md` identifying the deferred tests.
+   Tests that can be written must be written before the PR is opened.
 
-3. **[AGENT] App runs** — Confirm the app still builds and launches without errors.
+3. **[AGENT] All tests pass** — Run `flutter test` from `cyber_bible_app/`. Every
+   test — both pre-existing and newly written — must pass before continuing.
+
+4. **[AGENT] App runs** — Confirm the app still builds and launches without errors.
    For most steps, run `flutter analyze` as a minimum; for UI steps, do a full
    `flutter run`.
 
-4. **[AGENT] Design alignment** — Do all changes follow the design goals in
+5. **[AGENT] Design alignment** — Do all changes follow the design goals in
    `docs/design-document.md` and the architecture decisions in `PROJECT_STATUS.md`?
    Call out any deviation and discuss before continuing.
 
-5. **[AGENT] Core documents current** — Do `PROJECT_STATUS.md` and
+6. **[AGENT] Core documents current** — Do `PROJECT_STATUS.md` and
    `docs/design-document.md` still accurately reflect the project? Update them
    if anything has changed or been clarified during this step.
 
 ### Group 2 — Wrap-up and Handoff
 
-6. **[AGENT] PROJECT_STATUS.md updated** — Update the "Current Status" section to
+7. **[AGENT] PROJECT_STATUS.md updated** — Update the "Current Status" section to
    reflect the completed step, what was built, key numbers/facts, and what comes next.
 
-7. **[AGENT] Agent memory updated** — Update `/memories/repo/cyber-bible.md` so
+8. **[AGENT] Agent memory updated** — Update `/memories/repo/cyber-bible.md` so
    future AI agents have accurate context without re-reading all files.
 
-8. **[HUMAN] Commit and push** — Prompt the developer to commit all changes with a
+9. **[HUMAN] Commit and push** — Prompt the developer to commit all changes with a
    clear commit message and push to the remote. Do not do this yourself.
    Wait for the developer to confirm before continuing.
 
-9. **[HUMAN] Open a PR** — Prompt the developer to open a Pull Request for this step.
-   Offer to draft the PR title and description. Wait for confirmation.
+10. **[HUMAN] Open a PR** — Prompt the developer to open a Pull Request for this step.
+    Offer to draft the PR title and description. Wait for confirmation.
 
-10. **[HUMAN] PR reviewed** — Remind the developer to request a Copilot code review
+11. **[HUMAN] PR reviewed** — Remind the developer to request a Copilot code review
     on the PR. Do not start the next step until the developer confirms the review
     is complete.
 
-11. **[HUMAN] PR comments addressed** — Ask the developer whether any review comments
+12. **[HUMAN] PR comments addressed** — Ask the developer whether any review comments
     need to be addressed before merging. Do not start the next step until the
     developer confirms all comments are resolved or intentionally deferred.
+
+13. **[HUMAN] PR merged** — Ask the developer to merge the PR into the main branch
+    once all review comments are resolved. Do not start the next step until the
+    developer confirms the merge is complete.
+
+14. **[HUMAN] New branch created** — Before starting the next step, prompt the
+    developer to create and check out a new branch named for that step
+    (e.g. `step/1.6-bundle-bible`). Do not begin any code changes until the
+    developer confirms they are on the new branch.
 
 ---
 

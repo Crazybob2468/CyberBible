@@ -22,44 +22,25 @@ import 'package:cyber_bible_app/models/bible_schema.dart';
 import 'package:cyber_bible_app/models/book.dart';
 import 'package:cyber_bible_app/models/chapter.dart';
 import 'package:cyber_bible_app/models/verse.dart';
+import 'package:cyber_bible_app/utils/usfx_utils.dart';
 
 // ---------------------------------------------------------------------------
-// Testament classification
+// Testament classification and book filtering
 // ---------------------------------------------------------------------------
 
-/// All 39 Old Testament book codes (standard 3-letter USFX/Paratext IDs).
-const _otBooks = {
-  'GEN', 'EXO', 'LEV', 'NUM', 'DEU', 'JOS', 'JDG', 'RUT',
-  '1SA', '2SA', '1KI', '2KI', '1CH', '2CH', 'EZR', 'NEH',
-  'EST', 'JOB', 'PSA', 'PRO', 'ECC', 'SNG', 'ISA', 'JER',
-  'LAM', 'EZK', 'DAN', 'HOS', 'JOL', 'AMO', 'OBA', 'JON',
-  'MIC', 'NAM', 'HAB', 'ZEP', 'HAG', 'ZEC', 'MAL',
-};
+// Note: classifyBook() is defined in lib/utils/usfx_utils.dart and imported
+// above. It is kept there so it can be unit tested independently.
 
-/// All 27 New Testament book codes (standard 3-letter USFX/Paratext IDs).
-const _ntBooks = {
-  'MAT', 'MRK', 'LUK', 'JHN', 'ACT', 'ROM', '1CO', '2CO',
-  'GAL', 'EPH', 'PHP', 'COL', '1TH', '2TH', '1TI', '2TI',
-  'TIT', 'PHM', 'HEB', 'JAS', '1PE', '2PE', '1JN', '2JN',
-  '3JN', 'JUD', 'REV',
-};
-
-/// Books to skip — these are non-biblical content such as:
+/// Books to skip — these are non-biblical content sections, not actual Bible
+/// books. They appear in the USFX file but should not be stored in the DB.
+///
 /// FRT = Preface/Front matter, INT = Introduction, BAK = Back matter,
 /// GLO = Glossary, CNC = Concordance, OTH = Other,
-/// XXA-XXG = Extra/placeholder books.
+/// XXA–XXG = Extra/placeholder book slots used by some translation tools.
 const _skipBooks = {
   'FRT', 'INT', 'BAK', 'GLO', 'CNC', 'OTH',
   'XXA', 'XXB', 'XXC', 'XXD', 'XXE', 'XXF', 'XXG',
 };
-
-/// Determines which testament a book belongs to based on its code.
-/// Books not in OT or NT sets are classified as Deuterocanon (DC).
-Testament _classifyBook(String code) {
-  if (_otBooks.contains(code)) return Testament.ot;
-  if (_ntBooks.contains(code)) return Testament.nt;
-  return Testament.dc;
-}
 
 // ---------------------------------------------------------------------------
 // Parsed result container
@@ -215,8 +196,8 @@ ParseResult parseUsfx(
       continue;
     }
 
-    // Extract chapter data from this book element.
-    final chapterMap = _extractChapters(bookEl);
+    // Extract chapter data from this book element using the shared utility.
+    final chapterMap = extractChapters(bookEl);
     if (chapterMap.isEmpty) {
       stdout.writeln('  [$code] skipped (no chapters)');
       continue;
@@ -224,7 +205,7 @@ ParseResult parseUsfx(
 
     // Look up book names.
     final names = bookNames[code];
-    final testament = _classifyBook(code);
+    final testament = classifyBook(code);
 
     books.add(Book(
       code: code,
@@ -248,8 +229,8 @@ ParseResult parseUsfx(
         contentUsfx: contentUsfx,
       ));
 
-      // Extract verse plain text from the USFX fragment.
-      final chapterVerses = _extractVerses(code, chapterNum, contentUsfx);
+      // Extract verse plain text from the USFX fragment using the shared utility.
+      final chapterVerses = extractVerses(code, chapterNum, contentUsfx);
       verses.addAll(chapterVerses);
       bookVerseCount += chapterVerses.length;
     }
@@ -270,130 +251,9 @@ ParseResult parseUsfx(
   );
 }
 
-// ---------------------------------------------------------------------------
-// Chapter extraction — groups book children by <c> milestones
-// ---------------------------------------------------------------------------
-
-/// Splits a `<book>` element's children into per-chapter USFX fragments.
-///
-/// USFX uses milestone `<c id="N" />` tags to mark chapter boundaries.
-/// Everything between two `<c>` tags belongs to one chapter. Content before
-/// the first `<c>` is book-level header material (title, TOC) and is skipped.
-///
-/// Returns a map of chapter number → raw USFX XML string for that chapter.
-Map<int, String> _extractChapters(XmlElement bookEl) {
-  final result = <int, String>{};
-  var currentChapter = 0;
-  final buffer = StringBuffer();
-
-  for (final node in bookEl.children) {
-    if (node is XmlElement && node.name.local == 'c') {
-      // Save previous chapter.
-      if (currentChapter > 0) {
-        final content = buffer.toString().trim();
-        if (content.isNotEmpty) {
-          result[currentChapter] = content;
-        }
-      }
-      // Start new chapter.
-      currentChapter = int.tryParse(node.getAttribute('id') ?? '') ?? 0;
-      buffer.clear();
-    } else if (currentChapter > 0) {
-      // Accumulate content for the current chapter.
-      buffer.write(node.toXmlString());
-    }
-    // Nodes before the first <c> are book headers — skip them.
-  }
-
-  // Save the last chapter.
-  if (currentChapter > 0) {
-    final content = buffer.toString().trim();
-    if (content.isNotEmpty) {
-      result[currentChapter] = content;
-    }
-  }
-
-  return result;
-}
-
-// ---------------------------------------------------------------------------
-// Verse extraction — finds <v>...<ve/> ranges and strips to plain text
-// ---------------------------------------------------------------------------
-
-/// Regex to match a verse in USFX: `<v id="N" bcv="..."/>` ... `<ve/>`
-/// Group 1 = verse ID (e.g. "1", "1a", "1-2")
-/// Group 2 = raw XML content between the verse start and end markers
-final _versePattern = RegExp(
-  r'<v\s+id="([^"]+)"[^/]*/>(.*?)<ve\s*/>',
-  dotAll: true,
-);
-
-/// Matches footnote elements: `<f>...</f>` (non-canonical editorial content).
-final _footnotePattern = RegExp(r'<f\b[^>]*>.*?</f>', dotAll: true);
-
-/// Matches cross-reference elements: `<x>...</x>` (reference links).
-final _crossRefPattern = RegExp(r'<x\b[^>]*>.*?</x>', dotAll: true);
-
-/// Matches any XML tag (opening, closing, or self-closing).
-final _tagPattern = RegExp(r'<[^>]+>');
-
-/// Matches one or more whitespace characters (for collapsing).
-final _whitespacePattern = RegExp(r'\s+');
-
-/// Extracts individual verses from a chapter's USFX fragment.
-///
-/// Uses regex to find milestone-style verse ranges that start with a
-/// self-closing `<v id="N" .../>` tag and end with `<ve/>`, then strips
-/// each verse's content down to plain text for search indexing.
-List<Verse> _extractVerses(String bookCode, int chapter, String usfx) {
-  final verses = <Verse>[];
-
-  for (final match in _versePattern.allMatches(usfx)) {
-    final verseId = match.group(1)!;
-    final rawContent = match.group(2)!;
-    final plainText = _stripToPlainText(rawContent);
-
-    if (plainText.isNotEmpty) {
-      verses.add(Verse(
-        bookCode: bookCode,
-        chapter: chapter,
-        verse: verseId,
-        textPlain: plainText,
-      ));
-    }
-  }
-
-  return verses;
-}
-
-/// Strips USFX XML markup down to plain canonical text.
-///
-/// Processing order:
-///   1. Remove footnotes (`<f>...</f>`) — editorial, not canonical text
-///   2. Remove cross-references (`<x>...</x>`) — reference markers
-///   3. Parse the remaining XML fragment and extract inner text
-///      (this strips all tags and decodes all XML entities and numeric
-///      character references like `&#8217;` consistently)
-///   4. Collapse whitespace to single spaces
-String _stripToPlainText(String xml) {
-  var text = xml;
-  // Remove footnotes and cross-references (contain non-canonical text).
-  text = text.replaceAll(_footnotePattern, '');
-  text = text.replaceAll(_crossRefPattern, '');
-  // Parse the remaining XML fragment so tags are stripped and all XML
-  // entities/character references are decoded consistently.
-  try {
-    final wrapped = '<root>$text</root>';
-    text = XmlDocument.parse(wrapped).rootElement.innerText;
-  } catch (_) {
-    // Fall back to regex-based stripping if XML parsing fails
-    // (e.g. malformed fragments in some translations).
-    text = text.replaceAll(_tagPattern, '');
-  }
-  // Collapse whitespace.
-  text = text.replaceAll(_whitespacePattern, ' ').trim();
-  return text;
-}
+// Note: extractChapters(), extractVerses(), and stripToPlainText() have been
+// moved to lib/utils/usfx_utils.dart so they can be unit tested independently.
+// They are imported at the top of this file.
 
 // ---------------------------------------------------------------------------
 // SQLite database writer
