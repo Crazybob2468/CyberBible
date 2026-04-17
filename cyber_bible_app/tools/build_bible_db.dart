@@ -3,17 +3,22 @@
 /// Usage: `dart tools/build_bible_db.dart [path/to/usfx_directory]`
 ///
 /// Default input: `tools/data/eng-web_usfx/`
-/// Output: `assets/bibles/<translation-id>.db` (Step 1.5)
+/// Output: `assets/bibles/<translation-id>.db`
 ///
 /// Step 1.4: USFX parsing — reads metadata, book names, and Bible text.
-/// Step 1.5: SQLite generation — writes parsed data to the database (to be added).
+/// Step 1.5: SQLite generation — writes parsed data into a SQLite database.
+///
+/// Windows note: sqlite3.dll must be on PATH or in the working directory.
+/// Download sqlite-dll-win-x64 from https://sqlite.org/download.html.
 library;
 
 import 'dart:io';
 
+import 'package:sqlite3/sqlite3.dart';
 import 'package:xml/xml.dart';
 
 import 'package:cyber_bible_app/models/bible_info.dart';
+import 'package:cyber_bible_app/models/bible_schema.dart';
 import 'package:cyber_bible_app/models/book.dart';
 import 'package:cyber_bible_app/models/chapter.dart';
 import 'package:cyber_bible_app/models/verse.dart';
@@ -391,6 +396,189 @@ String _stripToPlainText(String xml) {
 }
 
 // ---------------------------------------------------------------------------
+// SQLite database writer
+// ---------------------------------------------------------------------------
+
+/// Writes all parsed Bible data into a new SQLite database at [outputPath].
+///
+/// Creates the output directory if needed and always starts fresh (deletes
+/// any existing file). Runs all inserts inside a single transaction per
+/// table for performance. Rebuilds the FTS5 full-text search index after
+/// all verse rows are inserted.
+///
+/// On failure, any partially-written database is deleted so the next run
+/// starts clean.
+void writeSqlite(ParseResult result, String outputPath) {
+  final outputFile = File(outputPath);
+
+  // Create the output directory (e.g. assets/bibles/) if it does not exist.
+  outputFile.parent.createSync(recursive: true);
+
+  // Always start from a blank file to avoid schema conflicts on re-runs.
+  if (outputFile.existsSync()) {
+    outputFile.deleteSync();
+    stdout.writeln('Deleted existing database: $outputPath');
+  }
+
+  final db = sqlite3.open(outputPath);
+
+  // Track whether we completed successfully so we can clean up on failure.
+  var success = false;
+
+  try {
+    // -------------------------------------------------------------------------
+    // Performance PRAGMAs — suitable for a write-once build-time tool.
+    // WAL mode avoids whole-file locking; synchronous=NORMAL is safe here
+    // because we can always regenerate from source if a crash occurs.
+    // -------------------------------------------------------------------------
+    db.execute('PRAGMA journal_mode=WAL');
+    db.execute('PRAGMA synchronous=NORMAL');
+    db.execute('PRAGMA foreign_keys=ON');
+
+    // -------------------------------------------------------------------------
+    // Create tables and indexes from the shared BibleSchema definition.
+    // -------------------------------------------------------------------------
+    stdout.write('Creating schema...');
+    for (final stmt in BibleSchema.createStatements) {
+      db.execute(stmt);
+    }
+    for (final stmt in BibleSchema.createIndexes) {
+      db.execute(stmt);
+    }
+    stdout.writeln(' done');
+
+    // -------------------------------------------------------------------------
+    // Insert bible_info — one row per database (describes this translation).
+    // -------------------------------------------------------------------------
+    stdout.write('Inserting translation metadata...');
+    db.execute(
+      '''
+      INSERT INTO bible_info
+        (id, name, name_local, abbreviation, description,
+         language_code, language_name, script, script_direction,
+         country_code, scope, copyright)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ''',
+      [
+        result.bibleInfo.id,
+        result.bibleInfo.name,
+        result.bibleInfo.nameLocal,
+        result.bibleInfo.abbreviation,
+        result.bibleInfo.description,
+        result.bibleInfo.languageCode,
+        result.bibleInfo.languageName,
+        result.bibleInfo.script,
+        result.bibleInfo.scriptDirection,
+        result.bibleInfo.countryCode,
+        result.bibleInfo.scope,
+        result.bibleInfo.copyright,
+      ],
+    );
+    stdout.writeln(' done');
+
+    // -------------------------------------------------------------------------
+    // Insert books — one row per canonical book, in canonical order.
+    // -------------------------------------------------------------------------
+    stdout.write('Inserting ${result.books.length} books...');
+    db.execute('BEGIN');
+    final bookStmt = db.prepare(
+      '''
+      INSERT INTO books
+        (code, sort_order, name_short, name_long, abbreviation, testament, chapter_count)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ''',
+    );
+    try {
+      for (final book in result.books) {
+        bookStmt.execute([
+          book.code,
+          book.sortOrder,
+          book.nameShort,
+          book.nameLong,
+          book.abbreviation,
+          book.testament.name, // 'ot', 'nt', or 'dc' — matches CHECK constraint
+          book.chapterCount,
+        ]);
+      }
+    } finally {
+      // Always dispose the prepared statement, even if an insert throws.
+      bookStmt.dispose();
+    }
+    db.execute('COMMIT');
+    stdout.writeln(' done');
+
+    // -------------------------------------------------------------------------
+    // Insert chapters — stored as raw USFX fragments for runtime rendering.
+    // -------------------------------------------------------------------------
+    stdout.write('Inserting ${result.chapters.length} chapters...');
+    db.execute('BEGIN');
+    final chapterStmt = db.prepare(
+      'INSERT INTO chapters (book_code, number, content_usfx) VALUES (?, ?, ?)',
+    );
+    try {
+      for (final chapter in result.chapters) {
+        chapterStmt.execute([
+          chapter.bookCode,
+          chapter.number,
+          chapter.contentUsfx,
+        ]);
+      }
+    } finally {
+      chapterStmt.dispose();
+    }
+    db.execute('COMMIT');
+    stdout.writeln(' done');
+
+    // -------------------------------------------------------------------------
+    // Insert verses — plain text only, used for full-text search (FTS5).
+    // -------------------------------------------------------------------------
+    stdout.write('Inserting ${result.verses.length} verses...');
+    db.execute('BEGIN');
+    final verseStmt = db.prepare(
+      'INSERT INTO verses (book_code, chapter, verse, text_plain) VALUES (?, ?, ?, ?)',
+    );
+    try {
+      for (final verse in result.verses) {
+        verseStmt.execute([
+          verse.bookCode,
+          verse.chapter,
+          verse.verse,
+          verse.textPlain,
+        ]);
+      }
+    } finally {
+      verseStmt.dispose();
+    }
+    db.execute('COMMIT');
+    stdout.writeln(' done');
+
+    // -------------------------------------------------------------------------
+    // Rebuild FTS5 index — scans all rows in the `verses` content table
+    // and populates the verses_fts virtual table for full-text search.
+    // -------------------------------------------------------------------------
+    stdout.write('Building full-text search index...');
+    db.execute(BibleSchema.rebuildFts);
+    stdout.writeln(' done');
+
+    success = true;
+
+    // Report output file size.
+    final sizeBytes = outputFile.lengthSync();
+    final sizeMb = (sizeBytes / (1024 * 1024)).toStringAsFixed(1);
+    stdout.writeln('');
+    stdout.writeln('Database written: $outputPath');
+    stdout.writeln('Database size:    $sizeMb MB ($sizeBytes bytes)');
+  } finally {
+    db.dispose();
+    // Remove any partial database on failure so the next run starts clean.
+    if (!success && outputFile.existsSync()) {
+      outputFile.deleteSync();
+      stdout.writeln('Removed partial database due to error.');
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -444,7 +632,7 @@ void main(List<String> args) {
   stdout.writeln('');
   stdout.writeln('Parsed in ${stopwatch.elapsedMilliseconds} ms');
 
-  // Spot-check: print first verse of Genesis.
+  // Spot-check: print first verse of Genesis to confirm parsing succeeded.
   final gen11 = result.verses.where(
     (v) => v.bookCode == 'GEN' && v.chapter == 1 && v.verse == '1',
   );
@@ -454,7 +642,41 @@ void main(List<String> args) {
     stdout.writeln('  "${gen11.first.textPlain}"');
   }
 
-  // TODO(Step 1.5): Write parsed data to SQLite database.
+  // -------------------------------------------------------------------------
+  // Step 1.5: Write parsed data to SQLite database.
+  // Output goes to assets/bibles/<id>.db so it is bundled with the app.
+  // -------------------------------------------------------------------------
+
+  // Determine the output path relative to the project root.
+  // This script lives in tools/, so the project root is one level up.
+  final projectRoot = File(Platform.script.toFilePath()).parent.parent.path;
+  final dbFilename = '${result.bibleInfo.id.toLowerCase()}.db';
+  final outputPath = '$projectRoot/assets/bibles/$dbFilename';
+
   stdout.writeln('');
-  stdout.writeln('Done. SQLite generation will be added in Step 1.5.');
+  stdout.writeln('=== Writing SQLite Database ===');
+  stdout.writeln('Output: $outputPath');
+  stdout.writeln('');
+
+  try {
+    writeSqlite(result, outputPath);
+  } catch (e) {
+    stderr.writeln('');
+    stderr.writeln('ERROR writing database: $e');
+    // Give a Windows-specific hint since sqlite3.dll is the most common cause
+    // of failure on that platform.
+    if (Platform.isWindows) {
+      stderr.writeln('');
+      stderr.writeln('On Windows, sqlite3.dll must be on your PATH or in the');
+      stderr.writeln('current working directory. Download it from:');
+      stderr.writeln('  https://sqlite.org/download.html  (sqlite-dll-win-x64)');
+      stderr.writeln('Extract sqlite3.dll and place it alongside this script,');
+      stderr.writeln('or add its containing folder to your system PATH.');
+    }
+    exit(1);
+  }
+
+  stdout.writeln('');
+  stdout.writeln('=== Done ===');
+  stdout.writeln('Step 1.5 complete. Database ready to be bundled in Step 1.6.');
 }

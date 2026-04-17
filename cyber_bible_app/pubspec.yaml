@@ -15,6 +15,10 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  # Used by tools/build_bible_db.dart (CLI build tool only — never ships in the app).
+  # On Windows: requires sqlite3.dll on PATH. Download sqlite-dll-win-x64 from
+  # https://sqlite.org/download.html and place sqlite3.dll in your working directory.
+  sqlite3: ^2.0.0
 
 flutter:
   uses-material-design: true

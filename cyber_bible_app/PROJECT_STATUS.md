@@ -4,6 +4,10 @@
 > context, architecture decisions, current progress, and step-by-step roadmap.
 > For the public-facing project overview, see the root [README.md](../README.md).
 > For the complete design vision, see [docs/design-document.md](docs/design-document.md).
+>
+> **Step completion checklist:** After every step (1.1, 1.2, etc.), work through the
+> full checklist defined in [../.github/copilot-instructions.md](../.github/copilot-instructions.md).
+> Do not start the next step until all items are confirmed.
 
 A free/libre and open source software (FLOSS) Bible study app built with Flutter & Dart.  
 Licensed under **GPL 3.0**. Cross-platform: Android, iOS, Windows, macOS, Linux, and Web.
@@ -78,8 +82,8 @@ cyber_bible_app/
 
 ## Current Status
 
-**Phase 1 — Step 1.4 Complete**  
-USFX parser built as a Dart CLI tool at `tools/build_bible_db.dart`. Parses the WEB USFX XML (metadata, book names, and Bible text) into our data model objects. Extracts 81 books (39 OT, 27 NT, 15 DC), 1,402 chapters (as raw USFX fragments), and 38,029 verses (as plain text for FTS5 search). Skips non-canonical matter and other non-book content (`FRT`, `INT`, `BAK`, `GLO`, `CNC`, `OTH`, `XXA`–`XXG`). Added `xml` package dependency. The same tool will be extended in Step 1.5 to write parsed data into SQLite. Next: Step 1.5 — Build SQLite Bible database.
+**Phase 1 — Step 1.5 Complete**  
+SQLite database generation added to `tools/build_bible_db.dart`. The tool now parses the WEB USFX XML and writes the full dataset into `assets/bibles/eng-web.db` in a single run. The generated database contains 81 books (39 OT, 27 NT, 15 DC), 1,402 chapters (stored as raw USFX XML fragments), and 38,029 verses (as plain text), plus a rebuilt FTS5 full-text search index. Database size: 25.1 MB. Added `sqlite3: ^2.0.0` as a dev dependency (CLI build tool only — never ships in the app). The `eng-web.db` file is committed to `assets/bibles/` so a fresh clone is immediately runnable. Next: Step 1.6 — Bundle WEB Bible with app (write a service to copy the DB from assets to app-local storage on first launch).
 
 ---
 
