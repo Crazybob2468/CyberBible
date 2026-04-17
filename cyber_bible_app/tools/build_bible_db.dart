@@ -287,11 +287,19 @@ void writeSqlite(ParseResult result, String outputPath) {
 
   try {
     // -------------------------------------------------------------------------
-    // Performance PRAGMAs — suitable for a write-once build-time tool.
-    // WAL mode avoids whole-file locking; synchronous=NORMAL is safe here
-    // because we can always regenerate from source if a crash occurs.
+    // PRAGMAs — tuned for a write-once build-time tool.
+    //
+    // journal_mode=DELETE (the SQLite default) is used intentionally instead
+    // of WAL. WAL mode creates `.db-wal` and `.db-shm` sidecar files that
+    // could be accidentally committed alongside the generated asset, and
+    // causes outputFile.lengthSync() to under-report the final DB size until
+    // a checkpoint occurs. Since this tool is single-writer with no
+    // concurrency requirements, DELETE mode is the right choice.
+    //
+    // synchronous=NORMAL is safe because we can always regenerate the DB from
+    // source if a crash occurs during the build.
     // -------------------------------------------------------------------------
-    db.execute('PRAGMA journal_mode=WAL');
+    db.execute('PRAGMA journal_mode=DELETE');
     db.execute('PRAGMA synchronous=NORMAL');
     db.execute('PRAGMA foreign_keys=ON');
 
@@ -360,11 +368,17 @@ void writeSqlite(ParseResult result, String outputPath) {
           book.chapterCount,
         ]);
       }
-    } finally {
-      // Always dispose the prepared statement, even if an insert throws.
+      // Always dispose the prepared statement before committing so no
+      // resources are held across the transaction boundary.
       bookStmt.dispose();
+      db.execute('COMMIT');
+    } catch (e) {
+      // Explicit ROLLBACK so the transaction does not remain open and leave
+      // confusing state if the DB connection is reused or error is caught.
+      bookStmt.dispose();
+      db.execute('ROLLBACK');
+      rethrow;
     }
-    db.execute('COMMIT');
     stdout.writeln(' done');
 
     // -------------------------------------------------------------------------
@@ -383,10 +397,14 @@ void writeSqlite(ParseResult result, String outputPath) {
           chapter.contentUsfx,
         ]);
       }
-    } finally {
       chapterStmt.dispose();
+      db.execute('COMMIT');
+    } catch (e) {
+      // Roll back explicitly so the transaction does not remain open on error.
+      chapterStmt.dispose();
+      db.execute('ROLLBACK');
+      rethrow;
     }
-    db.execute('COMMIT');
     stdout.writeln(' done');
 
     // -------------------------------------------------------------------------
@@ -406,10 +424,14 @@ void writeSqlite(ParseResult result, String outputPath) {
           verse.textPlain,
         ]);
       }
-    } finally {
       verseStmt.dispose();
+      db.execute('COMMIT');
+    } catch (e) {
+      // Roll back explicitly so the transaction does not remain open on error.
+      verseStmt.dispose();
+      db.execute('ROLLBACK');
+      rethrow;
     }
-    db.execute('COMMIT');
     stdout.writeln(' done');
 
     // -------------------------------------------------------------------------
