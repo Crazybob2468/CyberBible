@@ -357,27 +357,29 @@ void writeSqlite(ParseResult result, String outputPath) {
       ''',
     );
     try {
-      for (final book in result.books) {
-        bookStmt.execute([
-          book.code,
-          book.sortOrder,
-          book.nameShort,
-          book.nameLong,
-          book.abbreviation,
-          book.testament.name, // 'ot', 'nt', or 'dc' — matches CHECK constraint
-          book.chapterCount,
-        ]);
+      try {
+        for (final book in result.books) {
+          bookStmt.execute([
+            book.code,
+            book.sortOrder,
+            book.nameShort,
+            book.nameLong,
+            book.abbreviation,
+            book.testament.name, // 'ot', 'nt', or 'dc' — matches CHECK constraint
+            book.chapterCount,
+          ]);
+        }
+        db.execute('COMMIT');
+      } catch (e) {
+        // Explicit ROLLBACK so the transaction does not remain open and leave
+        // confusing WAL state if the error is caught upstream.
+        db.execute('ROLLBACK');
+        rethrow;
       }
-      // Always dispose the prepared statement before committing so no
-      // resources are held across the transaction boundary.
+    } finally {
+      // Dispose the prepared statement exactly once, regardless of whether
+      // the inserts or COMMIT succeeded or failed.
       bookStmt.dispose();
-      db.execute('COMMIT');
-    } catch (e) {
-      // Explicit ROLLBACK so the transaction does not remain open and leave
-      // confusing state if the DB connection is reused or error is caught.
-      bookStmt.dispose();
-      db.execute('ROLLBACK');
-      rethrow;
     }
     stdout.writeln(' done');
 
@@ -390,20 +392,23 @@ void writeSqlite(ParseResult result, String outputPath) {
       'INSERT INTO chapters (book_code, number, content_usfx) VALUES (?, ?, ?)',
     );
     try {
-      for (final chapter in result.chapters) {
-        chapterStmt.execute([
-          chapter.bookCode,
-          chapter.number,
-          chapter.contentUsfx,
-        ]);
+      try {
+        for (final chapter in result.chapters) {
+          chapterStmt.execute([
+            chapter.bookCode,
+            chapter.number,
+            chapter.contentUsfx,
+          ]);
+        }
+        db.execute('COMMIT');
+      } catch (e) {
+        // Roll back explicitly so the transaction does not remain open on error.
+        db.execute('ROLLBACK');
+        rethrow;
       }
+    } finally {
+      // Dispose exactly once, whether inserts/COMMIT succeeded or failed.
       chapterStmt.dispose();
-      db.execute('COMMIT');
-    } catch (e) {
-      // Roll back explicitly so the transaction does not remain open on error.
-      chapterStmt.dispose();
-      db.execute('ROLLBACK');
-      rethrow;
     }
     stdout.writeln(' done');
 
@@ -416,21 +421,24 @@ void writeSqlite(ParseResult result, String outputPath) {
       'INSERT INTO verses (book_code, chapter, verse, text_plain) VALUES (?, ?, ?, ?)',
     );
     try {
-      for (final verse in result.verses) {
-        verseStmt.execute([
-          verse.bookCode,
-          verse.chapter,
-          verse.verse,
-          verse.textPlain,
-        ]);
+      try {
+        for (final verse in result.verses) {
+          verseStmt.execute([
+            verse.bookCode,
+            verse.chapter,
+            verse.verse,
+            verse.textPlain,
+          ]);
+        }
+        db.execute('COMMIT');
+      } catch (e) {
+        // Roll back explicitly so the transaction does not remain open on error.
+        db.execute('ROLLBACK');
+        rethrow;
       }
+    } finally {
+      // Dispose exactly once, whether inserts/COMMIT succeeded or failed.
       verseStmt.dispose();
-      db.execute('COMMIT');
-    } catch (e) {
-      // Roll back explicitly so the transaction does not remain open on error.
-      verseStmt.dispose();
-      db.execute('ROLLBACK');
-      rethrow;
     }
     stdout.writeln(' done');
 
@@ -442,14 +450,18 @@ void writeSqlite(ParseResult result, String outputPath) {
     db.execute(BibleSchema.rebuildFts);
     stdout.writeln(' done');
 
-    success = true;
-
     // Report output file size.
+    // This is done before setting success = true so that if lengthSync() or
+    // any of the print calls throw, the partial DB cleanup in the finally
+    // block below still runs correctly.
     final sizeBytes = outputFile.lengthSync();
     final sizeMb = (sizeBytes / (1024 * 1024)).toStringAsFixed(1);
     stdout.writeln('');
     stdout.writeln('Database written: $outputPath');
     stdout.writeln('Database size:    $sizeMb MB ($sizeBytes bytes)');
+
+    // Mark success only after all work — including size reporting — is done.
+    success = true;
   } finally {
     db.dispose();
     // Remove any partial database on failure so the next run starts clean.

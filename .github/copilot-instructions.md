@@ -74,8 +74,11 @@ wait for confirmation before proceeding.
 7. **[AGENT] PROJECT_STATUS.md updated** — Update the "Current Status" section to
    reflect the completed step, what was built, key numbers/facts, and what comes next.
 
-8. **[AGENT] Agent memory updated** — Update `/memories/repo/cyber-bible.md` so
-   future AI agents have accurate context without re-reading all files.
+8. **[AGENT] Agent memory updated** — Update `/memories/repo/cyber-bible.md` if
+   your agent environment provides that path (this is an external VS Code Copilot
+   memory path, not a tracked file in this repository). If that path is unavailable,
+   record the same handoff context in `cyber_bible_app/PROJECT_STATUS.md` so future
+   agents can recover the necessary context without re-reading all files.
 
 9. **[HUMAN] Commit and push** — Prompt the developer to commit all changes with a
    clear commit message and push to the remote. Do not do this yourself.
