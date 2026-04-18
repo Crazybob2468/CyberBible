@@ -10,6 +10,16 @@ dependencies:
   flutter:
     sdk: flutter
   xml: ^6.5.0
+  # sqflite: runtime SQLite access for reading the bundled Bible database.
+  # Added in Step 1.6 so the dependency is ready for the app DB reader layer
+  # introduced in Step 1.7+; BibleSetupService only copies the DB file.
+  sqflite: ^2.4.2
+  # path_provider: locates the app's writable Application Support directory on
+  # each platform, where the bundled Bible database is copied on first launch.
+  path_provider: ^2.1.5
+  # path: cross-platform path joining used by BibleSetupService (lib/ code).
+  # Also used by tools/build_bible_db.dart — declared here so both can share it.
+  path: ^1.9.0
 
 dev_dependencies:
   flutter_test:
@@ -19,9 +29,7 @@ dev_dependencies:
   # On Windows: requires sqlite3.dll on PATH. Download sqlite-dll-win-x64 from
   # https://sqlite.org/download.html and place sqlite3.dll in your working directory.
   sqlite3: ^2.0.0
-  # Used by tools/build_bible_db.dart for cross-platform path joining.
-  # Declared explicitly so we don't rely on a transitive Flutter dependency.
-  path: ^1.9.0
+  # path is declared in dependencies (above) and is also used by the build tool.
 
 flutter:
   uses-material-design: true

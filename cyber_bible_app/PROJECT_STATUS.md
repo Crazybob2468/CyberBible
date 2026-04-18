@@ -82,31 +82,27 @@ cyber_bible_app/
 
 ## Current Status
 
-**Phase 1 — Step 1.5 Complete (with test debt resolved and PR review fixes applied)**  
-SQLite database generation added to `tools/build_bible_db.dart`. The tool now parses the WEB USFX XML and writes the full dataset into `assets/bibles/eng-web.db` in a single run. The generated database contains 81 books (39 OT, 27 NT, 15 DC), 1,402 chapters (stored as raw USFX XML fragments), and 38,029 verses (as plain text), plus a rebuilt FTS5 full-text search index. Database size: 28.9 MB (single-file, `journal_mode=DELETE`, no WAL sidecar files). Added `sqlite3: ^2.0.0` and `path: ^1.9.0` as dev dependencies (CLI build tool only — never ship in the app). The `eng-web.db` file is committed to `assets/bibles/` so a fresh clone is immediately runnable.
+**Phase 1 — Step 1.6 Complete: Bundle WEB Bible with app**
 
-Pure utility functions extracted from the build tool into `lib/utils/usfx_utils.dart` (`classifyBook`, `stripToPlainText`, `extractVerses`, `extractChapters`) so they can be unit tested independently. Unit tests written and passing across `test/utils/usfx_utils_test.dart` and `test/models/models_test.dart`, covering all model `toMap()`/`fromMap()` round trips, the Bible schema, and all four USFX parser utilities (`classifyBook`, `stripToPlainText`, `extractVerses`, and `extractChapters`). Step completion checklist created at `.github/copilot-instructions.md` and linked from this file.
+Step 1.5 ✅ MERGED (PR #7). The SQLite build tool, 60 unit tests, and generated `eng-web.db` are on `main`.
+Step 1.6 ✅ COMPLETE. The bundled WEB database setup service, startup wiring in `main.dart`, and unit-test coverage are introduced in this PR; deferred integration tests are intentionally tracked below.
 
-PR review fixes applied (across multiple review rounds):
-- `journal_mode=DELETE` (no WAL sidecar files, accurate size reporting)
-- Explicit `ROLLBACK` in catch blocks for all three transaction groups
-- `try { inserts; COMMIT } catch { ROLLBACK; rethrow } finally { stmt.dispose() }` pattern — dispose exactly once
-- `success = true` moved to after size reporting so cleanup still fires on any late failure
-- `/memories/repo/cyber-bible.md` clarified as external VS Code Copilot path (not a tracked repo file)
-- All file paths converted from string interpolation with `/` to `p.join()` (cross-platform correctness on Windows)
-- Windows DLL hint corrected to reference current working directory / PATH (not the script directory)
-- `library;` directives added to test files to fix `dangling_library_doc_comments` lint
-- `sqlite3.open()` moved inside the try block (`Database? db`) so partial-file cleanup runs even if open() throws
-- `BEGIN` moved to after `db.prepare()` in all three transaction blocks so a prepare failure can't leave an orphaned open transaction
-- Stack trace added to catch block in `main()` (`catch (e, st)`) for diagnosable failures
-- Test `verse()` helper: removed hard-coded `bcv="GEN.1.$id"` attribute that was misleading for non-GEN test cases
-- `extractChapters()` was untested — added 5-test group in `usfx_utils_test.dart` covering single/multiple chapters, header skipping, empty chapter omission, and no-milestone case
-- Stale "WAL state" comment in books ROLLBACK block corrected (tool uses `journal_mode=DELETE`, not WAL)
-- `PROJECT_STATUS.md` coverage claim corrected to list all four tested utilities explicitly
+Step 1.6 implementation:
+- Added `sqflite: ^2.4.2` and `path_provider: ^2.1.5` to `dependencies` in pubspec.yaml (runtime packages — ship with the app)
+- Moved `path: ^1.9.0` from `dev_dependencies` to `dependencies` (now used by `lib/` production code as well as the build tool)
+- Created `lib/services/bible_setup_service.dart` — platform-neutral service class; uses conditional imports to delegate all `dart:io` work to a platform-specific file (required because the web compiler rejects `dart:io` even behind a `kIsWeb` guard)
+- Created `lib/services/bible_setup_service_io.dart` — native implementation: copies `assets/bibles/eng-web.db` to `getApplicationSupportDirectory()/bibles/` on first launch using an atomic write (writes to `.tmp` then renames, preventing a corrupt DB if the app is killed mid-copy); skips copy on subsequent launches
+- Created `lib/services/bible_setup_service_stub.dart` — web no-op stub (all operations return null; never called at runtime due to `kIsWeb` early return)
+- `getApplicationSupportDirectory()` chosen over Documents: not user-visible, not iCloud-backed on iOS — appropriate for a large app-managed database
+- Updated `lib/main.dart` to `await BibleSetupService.ensureReady()` before `runApp()`, so the database path is always ready before any screen renders
 
-`flutter analyze` → No issues. `flutter test` → 60 passed.
+**Tests:**
+- `test/services/bible_setup_service_test.dart` — 1 unit test: verifies `dbPath` throws `StateError` before `ensureReady()` is called (pure Dart logic).
+- **Deferred integration tests:** `ensureReady()` depends on `path_provider` and `rootBundle`, which are platform plugins that cannot be exercised in plain unit tests without channel mocking. Full coverage of the copy-on-first-launch path requires an integration test (run on a real device/emulator via `flutter test integration_test/`). This will be added when the integration-test scaffold is set up.
 
-Next: Step 1.6 — Bundle WEB Bible with app (write a service to copy the DB from assets to app-local storage on first launch).
+`flutter analyze` → No issues. `flutter test` → 61 passed.
+
+Next: Step 1.7 — Bible service layer (`BibleService` class with `getBooks()`, `getChapters()`, `getVerses()` methods reading from the SQLite DB via `sqflite`).
 
 ---
 
