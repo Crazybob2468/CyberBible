@@ -29,6 +29,7 @@ library;
 
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -63,9 +64,18 @@ class BibleSetupService {
 
   /// Returns the absolute path to the Bible database file.
   ///
-  /// Throws a [StateError] if [ensureReady] has not been called yet — callers
-  /// must always `await BibleSetupService.ensureReady()` at startup first.
+  /// Throws an [UnsupportedError] on web (web does not use a file-based SQLite
+  /// database — web support will be implemented in a later phase).
+  /// Throws a [StateError] if [ensureReady] has not been called yet on other
+  /// platforms — callers must always `await BibleSetupService.ensureReady()`
+  /// at startup first.
   static String get dbPath {
+    if (kIsWeb) {
+      throw UnsupportedError(
+        'BibleSetupService.dbPath is not available on web. '
+        'Web platform SQLite support will be added in a later phase.',
+      );
+    }
     if (_dbPath == null) {
       throw StateError(
         'BibleSetupService.dbPath accessed before ensureReady() completed. '
@@ -91,6 +101,11 @@ class BibleSetupService {
   ///
   /// After this method completes, [dbPath] is safe to use.
   static Future<void> ensureReady() async {
+    // Web does not support dart:io (File/Directory) or path_provider.
+    // On web the database copy step is skipped entirely; web-specific Bible
+    // data access will be implemented in a later phase.
+    if (kIsWeb) return;
+
     // Determine where to put the database on this platform.
     final docsDir = await getApplicationDocumentsDirectory();
     final biblesDir = Directory(p.join(docsDir.path, _subdir));
