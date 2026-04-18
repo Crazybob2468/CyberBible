@@ -90,7 +90,10 @@ Step 1.6 ✅ COMPLETE. The bundled WEB database setup service, startup wiring in
 Step 1.6 implementation:
 - Added `sqflite: ^2.4.2` and `path_provider: ^2.1.5` to `dependencies` in pubspec.yaml (runtime packages — ship with the app)
 - Moved `path: ^1.9.0` from `dev_dependencies` to `dependencies` (now used by `lib/` production code as well as the build tool)
-- Created `lib/services/bible_setup_service.dart` — `BibleSetupService.ensureReady()` copies `assets/bibles/eng-web.db` from the read-only Flutter asset bundle to the app's writable documents directory on first launch; subsequent launches detect the file already exists and skip the copy. On web, `ensureReady()` is a no-op (web SQLite support is a future phase); `kIsWeb` guard added to both `ensureReady()` and `dbPath`
+- Created `lib/services/bible_setup_service.dart` — platform-neutral service class; uses conditional imports to delegate all `dart:io` work to a platform-specific file (required because the web compiler rejects `dart:io` even behind a `kIsWeb` guard)
+- Created `lib/services/bible_setup_service_io.dart` — native implementation: copies `assets/bibles/eng-web.db` to `getApplicationSupportDirectory()/bibles/` on first launch using an atomic write (writes to `.tmp` then renames, preventing a corrupt DB if the app is killed mid-copy); skips copy on subsequent launches
+- Created `lib/services/bible_setup_service_stub.dart` — web no-op stub (all operations return null; never called at runtime due to `kIsWeb` early return)
+- `getApplicationSupportDirectory()` chosen over Documents: not user-visible, not iCloud-backed on iOS — appropriate for a large app-managed database
 - Updated `lib/main.dart` to `await BibleSetupService.ensureReady()` before `runApp()`, so the database path is always ready before any screen renders
 
 **Tests:**
