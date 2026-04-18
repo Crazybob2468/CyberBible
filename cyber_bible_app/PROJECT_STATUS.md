@@ -85,7 +85,7 @@ cyber_bible_app/
 **Phase 1 — Step 1.6 Complete: Bundle WEB Bible with app**
 
 Step 1.5 ✅ MERGED (PR #7). The SQLite build tool, 60 unit tests, and generated `eng-web.db` are on `main`.
-Step 1.6 ✅ COMPLETE. The bundled WEB database setup service, startup wiring in `main.dart`, and unit-test coverage are now on `main`; deferred integration tests are intentionally tracked below.
+Step 1.6 ✅ COMPLETE. The bundled WEB database setup service, startup wiring in `main.dart`, and unit-test coverage are introduced in this PR; deferred integration tests are intentionally tracked below.
 
 Step 1.6 implementation:
 - Added `sqflite: ^2.4.2` and `path_provider: ^2.1.5` to `dependencies` in pubspec.yaml (runtime packages — ship with the app)

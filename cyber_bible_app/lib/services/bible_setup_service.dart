@@ -7,20 +7,28 @@
 /// bundle in a read-only, compressed form. SQLite — and therefore `sqflite` —
 /// needs a regular, writable file on disk in order to open a database. This
 /// service bridges the gap: on first launch it reads the asset bytes and writes
-/// them to the app's writable documents directory, then on every subsequent
+/// them to the app's writable support directory, then on every subsequent
 /// launch it simply returns the path to that already-copied file.
+///
+/// ## Why conditional imports are used
+///
+/// `dart:io` (File, Directory) cannot be imported unconditionally in a Flutter
+/// project because the web compiler rejects it at compile time, even if all
+/// the dart:io code is behind a `kIsWeb` runtime guard. All file-system
+/// operations are therefore delegated to a platform-specific implementation
+/// selected at compile time via conditional imports:
+///   - `bible_setup_service_io.dart`   — Android, iOS, Windows, macOS, Linux
+///   - `bible_setup_service_stub.dart` — Flutter Web (all operations are no-ops)
 ///
 /// ## File location
 ///
-/// The database is placed in the app's documents directory:
-///   `<documents>/bibles/eng-web.db`
+/// The database is placed in the app's support directory (not Documents):
+///   `<appSupportDir>/bibles/eng-web.db`
 ///
-/// On Android this is typically under an app-specific directory such as
-/// `/data/user/0/<package>/app_flutter/bibles/` (or a similar path on the
-/// device), not the generic `/files/` directory.
-/// On iOS it is inside the app's sandbox Documents folder.
-/// On Windows/macOS/Linux it is placed in the app's platform-specific writable
-/// documents/data location returned by `getApplicationDocumentsDirectory()`.
+/// On Android this is typically `/data/user/0/<package>/files/bibles/`.
+/// On iOS it is in the app's Application Support folder (not iCloud-backed).
+/// On Windows/macOS/Linux it is in the platform-specific app support directory
+/// returned by `getApplicationSupportDirectory()`.
 ///
 /// ## Usage
 ///
@@ -30,12 +38,13 @@
 /// absolute path, ready to pass to `sqflite`'s `openDatabase()`.
 library;
 
-import 'dart:io';
-
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter/services.dart' show rootBundle;
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
+
+// Conditional import: selects the dart:io implementation on native platforms
+// and a no-op stub on Flutter Web. This is required because the web compiler
+// cannot link dart:io even when all usage is guarded by kIsWeb at runtime.
+import 'bible_setup_service_stub.dart'
+    if (dart.library.io) 'bible_setup_service_io.dart' as platform_impl;
 
 /// Manages the one-time copy of the bundled Bible asset database to writable
 /// app storage, and exposes the resulting file path for use by [BibleService].
@@ -48,7 +57,7 @@ class BibleSetupService {
   /// Must match the entry declared in pubspec.yaml's `flutter > assets` list.
   static const String _assetPath = 'assets/bibles/eng-web.db';
 
-  /// Subdirectory name created under the platform documents directory where
+  /// Subdirectory name created under the platform support directory where
   /// all Bible database files are stored.
   static const String _subdir = 'bibles';
 
@@ -94,45 +103,30 @@ class BibleSetupService {
 
   /// Ensures the Bible database file exists in the app's writable storage.
   ///
-  /// On **first launch** (or after an app update that changes the DB):
+  /// Delegates all file-system work to the platform-specific implementation
+  /// selected via the conditional import. On web this is a no-op.
+  ///
+  /// On **first launch**:
   ///   1. Reads the `assets/bibles/eng-web.db` asset from the app bundle.
-  ///   2. Creates the `bibles/` subdirectory in the documents folder if needed.
-  ///   3. Writes the raw bytes to disk as `bibles/eng-web.db`.
+  ///   2. Creates the `bibles/` subdirectory in the support folder if needed.
+  ///   3. Writes the raw bytes to a `.tmp` sibling file (non-destructive).
+  ///   4. Renames the `.tmp` file to the final path (atomic on POSIX systems).
   ///
   /// On **subsequent launches** the file already exists, so the copy is
   /// skipped and this method returns almost immediately.
   ///
-  /// After this method completes, [dbPath] is safe to use.
+  /// After this method completes, [dbPath] is safe to use on non-web platforms.
   static Future<void> ensureReady() async {
-    // Web does not support dart:io (File/Directory) or path_provider.
-    // On web the database copy step is skipped entirely; web-specific Bible
-    // data access will be implemented in a later phase.
+    // On web, dart:io is unavailable — skip file-system work entirely.
+    // Web-specific Bible data access will be implemented in a later phase.
     if (kIsWeb) return;
 
-    // Determine where to put the database on this platform.
-    final docsDir = await getApplicationDocumentsDirectory();
-    final biblesDir = Directory(p.join(docsDir.path, _subdir));
-    final dbFile = File(p.join(biblesDir.path, _filename));
-
-    // Only copy if the file does not already exist. Use the asynchronous file
-    // existence check so startup work stays non-blocking on the UI isolate.
-    // Future steps (e.g. version checking) may add logic here to re-copy when
-    // the bundled DB is newer.
-    if (!await dbFile.exists()) {
-      // Create the bibles/ subdirectory if it does not exist yet.
-      await biblesDir.create(recursive: true);
-
-      // Load the asset bytes from the Flutter asset bundle (read-only,
-      // compressed inside the app package) and write them to a plain file.
-      final byteData = await rootBundle.load(_assetPath);
-      final bytes = byteData.buffer.asUint8List(
-        byteData.offsetInBytes,
-        byteData.lengthInBytes,
-      );
-      await dbFile.writeAsBytes(bytes, flush: true);
-    }
-
-    // Cache the resolved path so callers can access it synchronously later.
-    _dbPath = dbFile.path;
+    // Delegate to the platform implementation (IO or stub). The IO
+    // implementation returns the absolute path to the database file.
+    _dbPath = await platform_impl.platformEnsureReady(
+      _assetPath,
+      _subdir,
+      _filename,
+    );
   }
 }

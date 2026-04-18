@@ -9,7 +9,7 @@
 ///
 /// [BibleSetupService.ensureReady] uses two Flutter/platform APIs that cannot
 /// be exercised in plain unit tests without complex channel mocking:
-///   - `getApplicationDocumentsDirectory()` from `path_provider`
+///   - `getApplicationSupportDirectory()` from `path_provider`
 ///   - `rootBundle.load()` from `package:flutter/services.dart`
 ///
 /// Coverage of `ensureReady()` requires integration tests (run on a real
