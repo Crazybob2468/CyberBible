@@ -19,6 +19,9 @@ dev_dependencies:
   # On Windows: requires sqlite3.dll on PATH. Download sqlite-dll-win-x64 from
   # https://sqlite.org/download.html and place sqlite3.dll in your working directory.
   sqlite3: ^2.0.0
+  # Used by tools/build_bible_db.dart for cross-platform path joining.
+  # Declared explicitly so we don't rely on a transitive Flutter dependency.
+  path: ^1.9.0
 
 flutter:
   uses-material-design: true

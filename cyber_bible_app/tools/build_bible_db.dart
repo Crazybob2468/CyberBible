@@ -14,6 +14,7 @@ library;
 
 import 'dart:io';
 
+import 'package:path/path.dart' as p;
 import 'package:sqlite3/sqlite3.dart';
 import 'package:xml/xml.dart';
 
@@ -482,13 +483,14 @@ void main(List<String> args) {
   // Resolve directory: use CLI argument if provided, otherwise default
   // to the data directory relative to this script's location.
   final scriptDir = File(Platform.script.toFilePath()).parent.path;
-  final defaultDataDir = '$scriptDir/data/eng-web_usfx';
+  // Use p.join() for cross-platform path building (avoids mixed separators on Windows).
+  final defaultDataDir = p.join(scriptDir, 'data', 'eng-web_usfx');
   final dataDir = args.isNotEmpty ? args[0] : defaultDataDir;
 
-  // Resolve input files.
-  final usfxFile = File('$dataDir/eng-web_usfx.xml');
-  final metadataFile = File('$dataDir/eng-webmetadata.xml');
-  final bookNamesFile = File('$dataDir/BookNames.xml');
+  // Resolve input files using p.join() for safe cross-platform separator handling.
+  final usfxFile = File(p.join(dataDir, 'eng-web_usfx.xml'));
+  final metadataFile = File(p.join(dataDir, 'eng-webmetadata.xml'));
+  final bookNamesFile = File(p.join(dataDir, 'BookNames.xml'));
 
   for (final f in [usfxFile, metadataFile, bookNamesFile]) {
     if (!f.existsSync()) {
@@ -545,7 +547,8 @@ void main(List<String> args) {
   // This script lives in tools/, so the project root is one level up.
   final projectRoot = File(Platform.script.toFilePath()).parent.parent.path;
   final dbFilename = '${result.bibleInfo.id.toLowerCase()}.db';
-  final outputPath = '$projectRoot/assets/bibles/$dbFilename';
+  // Use p.join() so separators are correct on Windows as well as Unix.
+  final outputPath = p.join(projectRoot, 'assets', 'bibles', dbFilename);
 
   stdout.writeln('');
   stdout.writeln('=== Writing SQLite Database ===');
@@ -560,12 +563,16 @@ void main(List<String> args) {
     // Give a Windows-specific hint since sqlite3.dll is the most common cause
     // of failure on that platform.
     if (Platform.isWindows) {
+      // Windows DLL resolution searches the current working directory and PATH,
+      // NOT the script's directory. Run this tool from the project root so that
+      // sqlite3.dll placed there (or on PATH) is found correctly.
       stderr.writeln('');
       stderr.writeln('On Windows, sqlite3.dll must be on your PATH or in the');
       stderr.writeln('current working directory. Download it from:');
       stderr.writeln('  https://sqlite.org/download.html  (sqlite-dll-win-x64)');
-      stderr.writeln('Extract sqlite3.dll and place it alongside this script,');
-      stderr.writeln('or add its containing folder to your system PATH.');
+      stderr.writeln('Extract sqlite3.dll and place it in the current working');
+      stderr.writeln('directory (typically the project root when running this');
+      stderr.writeln('command), or add its containing folder to your PATH.');
     }
     exit(1);
   }
