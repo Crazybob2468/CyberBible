@@ -1,15 +1,17 @@
 /// Unit tests for the USFX utility functions in lib/utils/usfx_utils.dart.
 ///
-/// Tests cover three public functions:
+/// Tests cover all four public functions:
 ///   - [classifyBook] — maps 3-letter book codes to their testament
 ///   - [stripToPlainText] — strips USFX markup to searchable plain text
 ///   - [extractVerses] — extracts [Verse] objects from a USFX chapter fragment
+///   - [extractChapters] — splits a USFX book element into per-chapter fragments
 ///
 /// These tests run without any file I/O or database access.
 /// Run with: flutter test test/utils/usfx_utils_test.dart
 library;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:xml/xml.dart';
 
 import 'package:cyber_bible_app/models/book.dart';
 import 'package:cyber_bible_app/utils/usfx_utils.dart';
@@ -240,6 +242,78 @@ void main() {
       const usfx = '<h>Genesis</h><toc1>Genesis</toc1>';
       final verses = extractVerses('GEN', 1, usfx);
       expect(verses, isEmpty);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // extractChapters
+  // ---------------------------------------------------------------------------
+
+  group('extractChapters', () {
+    /// Builds a minimal USFX `<book>` element string and parses it into an
+    /// [XmlElement] ready to pass to [extractChapters].
+    XmlElement bookEl(String innerXml) =>
+        XmlDocument.parse('<book>$innerXml</book>').rootElement;
+
+    test('extracts a single chapter', () {
+      // A single <c id="1"/> milestone with verse content after it.
+      final chapters = extractChapters(
+        bookEl('<c id="1"/><p><v id="1"/>In the beginning<ve/></p>'),
+      );
+
+      expect(chapters, hasLength(1));
+      expect(chapters.containsKey(1), isTrue);
+      expect(chapters[1], contains('In the beginning'));
+    });
+
+    test('extracts multiple chapters in order', () {
+      // Three chapters separated by <c> milestones.
+      final chapters = extractChapters(
+        bookEl(
+          '<c id="1"/><p>Chapter one</p>'
+          '<c id="2"/><p>Chapter two</p>'
+          '<c id="3"/><p>Chapter three</p>',
+        ),
+      );
+
+      expect(chapters, hasLength(3));
+      expect(chapters[1], contains('Chapter one'));
+      expect(chapters[2], contains('Chapter two'));
+      expect(chapters[3], contains('Chapter three'));
+    });
+
+    test('skips content before the first chapter milestone', () {
+      // Book-level header material (title, TOC entries) appears before the
+      // first <c> tag in USFX and must not be included in any chapter.
+      final chapters = extractChapters(
+        bookEl('<h>Genesis</h><toc1>Genesis</toc1><c id="1"/><p>Verse</p>'),
+      );
+
+      expect(chapters, hasLength(1));
+      expect(chapters[1], isNotNull);
+      // Header content should not appear in the chapter fragment.
+      expect(chapters[1], isNot(contains('Genesis')));
+    });
+
+    test('omits chapters whose content is empty after trimming', () {
+      // A <c> milestone with no following content should produce no entry.
+      // This mirrors what the production code does (content.isNotEmpty check).
+      final chapters = extractChapters(
+        bookEl('<c id="1"/><p>Some content</p><c id="2"/>'),
+      );
+
+      expect(chapters, hasLength(1));
+      expect(chapters.containsKey(1), isTrue);
+      expect(chapters.containsKey(2), isFalse);
+    });
+
+    test('returns empty map when book has no chapter milestones', () {
+      // A book element with only header content and no <c> tags.
+      final chapters = extractChapters(
+        bookEl('<h>Introduction</h>'),
+      );
+
+      expect(chapters, isEmpty);
     });
   });
 }

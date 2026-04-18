@@ -379,7 +379,7 @@ void writeSqlite(ParseResult result, String outputPath) {
         db.execute('COMMIT');
       } catch (e) {
         // Explicit ROLLBACK so the transaction does not remain open and leave
-        // confusing WAL state if the error is caught upstream.
+        // confusing transaction or rollback-journal state if the error is caught upstream.
         db.execute('ROLLBACK');
         rethrow;
       }
