@@ -96,6 +96,10 @@ PR review fixes applied (across multiple review rounds):
 - All file paths converted from string interpolation with `/` to `p.join()` (cross-platform correctness on Windows)
 - Windows DLL hint corrected to reference current working directory / PATH (not the script directory)
 - `library;` directives added to test files to fix `dangling_library_doc_comments` lint
+- `sqlite3.open()` moved inside the try block (`Database? db`) so partial-file cleanup runs even if open() throws
+- `BEGIN` moved to after `db.prepare()` in all three transaction blocks so a prepare failure can't leave an orphaned open transaction
+- Stack trace added to catch block in `main()` (`catch (e, st)`) for diagnosable failures
+- Test `verse()` helper: removed hard-coded `bcv="GEN.1.$id"` attribute that was misleading for non-GEN test cases
 
 `flutter analyze` → No issues. `flutter test` → 55 passed.
 

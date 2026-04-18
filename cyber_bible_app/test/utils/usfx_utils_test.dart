@@ -161,8 +161,12 @@ void main() {
     ///
     /// USFX uses a milestone pattern: a self-closing `<v>` start marker,
     /// the verse content, then a self-closing `<ve/>` end marker.
+    ///
+    /// The `bcv` attribute is intentionally omitted here — it is not used by
+    /// [extractVerses] and including a hard-coded `GEN.1.x` value would make
+    /// fixtures that call this helper with other book/chapter values misleading.
     String verse(String id, String content) =>
-        '<v id="$id" bcv="GEN.1.$id"/>$content<ve/>';
+        '<v id="$id"/>$content<ve/>';
 
     test('extracts a single verse', () {
       final usfx = verse('1', 'In the beginning');

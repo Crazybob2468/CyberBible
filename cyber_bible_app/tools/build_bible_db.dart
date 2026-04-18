@@ -281,12 +281,16 @@ void writeSqlite(ParseResult result, String outputPath) {
     stdout.writeln('Deleted existing database: $outputPath');
   }
 
-  final db = sqlite3.open(outputPath);
-
   // Track whether we completed successfully so we can clean up on failure.
   var success = false;
 
+  // db is declared nullable so the finally block can safely call db?.dispose()
+  // even if sqlite3.open() threw before db was assigned (e.g. missing DLL on
+  // Windows). Opening inside the try block ensures partial-file cleanup runs.
+  Database? db;
+
   try {
+    db = sqlite3.open(outputPath);
     // -------------------------------------------------------------------------
     // PRAGMAs — tuned for a write-once build-time tool.
     //
@@ -349,7 +353,8 @@ void writeSqlite(ParseResult result, String outputPath) {
     // Insert books — one row per canonical book, in canonical order.
     // -------------------------------------------------------------------------
     stdout.write('Inserting ${result.books.length} books...');
-    db.execute('BEGIN');
+    // Prepare the statement BEFORE calling BEGIN so that a schema mismatch or
+    // other prepare failure cannot leave an open transaction with no rollback path.
     final bookStmt = db.prepare(
       '''
       INSERT INTO books
@@ -358,6 +363,7 @@ void writeSqlite(ParseResult result, String outputPath) {
       ''',
     );
     try {
+      db.execute('BEGIN');
       try {
         for (final book in result.books) {
           bookStmt.execute([
@@ -388,11 +394,12 @@ void writeSqlite(ParseResult result, String outputPath) {
     // Insert chapters — stored as raw USFX fragments for runtime rendering.
     // -------------------------------------------------------------------------
     stdout.write('Inserting ${result.chapters.length} chapters...');
-    db.execute('BEGIN');
+    // Prepare before BEGIN for the same reason as the books block above.
     final chapterStmt = db.prepare(
       'INSERT INTO chapters (book_code, number, content_usfx) VALUES (?, ?, ?)',
     );
     try {
+      db.execute('BEGIN');
       try {
         for (final chapter in result.chapters) {
           chapterStmt.execute([
@@ -417,11 +424,12 @@ void writeSqlite(ParseResult result, String outputPath) {
     // Insert verses — plain text only, used for full-text search (FTS5).
     // -------------------------------------------------------------------------
     stdout.write('Inserting ${result.verses.length} verses...');
-    db.execute('BEGIN');
+    // Prepare before BEGIN for the same reason as the books block above.
     final verseStmt = db.prepare(
       'INSERT INTO verses (book_code, chapter, verse, text_plain) VALUES (?, ?, ?, ?)',
     );
     try {
+      db.execute('BEGIN');
       try {
         for (final verse in result.verses) {
           verseStmt.execute([
@@ -464,7 +472,8 @@ void writeSqlite(ParseResult result, String outputPath) {
     // Mark success only after all work — including size reporting — is done.
     success = true;
   } finally {
-    db.dispose();
+    // db?.dispose() is safe whether or not open() succeeded.
+    db?.dispose();
     // Remove any partial database on failure so the next run starts clean.
     if (!success && outputFile.existsSync()) {
       outputFile.deleteSync();
@@ -557,9 +566,12 @@ void main(List<String> args) {
 
   try {
     writeSqlite(result, outputPath);
-  } catch (e) {
+  } catch (e, st) {
+    // Print both the error message and full stack trace so failures are
+    // diagnosable without re-running under a debugger.
     stderr.writeln('');
     stderr.writeln('ERROR writing database: $e');
+    stderr.writeln('Stack trace:\n$st');
     // Give a Windows-specific hint since sqlite3.dll is the most common cause
     // of failure on that platform.
     if (Platform.isWindows) {
