@@ -82,10 +82,22 @@ cyber_bible_app/
 
 ## Current Status
 
-**Phase 1 — Step 1.5 Complete (with test debt resolved)**  
-SQLite database generation added to `tools/build_bible_db.dart`. The tool now parses the WEB USFX XML and writes the full dataset into `assets/bibles/eng-web.db` in a single run. The generated database contains 81 books (39 OT, 27 NT, 15 DC), 1,402 chapters (stored as raw USFX XML fragments), and 38,029 verses (as plain text), plus a rebuilt FTS5 full-text search index. Database size: 25.1 MB. Added `sqlite3: ^2.0.0` as a dev dependency (CLI build tool only — never ships in the app). The `eng-web.db` file is committed to `assets/bibles/` so a fresh clone is immediately runnable.
+**Phase 1 — Step 1.5 Complete (with test debt resolved and PR review fixes applied)**  
+SQLite database generation added to `tools/build_bible_db.dart`. The tool now parses the WEB USFX XML and writes the full dataset into `assets/bibles/eng-web.db` in a single run. The generated database contains 81 books (39 OT, 27 NT, 15 DC), 1,402 chapters (stored as raw USFX XML fragments), and 38,029 verses (as plain text), plus a rebuilt FTS5 full-text search index. Database size: 28.9 MB (single-file, `journal_mode=DELETE`, no WAL sidecar files). Added `sqlite3: ^2.0.0` and `path: ^1.9.0` as dev dependencies (CLI build tool only — never ship in the app). The `eng-web.db` file is committed to `assets/bibles/` so a fresh clone is immediately runnable.
 
 Pure utility functions extracted from the build tool into `lib/utils/usfx_utils.dart` (`classifyBook`, `stripToPlainText`, `extractVerses`, `extractChapters`) so they can be unit tested independently. 55 unit tests written and passing across `test/utils/usfx_utils_test.dart` and `test/models/models_test.dart`, covering all model `toMap()`/`fromMap()` round trips, the Bible schema, and all USFX parser utilities. Step completion checklist created at `.github/copilot-instructions.md` and linked from this file.
+
+PR review fixes applied (across multiple review rounds):
+- `journal_mode=DELETE` (no WAL sidecar files, accurate size reporting)
+- Explicit `ROLLBACK` in catch blocks for all three transaction groups
+- `try { inserts; COMMIT } catch { ROLLBACK; rethrow } finally { stmt.dispose() }` pattern — dispose exactly once
+- `success = true` moved to after size reporting so cleanup still fires on any late failure
+- `/memories/repo/cyber-bible.md` clarified as external VS Code Copilot path (not a tracked repo file)
+- All file paths converted from string interpolation with `/` to `p.join()` (cross-platform correctness on Windows)
+- Windows DLL hint corrected to reference current working directory / PATH (not the script directory)
+- `library;` directives added to test files to fix `dangling_library_doc_comments` lint
+
+`flutter analyze` → No issues. `flutter test` → 55 passed.
 
 Next: Step 1.6 — Bundle WEB Bible with app (write a service to copy the DB from assets to app-local storage on first launch).
 

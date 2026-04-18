@@ -9,6 +9,8 @@
 ///
 /// These tests have no I/O or database dependencies.
 /// Run with: flutter test test/models/models_test.dart
+library;
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cyber_bible_app/models/bible_info.dart';

@@ -7,6 +7,8 @@
 ///
 /// These tests run without any file I/O or database access.
 /// Run with: flutter test test/utils/usfx_utils_test.dart
+library;
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:cyber_bible_app/models/book.dart';
