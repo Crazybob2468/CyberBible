@@ -3,58 +3,45 @@
 /// Usage: `dart tools/build_bible_db.dart [path/to/usfx_directory]`
 ///
 /// Default input: `tools/data/eng-web_usfx/`
-/// Output: `assets/bibles/<translation-id>.db` (Step 1.5)
+/// Output: `assets/bibles/<translation-id>.db`
 ///
 /// Step 1.4: USFX parsing — reads metadata, book names, and Bible text.
-/// Step 1.5: SQLite generation — writes parsed data to the database (to be added).
+/// Step 1.5: SQLite generation — writes parsed data into a SQLite database.
+///
+/// Windows note: sqlite3.dll must be on PATH or in the working directory.
+/// Download sqlite-dll-win-x64 from https://sqlite.org/download.html.
 library;
 
 import 'dart:io';
 
+import 'package:path/path.dart' as p;
+import 'package:sqlite3/sqlite3.dart';
 import 'package:xml/xml.dart';
 
 import 'package:cyber_bible_app/models/bible_info.dart';
+import 'package:cyber_bible_app/models/bible_schema.dart';
 import 'package:cyber_bible_app/models/book.dart';
 import 'package:cyber_bible_app/models/chapter.dart';
 import 'package:cyber_bible_app/models/verse.dart';
+import 'package:cyber_bible_app/utils/usfx_utils.dart';
 
 // ---------------------------------------------------------------------------
-// Testament classification
+// Testament classification and book filtering
 // ---------------------------------------------------------------------------
 
-/// All 39 Old Testament book codes (standard 3-letter USFX/Paratext IDs).
-const _otBooks = {
-  'GEN', 'EXO', 'LEV', 'NUM', 'DEU', 'JOS', 'JDG', 'RUT',
-  '1SA', '2SA', '1KI', '2KI', '1CH', '2CH', 'EZR', 'NEH',
-  'EST', 'JOB', 'PSA', 'PRO', 'ECC', 'SNG', 'ISA', 'JER',
-  'LAM', 'EZK', 'DAN', 'HOS', 'JOL', 'AMO', 'OBA', 'JON',
-  'MIC', 'NAM', 'HAB', 'ZEP', 'HAG', 'ZEC', 'MAL',
-};
+// Note: classifyBook() is defined in lib/utils/usfx_utils.dart and imported
+// above. It is kept there so it can be unit tested independently.
 
-/// All 27 New Testament book codes (standard 3-letter USFX/Paratext IDs).
-const _ntBooks = {
-  'MAT', 'MRK', 'LUK', 'JHN', 'ACT', 'ROM', '1CO', '2CO',
-  'GAL', 'EPH', 'PHP', 'COL', '1TH', '2TH', '1TI', '2TI',
-  'TIT', 'PHM', 'HEB', 'JAS', '1PE', '2PE', '1JN', '2JN',
-  '3JN', 'JUD', 'REV',
-};
-
-/// Books to skip — these are non-biblical content such as:
+/// Books to skip — these are non-biblical content sections, not actual Bible
+/// books. They appear in the USFX file but should not be stored in the DB.
+///
 /// FRT = Preface/Front matter, INT = Introduction, BAK = Back matter,
 /// GLO = Glossary, CNC = Concordance, OTH = Other,
-/// XXA-XXG = Extra/placeholder books.
+/// XXA–XXG = Extra/placeholder book slots used by some translation tools.
 const _skipBooks = {
   'FRT', 'INT', 'BAK', 'GLO', 'CNC', 'OTH',
   'XXA', 'XXB', 'XXC', 'XXD', 'XXE', 'XXF', 'XXG',
 };
-
-/// Determines which testament a book belongs to based on its code.
-/// Books not in OT or NT sets are classified as Deuterocanon (DC).
-Testament _classifyBook(String code) {
-  if (_otBooks.contains(code)) return Testament.ot;
-  if (_ntBooks.contains(code)) return Testament.nt;
-  return Testament.dc;
-}
 
 // ---------------------------------------------------------------------------
 // Parsed result container
@@ -210,8 +197,8 @@ ParseResult parseUsfx(
       continue;
     }
 
-    // Extract chapter data from this book element.
-    final chapterMap = _extractChapters(bookEl);
+    // Extract chapter data from this book element using the shared utility.
+    final chapterMap = extractChapters(bookEl);
     if (chapterMap.isEmpty) {
       stdout.writeln('  [$code] skipped (no chapters)');
       continue;
@@ -219,7 +206,7 @@ ParseResult parseUsfx(
 
     // Look up book names.
     final names = bookNames[code];
-    final testament = _classifyBook(code);
+    final testament = classifyBook(code);
 
     books.add(Book(
       code: code,
@@ -243,8 +230,8 @@ ParseResult parseUsfx(
         contentUsfx: contentUsfx,
       ));
 
-      // Extract verse plain text from the USFX fragment.
-      final chapterVerses = _extractVerses(code, chapterNum, contentUsfx);
+      // Extract verse plain text from the USFX fragment using the shared utility.
+      final chapterVerses = extractVerses(code, chapterNum, contentUsfx);
       verses.addAll(chapterVerses);
       bookVerseCount += chapterVerses.length;
     }
@@ -265,129 +252,234 @@ ParseResult parseUsfx(
   );
 }
 
+// Note: extractChapters(), extractVerses(), and stripToPlainText() have been
+// moved to lib/utils/usfx_utils.dart so they can be unit tested independently.
+// They are imported at the top of this file.
+
 // ---------------------------------------------------------------------------
-// Chapter extraction — groups book children by <c> milestones
+// SQLite database writer
 // ---------------------------------------------------------------------------
 
-/// Splits a `<book>` element's children into per-chapter USFX fragments.
+/// Writes all parsed Bible data into a new SQLite database at [outputPath].
 ///
-/// USFX uses milestone `<c id="N" />` tags to mark chapter boundaries.
-/// Everything between two `<c>` tags belongs to one chapter. Content before
-/// the first `<c>` is book-level header material (title, TOC) and is skipped.
+/// Creates the output directory if needed and always starts fresh (deletes
+/// any existing file). Runs all inserts inside a single transaction per
+/// table for performance. Rebuilds the FTS5 full-text search index after
+/// all verse rows are inserted.
 ///
-/// Returns a map of chapter number → raw USFX XML string for that chapter.
-Map<int, String> _extractChapters(XmlElement bookEl) {
-  final result = <int, String>{};
-  var currentChapter = 0;
-  final buffer = StringBuffer();
+/// On failure, any partially-written database is deleted so the next run
+/// starts clean.
+void writeSqlite(ParseResult result, String outputPath) {
+  final outputFile = File(outputPath);
 
-  for (final node in bookEl.children) {
-    if (node is XmlElement && node.name.local == 'c') {
-      // Save previous chapter.
-      if (currentChapter > 0) {
-        final content = buffer.toString().trim();
-        if (content.isNotEmpty) {
-          result[currentChapter] = content;
-        }
-      }
-      // Start new chapter.
-      currentChapter = int.tryParse(node.getAttribute('id') ?? '') ?? 0;
-      buffer.clear();
-    } else if (currentChapter > 0) {
-      // Accumulate content for the current chapter.
-      buffer.write(node.toXmlString());
-    }
-    // Nodes before the first <c> are book headers — skip them.
+  // Create the output directory (e.g. assets/bibles/) if it does not exist.
+  outputFile.parent.createSync(recursive: true);
+
+  // Always start from a blank file to avoid schema conflicts on re-runs.
+  if (outputFile.existsSync()) {
+    outputFile.deleteSync();
+    stdout.writeln('Deleted existing database: $outputPath');
   }
 
-  // Save the last chapter.
-  if (currentChapter > 0) {
-    final content = buffer.toString().trim();
-    if (content.isNotEmpty) {
-      result[currentChapter] = content;
-    }
-  }
+  // Track whether we completed successfully so we can clean up on failure.
+  var success = false;
 
-  return result;
-}
+  // db is declared nullable so the finally block can safely call db?.dispose()
+  // even if sqlite3.open() threw before db was assigned (e.g. missing DLL on
+  // Windows). Opening inside the try block ensures partial-file cleanup runs.
+  Database? db;
 
-// ---------------------------------------------------------------------------
-// Verse extraction — finds <v>...<ve/> ranges and strips to plain text
-// ---------------------------------------------------------------------------
-
-/// Regex to match a verse in USFX: `<v id="N" bcv="..."/>` ... `<ve/>`
-/// Group 1 = verse ID (e.g. "1", "1a", "1-2")
-/// Group 2 = raw XML content between the verse start and end markers
-final _versePattern = RegExp(
-  r'<v\s+id="([^"]+)"[^/]*/>(.*?)<ve\s*/>',
-  dotAll: true,
-);
-
-/// Matches footnote elements: `<f>...</f>` (non-canonical editorial content).
-final _footnotePattern = RegExp(r'<f\b[^>]*>.*?</f>', dotAll: true);
-
-/// Matches cross-reference elements: `<x>...</x>` (reference links).
-final _crossRefPattern = RegExp(r'<x\b[^>]*>.*?</x>', dotAll: true);
-
-/// Matches any XML tag (opening, closing, or self-closing).
-final _tagPattern = RegExp(r'<[^>]+>');
-
-/// Matches one or more whitespace characters (for collapsing).
-final _whitespacePattern = RegExp(r'\s+');
-
-/// Extracts individual verses from a chapter's USFX fragment.
-///
-/// Uses regex to find milestone-style verse ranges that start with a
-/// self-closing `<v id="N" .../>` tag and end with `<ve/>`, then strips
-/// each verse's content down to plain text for search indexing.
-List<Verse> _extractVerses(String bookCode, int chapter, String usfx) {
-  final verses = <Verse>[];
-
-  for (final match in _versePattern.allMatches(usfx)) {
-    final verseId = match.group(1)!;
-    final rawContent = match.group(2)!;
-    final plainText = _stripToPlainText(rawContent);
-
-    if (plainText.isNotEmpty) {
-      verses.add(Verse(
-        bookCode: bookCode,
-        chapter: chapter,
-        verse: verseId,
-        textPlain: plainText,
-      ));
-    }
-  }
-
-  return verses;
-}
-
-/// Strips USFX XML markup down to plain canonical text.
-///
-/// Processing order:
-///   1. Remove footnotes (`<f>...</f>`) — editorial, not canonical text
-///   2. Remove cross-references (`<x>...</x>`) — reference markers
-///   3. Parse the remaining XML fragment and extract inner text
-///      (this strips all tags and decodes all XML entities and numeric
-///      character references like `&#8217;` consistently)
-///   4. Collapse whitespace to single spaces
-String _stripToPlainText(String xml) {
-  var text = xml;
-  // Remove footnotes and cross-references (contain non-canonical text).
-  text = text.replaceAll(_footnotePattern, '');
-  text = text.replaceAll(_crossRefPattern, '');
-  // Parse the remaining XML fragment so tags are stripped and all XML
-  // entities/character references are decoded consistently.
   try {
-    final wrapped = '<root>$text</root>';
-    text = XmlDocument.parse(wrapped).rootElement.innerText;
-  } catch (_) {
-    // Fall back to regex-based stripping if XML parsing fails
-    // (e.g. malformed fragments in some translations).
-    text = text.replaceAll(_tagPattern, '');
+    db = sqlite3.open(outputPath);
+    // -------------------------------------------------------------------------
+    // PRAGMAs — tuned for a write-once build-time tool.
+    //
+    // journal_mode=DELETE (the SQLite default) is used intentionally instead
+    // of WAL. WAL mode creates `.db-wal` and `.db-shm` sidecar files that
+    // could be accidentally committed alongside the generated asset, and
+    // causes outputFile.lengthSync() to under-report the final DB size until
+    // a checkpoint occurs. Since this tool is single-writer with no
+    // concurrency requirements, DELETE mode is the right choice.
+    //
+    // synchronous=NORMAL is safe because we can always regenerate the DB from
+    // source if a crash occurs during the build.
+    // -------------------------------------------------------------------------
+    db.execute('PRAGMA journal_mode=DELETE');
+    db.execute('PRAGMA synchronous=NORMAL');
+    db.execute('PRAGMA foreign_keys=ON');
+
+    // -------------------------------------------------------------------------
+    // Create tables and indexes from the shared BibleSchema definition.
+    // -------------------------------------------------------------------------
+    stdout.write('Creating schema...');
+    for (final stmt in BibleSchema.createStatements) {
+      db.execute(stmt);
+    }
+    for (final stmt in BibleSchema.createIndexes) {
+      db.execute(stmt);
+    }
+    stdout.writeln(' done');
+
+    // -------------------------------------------------------------------------
+    // Insert bible_info — one row per database (describes this translation).
+    // -------------------------------------------------------------------------
+    stdout.write('Inserting translation metadata...');
+    db.execute(
+      '''
+      INSERT INTO bible_info
+        (id, name, name_local, abbreviation, description,
+         language_code, language_name, script, script_direction,
+         country_code, scope, copyright)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ''',
+      [
+        result.bibleInfo.id,
+        result.bibleInfo.name,
+        result.bibleInfo.nameLocal,
+        result.bibleInfo.abbreviation,
+        result.bibleInfo.description,
+        result.bibleInfo.languageCode,
+        result.bibleInfo.languageName,
+        result.bibleInfo.script,
+        result.bibleInfo.scriptDirection,
+        result.bibleInfo.countryCode,
+        result.bibleInfo.scope,
+        result.bibleInfo.copyright,
+      ],
+    );
+    stdout.writeln(' done');
+
+    // -------------------------------------------------------------------------
+    // Insert books — one row per canonical book, in canonical order.
+    // -------------------------------------------------------------------------
+    stdout.write('Inserting ${result.books.length} books...');
+    // Prepare the statement BEFORE calling BEGIN so that a schema mismatch or
+    // other prepare failure cannot leave an open transaction with no rollback path.
+    final bookStmt = db.prepare(
+      '''
+      INSERT INTO books
+        (code, sort_order, name_short, name_long, abbreviation, testament, chapter_count)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ''',
+    );
+    try {
+      db.execute('BEGIN');
+      try {
+        for (final book in result.books) {
+          bookStmt.execute([
+            book.code,
+            book.sortOrder,
+            book.nameShort,
+            book.nameLong,
+            book.abbreviation,
+            book.testament.name, // 'ot', 'nt', or 'dc' — matches CHECK constraint
+            book.chapterCount,
+          ]);
+        }
+        db.execute('COMMIT');
+      } catch (e) {
+        // Explicit ROLLBACK so the transaction does not remain open and leave
+        // confusing transaction or rollback-journal state if the error is caught upstream.
+        db.execute('ROLLBACK');
+        rethrow;
+      }
+    } finally {
+      // Dispose the prepared statement exactly once, regardless of whether
+      // the inserts or COMMIT succeeded or failed.
+      bookStmt.dispose();
+    }
+    stdout.writeln(' done');
+
+    // -------------------------------------------------------------------------
+    // Insert chapters — stored as raw USFX fragments for runtime rendering.
+    // -------------------------------------------------------------------------
+    stdout.write('Inserting ${result.chapters.length} chapters...');
+    // Prepare before BEGIN for the same reason as the books block above.
+    final chapterStmt = db.prepare(
+      'INSERT INTO chapters (book_code, number, content_usfx) VALUES (?, ?, ?)',
+    );
+    try {
+      db.execute('BEGIN');
+      try {
+        for (final chapter in result.chapters) {
+          chapterStmt.execute([
+            chapter.bookCode,
+            chapter.number,
+            chapter.contentUsfx,
+          ]);
+        }
+        db.execute('COMMIT');
+      } catch (e) {
+        // Roll back explicitly so the transaction does not remain open on error.
+        db.execute('ROLLBACK');
+        rethrow;
+      }
+    } finally {
+      // Dispose exactly once, whether inserts/COMMIT succeeded or failed.
+      chapterStmt.dispose();
+    }
+    stdout.writeln(' done');
+
+    // -------------------------------------------------------------------------
+    // Insert verses — plain text only, used for full-text search (FTS5).
+    // -------------------------------------------------------------------------
+    stdout.write('Inserting ${result.verses.length} verses...');
+    // Prepare before BEGIN for the same reason as the books block above.
+    final verseStmt = db.prepare(
+      'INSERT INTO verses (book_code, chapter, verse, text_plain) VALUES (?, ?, ?, ?)',
+    );
+    try {
+      db.execute('BEGIN');
+      try {
+        for (final verse in result.verses) {
+          verseStmt.execute([
+            verse.bookCode,
+            verse.chapter,
+            verse.verse,
+            verse.textPlain,
+          ]);
+        }
+        db.execute('COMMIT');
+      } catch (e) {
+        // Roll back explicitly so the transaction does not remain open on error.
+        db.execute('ROLLBACK');
+        rethrow;
+      }
+    } finally {
+      // Dispose exactly once, whether inserts/COMMIT succeeded or failed.
+      verseStmt.dispose();
+    }
+    stdout.writeln(' done');
+
+    // -------------------------------------------------------------------------
+    // Rebuild FTS5 index — scans all rows in the `verses` content table
+    // and populates the verses_fts virtual table for full-text search.
+    // -------------------------------------------------------------------------
+    stdout.write('Building full-text search index...');
+    db.execute(BibleSchema.rebuildFts);
+    stdout.writeln(' done');
+
+    // Report output file size.
+    // This is done before setting success = true so that if lengthSync() or
+    // any of the print calls throw, the partial DB cleanup in the finally
+    // block below still runs correctly.
+    final sizeBytes = outputFile.lengthSync();
+    final sizeMb = (sizeBytes / (1024 * 1024)).toStringAsFixed(1);
+    stdout.writeln('');
+    stdout.writeln('Database written: $outputPath');
+    stdout.writeln('Database size:    $sizeMb MB ($sizeBytes bytes)');
+
+    // Mark success only after all work — including size reporting — is done.
+    success = true;
+  } finally {
+    // db?.dispose() is safe whether or not open() succeeded.
+    db?.dispose();
+    // Remove any partial database on failure so the next run starts clean.
+    if (!success && outputFile.existsSync()) {
+      outputFile.deleteSync();
+      stdout.writeln('Removed partial database due to error.');
+    }
   }
-  // Collapse whitespace.
-  text = text.replaceAll(_whitespacePattern, ' ').trim();
-  return text;
 }
 
 // ---------------------------------------------------------------------------
@@ -400,13 +492,14 @@ void main(List<String> args) {
   // Resolve directory: use CLI argument if provided, otherwise default
   // to the data directory relative to this script's location.
   final scriptDir = File(Platform.script.toFilePath()).parent.path;
-  final defaultDataDir = '$scriptDir/data/eng-web_usfx';
+  // Use p.join() for cross-platform path building (avoids mixed separators on Windows).
+  final defaultDataDir = p.join(scriptDir, 'data', 'eng-web_usfx');
   final dataDir = args.isNotEmpty ? args[0] : defaultDataDir;
 
-  // Resolve input files.
-  final usfxFile = File('$dataDir/eng-web_usfx.xml');
-  final metadataFile = File('$dataDir/eng-webmetadata.xml');
-  final bookNamesFile = File('$dataDir/BookNames.xml');
+  // Resolve input files using p.join() for safe cross-platform separator handling.
+  final usfxFile = File(p.join(dataDir, 'eng-web_usfx.xml'));
+  final metadataFile = File(p.join(dataDir, 'eng-webmetadata.xml'));
+  final bookNamesFile = File(p.join(dataDir, 'BookNames.xml'));
 
   for (final f in [usfxFile, metadataFile, bookNamesFile]) {
     if (!f.existsSync()) {
@@ -444,7 +537,7 @@ void main(List<String> args) {
   stdout.writeln('');
   stdout.writeln('Parsed in ${stopwatch.elapsedMilliseconds} ms');
 
-  // Spot-check: print first verse of Genesis.
+  // Spot-check: print first verse of Genesis to confirm parsing succeeded.
   final gen11 = result.verses.where(
     (v) => v.bookCode == 'GEN' && v.chapter == 1 && v.verse == '1',
   );
@@ -454,7 +547,49 @@ void main(List<String> args) {
     stdout.writeln('  "${gen11.first.textPlain}"');
   }
 
-  // TODO(Step 1.5): Write parsed data to SQLite database.
+  // -------------------------------------------------------------------------
+  // Step 1.5: Write parsed data to SQLite database.
+  // Output goes to assets/bibles/<id>.db so it is bundled with the app.
+  // -------------------------------------------------------------------------
+
+  // Determine the output path relative to the project root.
+  // This script lives in tools/, so the project root is one level up.
+  final projectRoot = File(Platform.script.toFilePath()).parent.parent.path;
+  final dbFilename = '${result.bibleInfo.id.toLowerCase()}.db';
+  // Use p.join() so separators are correct on Windows as well as Unix.
+  final outputPath = p.join(projectRoot, 'assets', 'bibles', dbFilename);
+
   stdout.writeln('');
-  stdout.writeln('Done. SQLite generation will be added in Step 1.5.');
+  stdout.writeln('=== Writing SQLite Database ===');
+  stdout.writeln('Output: $outputPath');
+  stdout.writeln('');
+
+  try {
+    writeSqlite(result, outputPath);
+  } catch (e, st) {
+    // Print both the error message and full stack trace so failures are
+    // diagnosable without re-running under a debugger.
+    stderr.writeln('');
+    stderr.writeln('ERROR writing database: $e');
+    stderr.writeln('Stack trace:\n$st');
+    // Give a Windows-specific hint since sqlite3.dll is the most common cause
+    // of failure on that platform.
+    if (Platform.isWindows) {
+      // Windows DLL resolution searches the current working directory and PATH,
+      // NOT the script's directory. Run this tool from the project root so that
+      // sqlite3.dll placed there (or on PATH) is found correctly.
+      stderr.writeln('');
+      stderr.writeln('On Windows, sqlite3.dll must be on your PATH or in the');
+      stderr.writeln('current working directory. Download it from:');
+      stderr.writeln('  https://sqlite.org/download.html  (sqlite-dll-win-x64)');
+      stderr.writeln('Extract sqlite3.dll and place it in the current working');
+      stderr.writeln('directory (typically the project root when running this');
+      stderr.writeln('command), or add its containing folder to your PATH.');
+    }
+    exit(1);
+  }
+
+  stdout.writeln('');
+  stdout.writeln('=== Done ===');
+  stdout.writeln('Step 1.5 complete. Database ready to be bundled in Step 1.6.');
 }
