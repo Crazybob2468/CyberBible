@@ -15,9 +15,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Copy the bundled Bible database from the read-only asset bundle to the
-  // app's writable documents directory (skipped on subsequent launches if the
-  // file already exists). Must complete before the UI renders so that
-  // BibleService can open the database synchronously once needed.
+  // app's writable Application Support directory (skipped on subsequent
+  // launches if the file already exists). Must complete before the UI renders
+  // so that BibleService can open the database synchronously once needed.
   await BibleSetupService.ensureReady();
 
   runApp(const CyberBibleApp());

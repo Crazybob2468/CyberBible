@@ -14,8 +14,8 @@ dependencies:
   # Added in Step 1.6 so the dependency is ready for the app DB reader layer
   # introduced in Step 1.7+; BibleSetupService only copies the DB file.
   sqflite: ^2.4.2
-  # path_provider: locates the app's writable documents directory on each
-  # platform, where the bundled Bible database is copied on first launch.
+  # path_provider: locates the app's writable Application Support directory on
+  # each platform, where the bundled Bible database is copied on first launch.
   path_provider: ^2.1.5
   # path: cross-platform path joining used by BibleSetupService (lib/ code).
   # Also used by tools/build_bible_db.dart — declared here so both can share it.
