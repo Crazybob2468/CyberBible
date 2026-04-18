@@ -11,7 +11,8 @@ dependencies:
     sdk: flutter
   xml: ^6.5.0
   # sqflite: runtime SQLite access for reading the bundled Bible database.
-  # Used by BibleSetupService (Step 1.6) and BibleService (Step 1.7+).
+  # Added in Step 1.6 so the dependency is ready for the app DB reader layer
+  # introduced in Step 1.7+; BibleSetupService only copies the DB file.
   sqflite: ^2.4.2
   # path_provider: locates the app's writable documents directory on each
   # platform, where the bundled Bible database is copied on first launch.

@@ -15,9 +15,12 @@
 /// The database is placed in the app's documents directory:
 ///   `<documents>/bibles/eng-web.db`
 ///
-/// On Android this is typically `/data/data/<package>/files/bibles/`.
+/// On Android this is typically under an app-specific directory such as
+/// `/data/user/0/<package>/app_flutter/bibles/` (or a similar path on the
+/// device), not the generic `/files/` directory.
 /// On iOS it is inside the app's sandbox Documents folder.
-/// On Windows/macOS/Linux it is under the user's documents directory.
+/// On Windows/macOS/Linux it is placed in the app's platform-specific writable
+/// documents/data location returned by `getApplicationDocumentsDirectory()`.
 ///
 /// ## Usage
 ///
@@ -111,9 +114,11 @@ class BibleSetupService {
     final biblesDir = Directory(p.join(docsDir.path, _subdir));
     final dbFile = File(p.join(biblesDir.path, _filename));
 
-    // Only copy if the file does not already exist. Future steps (e.g. version
-    // checking) may add logic here to re-copy when the bundled DB is newer.
-    if (!dbFile.existsSync()) {
+    // Only copy if the file does not already exist. Use the asynchronous file
+    // existence check so startup work stays non-blocking on the UI isolate.
+    // Future steps (e.g. version checking) may add logic here to re-copy when
+    // the bundled DB is newer.
+    if (!await dbFile.exists()) {
       // Create the bibles/ subdirectory if it does not exist yet.
       await biblesDir.create(recursive: true);
 
