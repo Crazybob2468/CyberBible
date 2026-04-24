@@ -10,8 +10,9 @@
 /// On **native platforms** (Android, iOS, Windows, macOS, Linux):
 ///   - The [BibleSetupService.ensureReady] call in `main()` has already copied
 ///     the bundled `eng-web.db` asset to the app's writable support directory.
-///   - [BibleService] opens that file via the standard `sqflite` `openDatabase`
-///     function.
+///   - [BibleService] opens that file via `sqflite`'s `openReadOnlyDatabase`
+///     function, matching the app's read-only access pattern for bundled Bible
+///     content.
 ///
 /// On **Flutter Web**:
 ///   - There is no writable native file system. `sqflite_common_ffi_web` is
@@ -127,7 +128,13 @@ class BibleService {
     // Concurrent-safe guard: the ??= operator ensures _doOpen() is invoked
     // exactly once even if multiple callers enter ensureOpen() before the
     // first open completes. All callers share the same future.
-    _openFuture ??= _doOpen();
+    //
+    // If the open fails, whenComplete resets _openFuture to null so that a
+    // subsequent ensureOpen() call can retry instead of replaying the same
+    // error forever. The original error is still rethrown to the caller.
+    _openFuture ??= _doOpen().whenComplete(() {
+      if (_db == null) _openFuture = null;
+    });
     return _openFuture!;
   }
 

@@ -55,10 +55,9 @@ import 'package:sqflite_common/sqflite.dart' show databaseFactory;
 import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart'
     show databaseFactoryFfiWebNoWebWorker;
 
-/// The filename under which the database is stored within the virtual
-/// file system. Joined with the factory's databases root path (which
-/// returns '/' on web) to produce the full virtual path '/eng-web.db'.
-const String _dbName = 'eng-web.db';
+// No hardcoded filename constant here — the stored name is derived from
+// assetPath at call time via p.basename(), so that this function works
+// correctly for any Bible translation asset without clobbering another.
 
 /// Opens the Bible database on Flutter Web.
 ///
@@ -67,6 +66,10 @@ const String _dbName = 'eng-web.db';
 /// loaded from the app bundle and written into browser IndexedDB. On
 /// subsequent calls (across page reloads) the write is skipped because
 /// the database file already exists in IndexedDB.
+///
+/// The IndexedDB key is derived from the basename of [assetPath]
+/// (e.g. 'eng-web.db'), so different Bible assets are stored under
+/// distinct keys and cannot overwrite each other.
 ///
 /// Returns an open sqflite [Database] handle ready for read-only queries.
 /// The caller ([BibleService.ensureOpen]) caches this for the lifetime of
@@ -85,11 +88,12 @@ Future<Database> platformOpenDatabase(String assetPath) async {
 
   // -- Step 2: Resolve the full virtual path for the database ----------------
   //
-  // On web, getDatabasesPath() returns '/'. Joining gives '/eng-web.db'.
-  // We resolve the path explicitly so that databaseExists(),
-  // writeDatabaseBytes(), and openReadOnlyDatabase() all use the same path.
+  // On web, getDatabasesPath() returns '/'. Joining the basename of assetPath
+  // gives e.g. '/eng-web.db'. Deriving the name from assetPath ensures
+  // different Bible translations are stored under distinct IndexedDB keys.
   final dbsPath = await databaseFactory.getDatabasesPath();
-  final fullPath = p.join(dbsPath, _dbName);
+  final dbFileName = p.basename(assetPath); // e.g. 'eng-web.db'
+  final fullPath = p.join(dbsPath, dbFileName);
 
   // -- Step 3: Seed IndexedDB with asset bytes on the very first page load ---
   //
