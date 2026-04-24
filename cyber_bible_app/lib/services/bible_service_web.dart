@@ -100,6 +100,13 @@ Future<Database> platformOpenDatabase(String assetPath) async {
   // If the database file already exists in IndexedDB we skip the write, making
   // subsequent cold starts fast (no need to reload the 28.9 MB asset).
   // On the very first load the write takes 1-3 seconds.
+  //
+  // KNOWN LIMITATION (Phase 1): if a future app release ships an updated
+  // eng-web.db, the databaseExists() guard will prevent the new bytes from
+  // being written — existing web users will silently keep the stale copy.
+  // Phase 3.2 (Bible library download infrastructure) will replace this with
+  // a versioned strategy: compare a bundled version marker against the stored
+  // one and re-seed when the app-bundled DB is newer.
   if (!await databaseFactory.databaseExists(fullPath)) {
     // Load the bundled .db file from the Flutter asset bundle as raw bytes.
     final byteData = await rootBundle.load(assetPath);

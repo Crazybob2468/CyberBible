@@ -55,7 +55,10 @@ class BibleSetupService {
 
   /// The asset path of the bundled WEB Bible database inside the app bundle.
   /// Must match the entry declared in pubspec.yaml's `flutter > assets` list.
-  static const String _assetPath = 'assets/bibles/eng-web.db';
+  ///
+  /// Declared public so that [BibleService] can reference the same constant
+  /// rather than maintaining a duplicate string literal.
+  static const String bundledBibleAssetPath = 'assets/bibles/eng-web.db';
 
   /// Subdirectory name created under the platform support directory where
   /// all Bible database files are stored.
@@ -124,7 +127,7 @@ class BibleSetupService {
     // Delegate to the platform implementation (IO or stub). The IO
     // implementation returns the absolute path to the database file.
     _dbPath = await platform_impl.platformEnsureReady(
-      _assetPath,
+      bundledBibleAssetPath,
       _subdir,
       _filename,
     );

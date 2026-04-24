@@ -87,7 +87,10 @@ class BibleService {
   // ---------------------------------------------------------------------------
 
   /// Asset path of the bundled Bible database (used on web to load bytes).
-  static const String _assetPath = 'assets/bibles/eng-web.db';
+  ///
+  /// References the single source of truth in [BibleSetupService] so that
+  /// the asset path cannot silently drift between the two services.
+  static const String _assetPath = BibleSetupService.bundledBibleAssetPath;
 
   // ---------------------------------------------------------------------------
   // State
