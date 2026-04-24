@@ -2,7 +2,7 @@
 ///
 /// [BibleService] is the single class that all screens and features use to
 /// read from a Bible translation database. It hides the platform differences
-/// (native file-based SQLite vs. web in-memory SQLite) behind a clean,
+/// (native file-based SQLite vs. web IndexedDB-backed SQLite) behind a clean,
 /// platform-neutral API.
 ///
 /// ## How it works
@@ -14,22 +14,26 @@
 ///     function.
 ///
 /// On **Flutter Web**:
-///   - There is no writable file system. `sqflite_common_ffi_web` is used
-///     instead, backed by a SQLite WebAssembly build.
-///   - The bundled asset bytes are loaded from `rootBundle` on every cold
-///     page load and placed into an `InMemoryFileSystem` VFS so that sqflite
-///     can open them as if they were a normal file.
-///   - **Known limitation:** Because the database lives in memory, data is lost
-///     on every page reload. This is intentional for Phase 1 (it keeps the
-///     implementation simple while still allowing web testing). A persistent
-///     IndexedDB-backed implementation will be added in Phase 3.2 when the
-///     full Bible library download infrastructure is built.
+///   - There is no writable native file system. `sqflite_common_ffi_web` is
+///     used instead, routing through a WebAssembly sqlite3 build backed by
+///     **browser IndexedDB**.
+///   - On the **first page load**, the bundled `eng-web.db` asset bytes are
+///     written into IndexedDB via `databaseFactory.writeDatabaseBytes` (~1-3s).
+///   - On **subsequent page loads** the write is skipped (database already
+///     exists in IndexedDB) — startup is ~0.5s.
+///   - Data **persists across page reloads**. Phase 3.2 will extend this for
+///     multi-Bible downloads with proper version-checking.
 ///
 /// ## Usage
 ///
-/// Call [BibleService.ensureOpen] once (or ensure [BibleSetupService.ensureReady]
-/// has run, which triggers the web setup automatically). Then call any of the
-/// read methods:
+/// Always call and await [BibleService.ensureOpen] before making any queries.
+/// This is required on every platform — including web, where
+/// [BibleSetupService.ensureReady] is a no-op and does **not** open or
+/// prepare the database.
+///
+/// On **native platforms**, [BibleSetupService.ensureReady] is useful during
+/// app startup because it copies the bundled database asset to the app's
+/// writable support directory, which [ensureOpen] then uses as the file path.
 ///
 /// ```dart
 /// await BibleService.ensureOpen();
@@ -98,10 +102,16 @@ class BibleService {
   ///
   /// On native platforms this reads the path from [BibleSetupService.dbPath]
   /// (which requires [BibleSetupService.ensureReady] to have completed first).
-  /// On web it delegates to the platform-specific implementation which loads
-  /// the asset bytes and sets up the in-memory SQLite database.
+  /// On web it delegates to the platform-specific implementation, which writes
+  /// the asset bytes into browser IndexedDB on first load and opens from there.
   ///
-  /// Safe to call multiple times — only opens the database once.
+  /// Safe to call multiple times serially — only opens the database once.
+  ///
+  /// **Concurrency caveat:** this method is not safe under concurrent calls.
+  /// If two callers hit `_db == null` simultaneously both may proceed into the
+  /// open path, causing redundant work. In practice this cannot happen because
+  /// `ensureOpen()` is called once in `main()` before `runApp()`. A
+  /// `_openFuture` guard will be added if concurrent callers become a concern.
   static Future<void> ensureOpen() async {
     // Already open — nothing to do.
     if (_db != null) return;
@@ -232,6 +242,11 @@ class BibleService {
       'verses',
       where: 'book_code = ? AND chapter = ?',
       whereArgs: [bookCode, chapterNumber],
+      // orderBy rowid preserves the insertion order from the build tool, which
+      // matches canonical verse order. The `verse` column is TEXT (to handle
+      // non-integer verse IDs like '1a'), so numeric ordering via rowid is
+      // necessary to avoid lexicographic mis-ordering (e.g. '10' before '2').
+      orderBy: 'rowid ASC',
     );
     return rows.map(Verse.fromMap).toList();
   }

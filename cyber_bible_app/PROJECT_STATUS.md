@@ -89,21 +89,22 @@ Step 1.6 ✅ MERGED. `BibleSetupService` (DB copy on first launch), startup wiri
 Step 1.7 ✅ COMPLETE. `BibleService` reads books, chapters, and verses from the SQLite DB, with full Flutter Web support (in-memory SQLite via WASM).
 
 Step 1.7 implementation:
-- Added `sqflite_common_ffi_web: ^1.1.1`, `sqflite_common: 2.5.6+1`, and `typed_data: ^1.4.0` as direct `dependencies`.
-- Moved `sqlite3` from `dev_dependencies` to `dependencies` (now used by the web runtime too).
-- Ran `dart run sqflite_common_ffi_web:setup` to copy `web/sqlite3.wasm` (730 KB) and `web/sqflite_sw.js` (253 KB) into the `web/` folder. These are required for SQLite to work in the browser.
+- Added `sqflite_common_ffi_web: ^1.0.2` (resolves to 1.1.1), `sqflite_common: ^2.5.6+1`, as direct `dependencies`.
+- Moved `sqlite3` back to `dev_dependencies` (no longer directly imported at runtime — `sqflite_common_ffi_web` loads its own WASM build of sqlite3 separately).
+- Removed `typed_data` from direct dependencies (was only needed for the now-replaced in-memory VFS approach).
+- Ran `dart run sqflite_common_ffi_web:setup` to copy `web/sqlite3.wasm` (730 KB) and `web/sqflite_sw.js` (253 KB) into the `web/` folder. `sqlite3.wasm` is required; `sqflite_sw.js` is generated but not used by the no-worker factory variant.
 - Created `lib/services/bible_service.dart` — platform-neutral static class with lazy singleton `Database` and the following public API:
-  - `ensureOpen()` — opens the DB once (native: reads on-disk path from `BibleSetupService.dbPath`; web: loads asset bytes into `InMemoryFileSystem` VFS and opens via `databaseFactoryFfiWeb`)
+  - `ensureOpen()` — opens the DB once (native: reads on-disk path from `BibleSetupService.dbPath`; web: seeds IndexedDB with asset bytes on first load, opens from there on subsequent loads)
   - `getBibleInfo()` → `Future<BibleInfo?>` — metadata row from `bible_info` table
   - `getBooks()` → `Future<List<Book>>` — all books in canonical order
   - `getChapters(bookCode)` → `Future<List<int>>` — sorted list of chapter numbers for a book
   - `getChapter(bookCode, chapterNumber)` → `Future<Chapter?>` — full chapter record (includes raw USFX XML)
-  - `getVerses(bookCode, chapterNumber)` → `Future<List<Verse>>` — verses in verse-number order
-- Created `lib/services/bible_service_web.dart` — web implementation: loads `assets/bibles/eng-web.db` bytes via `rootBundle.load()`, seeds an `InMemoryFileSystem` VFS with those bytes, registers a `WasmSqlite3` instance, sets `databaseFactory = databaseFactoryFfiWeb`, then opens the database read-only.
+  - `getVerses(bookCode, chapterNumber)` → `Future<List<Verse>>` — verses in canonical order (`ORDER BY rowid ASC`)
+- Created `lib/services/bible_service_web.dart` — web implementation: sets `databaseFactory = databaseFactoryFfiWebNoWebWorker` (IndexedDB-backed), checks `databaseExists`, writes asset bytes via `writeDatabaseBytes` on first load, then opens read-only.
 - Created `lib/services/bible_service_io.dart` — thin native stub (throws `UnsupportedError`; the main `bible_service.dart` handles native opening directly).
 - Uses the same conditional-import pattern as `BibleSetupService` to keep platform-specific packages out of cross-platform builds.
 
-**Web limitation (intentional for Phase 1):** The in-memory database is lost on every page reload. Persistent IndexedDB-backed storage for all installed Bibles will be added in Phase 3.2 when the full Bible library download infrastructure is built.
+**Web implementation (IndexedDB-backed):** On the first page load, `eng-web.db` bytes are written into browser IndexedDB (takes ~1-3 seconds). On subsequent page loads the write is skipped — only WASM loading + IndexedDB open (~0.5s). Data persists across page reloads. Phase 3.2 will extend this for multi-Bible downloads with version checking.
 
 **Tests:**
 - `test/services/bible_service_test.dart` — 5 unit tests: each query method throws `StateError` when called before `ensureOpen()`.

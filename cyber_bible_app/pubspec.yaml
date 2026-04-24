@@ -20,31 +20,29 @@ dependencies:
   # path: cross-platform path joining used by BibleSetupService (lib/ code).
   # Also used by tools/build_bible_db.dart — declared here so both can share it.
   path: ^1.9.0
-  # sqflite_common_ffi_web: Flutter Web SQLite support via WebAssembly.
-  # Resolves to 1.1.1. Required so BibleService can open the SQLite DB in the
-  # browser using an InMemoryFileSystem VFS. Run
-  # `dart run sqflite_common_ffi_web:setup` after adding to generate
-  # web/sqlite3.wasm and web/sqflite_sw.js.
+  # sqflite_common_ffi_web: Flutter Web SQLite support via WebAssembly backed by
+  # IndexedDB. Resolves to 1.1.1. BibleService uses the no-worker factory
+  # (databaseFactoryFfiWebNoWebWorker) to open the bundled Bible database via
+  # IndexedDB. Run `dart run sqflite_common_ffi_web:setup` after adding to
+  # generate web/sqlite3.wasm (required) and web/sqflite_sw.js (not used by
+  # the no-worker variant, but harmless to keep).
   sqflite_common_ffi_web: ^1.0.2
-  # sqlite3: provides InMemoryFileSystem (VFS) and WasmSqlite3 used by
-  # bible_service_web.dart to seed and open the in-memory database on web.
-  # Moved from dev_dependencies in Step 1.7 because it is now used at runtime.
-  sqlite3: ^3.3.1
   # sqflite_common: common sqflite interfaces; needed for the databaseFactory
-  # global used in bible_service_web.dart. Declared as a direct dep to satisfy
-  # the depend_on_referenced_packages lint.
+  # global setter used in bible_service_web.dart. Declared as a direct dep to
+  # satisfy the depend_on_referenced_packages lint.
   sqflite_common: ^2.5.6+1
-  # typed_data: provides Uint8Buffer, which is the value type of
-  # InMemoryFileSystem.fileData. Declared as a direct dep (was transitive).
-  typed_data: ^1.4.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  # Used by tools/build_bible_db.dart (CLI build tool only — never ships in the app).
-  # On Windows: requires sqlite3.dll on PATH. Download sqlite-dll-win-x64 from
-  # https://sqlite.org/download.html and place sqlite3.dll in your working directory.
+  # sqlite3: used by tools/build_bible_db.dart (CLI build tool only, never
+  # ships in the app). On Windows: also requires sqlite3.dll on PATH when
+  # running the build tool — download sqlite-dll-win-x64 from
+  # https://sqlite.org/download.html and place sqlite3.dll in the working
+  # directory. Not needed for the app runtime; sqflite_common_ffi_web loads
+  # the WASM build of sqlite3 separately at runtime.
+  sqlite3: ^3.3.1
   # path is declared in dependencies (above) and is also used by the build tool.
 
 flutter:

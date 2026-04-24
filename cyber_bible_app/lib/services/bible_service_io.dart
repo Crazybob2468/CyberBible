@@ -1,39 +1,33 @@
-/// Native (dart:io) implementation of [BibleService] database opening.
+/// Native-platform conditional-import stub for [BibleService] database opening.
 ///
 /// This file is selected at compile time by the conditional import in
 /// `bible_service.dart` when `dart.library.io` is available — i.e., on
 /// Android, iOS, Windows, macOS, and Linux. It must **never** be imported
 /// directly; always go through the conditional import in `bible_service.dart`.
 ///
-/// On native platforms the database is already a real file on disk (placed
-/// there by [BibleSetupService] on first launch), so we simply open it via
-/// the standard sqflite `openReadOnlyDatabase` function and return the handle.
-/// The [BibleService] main file handles the actual `openReadOnlyDatabase` call
-/// directly using the path from [BibleSetupService.dbPath], so this file only
-/// exists to provide the [platformOpenDatabase] symbol expected by the
-/// conditional import. It is intentionally thin.
+/// **Important:** this file does NOT open the SQLite database itself.
+/// The real native database-opening logic lives in [BibleService.ensureOpen],
+/// which reads the on-disk path from [BibleSetupService.dbPath] and opens it
+/// directly. This file exists only to provide the [platformOpenDatabase] symbol
+/// required by the conditional import structure.
+///
+/// If [platformOpenDatabase] is somehow called on a native platform, it throws
+/// an [UnsupportedError] to make the unexpected code path immediately visible
+/// during development.
 library;
 
 import 'package:sqflite/sqflite.dart';
 
-/// Opens the Bible database from the path already prepared by
-/// [BibleSetupService].
+/// Stub that satisfies the conditional import contract for native platforms.
 ///
-/// [assetPath] is not used on native — the file is already on disk. It is
-/// accepted only so the function signature matches the web implementation.
+/// [assetPath] is accepted only to match the web implementation's signature.
 ///
-/// Returns the open [Database] handle ready for queries.
+/// Throws [UnsupportedError] if called, because [BibleService.ensureOpen]
+/// handles native database opening directly and should never route here.
 Future<Database> platformOpenDatabase(String assetPath) async {
-  // This function is called only when dart:io is available (native platforms).
-  // The actual file path was determined by BibleSetupService.ensureReady()
-  // and is accessed via BibleSetupService.dbPath. We import the service here
-  // to get that path.
-  //
-  // Note: the BibleService main file also handles the native case directly
-  // (calling openReadOnlyDatabase itself), so this implementation is only
-  // reached if the conditional import selects this file AND kIsWeb is false.
-  // In practice, the main file short-circuits before reaching this on native.
-  // This stub ensures the symbol exists for the conditional import machinery.
+  // BibleService.ensureOpen() opens the native database directly using
+  // BibleSetupService.dbPath, so this function should never be reached.
+  // Throwing here makes any accidental call to this path immediately obvious.
   throw UnsupportedError(
     'platformOpenDatabase should not be called on native platforms. '
     'BibleService.ensureOpen() handles the native path directly.',
