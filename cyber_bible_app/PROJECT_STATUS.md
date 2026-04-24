@@ -86,7 +86,7 @@ cyber_bible_app/
 
 Step 1.5 ✅ MERGED (PR #7). The SQLite build tool, 60 unit tests, and generated `eng-web.db` are on `main`.
 Step 1.6 ✅ MERGED. `BibleSetupService` (DB copy on first launch), startup wiring, and unit tests.
-Step 1.7 ✅ COMPLETE. `BibleService` reads books, chapters, and verses from the SQLite DB, with full Flutter Web support (in-memory SQLite via WASM).
+Step 1.7 ✅ COMPLETE. `BibleService` reads books, chapters, and verses from the SQLite DB, with full Flutter Web support (IndexedDB-backed SQLite persistence via `sqflite_common_ffi_web`).
 
 Step 1.7 implementation:
 - Added `sqflite_common_ffi_web: ^1.0.2` (resolves to 1.1.1), `sqflite_common: ^2.5.6+1`, as direct `dependencies`.

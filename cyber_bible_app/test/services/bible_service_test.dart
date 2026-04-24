@@ -27,21 +27,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:cyber_bible_app/services/bible_service.dart';
 
 void main() {
-  // Reset BibleService._db between tests to ensure clean state.
-  // BibleService uses a static field that persists across tests in the same
-  // process, so we need to ensure the not-yet-opened state is tested first.
+  // These tests verify that each query method throws a [StateError] when
+  // called before [BibleService.ensureOpen]. This covers the pure-Dart guard
+  // logic that can be verified without a real database or platform plugins.
   //
-  // Note: Dart test files run sequentially within a group, so test ordering
-  // within a group is reliable. We place the StateError test before any test
-  // that would call ensureOpen().
+  // No setUp/tearDown is needed: this test binary never calls ensureOpen(),
+  // so _db remains null throughout. These tests do not depend on execution
+  // order and make no assumptions about resetting static state.
 
   group('BibleService — pre-open guard', () {
     test(
       'getBibleInfo throws StateError before ensureOpen is called',
       () async {
-        // BibleService._db starts as null (never opened in this test process
-        // — this test must run before any test that opens the database).
-        // The _database getter should detect this and throw.
+        // BibleService._db is null because ensureOpen() is never called in
+        // this test binary. The _database getter detects this and throws.
         expect(
           () async => BibleService.getBibleInfo(),
           throwsA(

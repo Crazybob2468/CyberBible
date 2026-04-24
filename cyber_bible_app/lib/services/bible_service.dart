@@ -73,9 +73,13 @@ import 'bible_setup_service.dart';
 
 /// Provides read-only access to a Bible translation SQLite database.
 ///
-/// All methods are static and async. Call [ensureOpen] before the first
-/// query, or rely on [BibleSetupService.ensureReady] in `main()` having
-/// already prepared the platform-specific database path/handle.
+/// All methods are static and async. Call and await [ensureOpen] before the
+/// first query on every platform.
+///
+/// [BibleSetupService.ensureReady] may be used during app startup on native
+/// platforms to copy the bundled database asset into the app's writable
+/// support directory, but it does not open the database. Callers must still
+/// await [ensureOpen] before running any query.
 class BibleService {
   // ---------------------------------------------------------------------------
   // Constants
@@ -94,6 +98,13 @@ class BibleService {
   /// (lazy singleton pattern). sqflite handles thread-safety internally.
   static Database? _db;
 
+  /// The in-progress open future, or null if no open has been started.
+  ///
+  /// Set on the first [ensureOpen] call and never cleared. All concurrent
+  /// callers await this same future so the database is opened exactly once
+  /// even if [ensureOpen] is called from multiple places before it completes.
+  static Future<void>? _openFuture;
+
   // ---------------------------------------------------------------------------
   // Lifecycle
   // ---------------------------------------------------------------------------
@@ -105,24 +116,36 @@ class BibleService {
   /// On web it delegates to the platform-specific implementation, which writes
   /// the asset bytes into browser IndexedDB on first load and opens from there.
   ///
-  /// Safe to call multiple times serially — only opens the database once.
-  ///
-  /// **Concurrency caveat:** this method is not safe under concurrent calls.
-  /// If two callers hit `_db == null` simultaneously both may proceed into the
-  /// open path, causing redundant work. In practice this cannot happen because
-  /// `ensureOpen()` is called once in `main()` before `runApp()`. A
-  /// `_openFuture` guard will be added if concurrent callers become a concern.
-  static Future<void> ensureOpen() async {
-    // Already open — nothing to do.
-    if (_db != null) return;
+  /// Safe to call multiple times — only opens the database once. Also safe
+  /// under concurrent calls: the first caller starts the open and stores the
+  /// future in [_openFuture]; all subsequent callers (including any that race
+  /// in before the open completes) await that same future.
+  static Future<void> ensureOpen() {
+    // Fast path: database is already fully open.
+    if (_db != null) return Future.value();
 
+    // Concurrent-safe guard: the ??= operator ensures _doOpen() is invoked
+    // exactly once even if multiple callers enter ensureOpen() before the
+    // first open completes. All callers share the same future.
+    _openFuture ??= _doOpen();
+    return _openFuture!;
+  }
+
+  /// Performs the actual platform-specific database open.
+  ///
+  /// Called at most once, guarded by [_openFuture] in [ensureOpen].
+  /// Separated into its own method so that [ensureOpen] can be a non-async
+  /// function that returns the shared future directly without wrapping it in
+  /// an extra layer.
+  static Future<void> _doOpen() async {
     if (kIsWeb) {
-      // Delegate to the web implementation. It loads the .db asset bytes into
-      // an InMemoryFileSystem VFS and returns an open sqflite Database handle.
-      // This takes 1–2 seconds on first call due to the 28.9 MB asset load.
+      // Delegate to the web implementation (bible_service_web.dart).
+      // On the first page load it writes the bundled asset bytes into browser
+      // IndexedDB (~1-3s for the 28.9 MB database). On subsequent loads
+      // the write is skipped — only WASM loading + IndexedDB open (~0.5s).
       _db = await platform_impl.platformOpenDatabase(_assetPath);
     } else {
-      // On native platforms, the database file is already on disk (copied by
+      // On native platforms the database file is already on disk (copied by
       // BibleSetupService.ensureReady in main()). Open it as a read-only
       // single-instance database for efficiency.
       _db = await openReadOnlyDatabase(
