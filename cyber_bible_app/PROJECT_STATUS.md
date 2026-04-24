@@ -82,27 +82,38 @@ cyber_bible_app/
 
 ## Current Status
 
-**Phase 1 — Step 1.6 Complete: Bundle WEB Bible with app**
+**Phase 1 — Step 1.7 Complete: Bible service layer**
 
 Step 1.5 ✅ MERGED (PR #7). The SQLite build tool, 60 unit tests, and generated `eng-web.db` are on `main`.
-Step 1.6 ✅ COMPLETE. The bundled WEB database setup service, startup wiring in `main.dart`, and unit-test coverage are introduced in this PR; deferred integration tests are intentionally tracked below.
+Step 1.6 ✅ MERGED. `BibleSetupService` (DB copy on first launch), startup wiring, and unit tests.
+Step 1.7 ✅ COMPLETE. `BibleService` reads books, chapters, and verses from the SQLite DB, with full Flutter Web support (IndexedDB-backed SQLite persistence via `sqflite_common_ffi_web`).
 
-Step 1.6 implementation:
-- Added `sqflite: ^2.4.2` and `path_provider: ^2.1.5` to `dependencies` in pubspec.yaml (runtime packages — ship with the app)
-- Moved `path: ^1.9.0` from `dev_dependencies` to `dependencies` (now used by `lib/` production code as well as the build tool)
-- Created `lib/services/bible_setup_service.dart` — platform-neutral service class; uses conditional imports to delegate all `dart:io` work to a platform-specific file (required because the web compiler rejects `dart:io` even behind a `kIsWeb` guard)
-- Created `lib/services/bible_setup_service_io.dart` — native implementation: copies `assets/bibles/eng-web.db` to `getApplicationSupportDirectory()/bibles/` on first launch using an atomic write (writes to `.tmp` then renames, preventing a corrupt DB if the app is killed mid-copy); skips copy on subsequent launches
-- Created `lib/services/bible_setup_service_stub.dart` — web no-op stub (all operations return null; never called at runtime due to `kIsWeb` early return)
-- `getApplicationSupportDirectory()` chosen over Documents: not user-visible, not iCloud-backed on iOS — appropriate for a large app-managed database
-- Updated `lib/main.dart` to `await BibleSetupService.ensureReady()` before `runApp()`, so the database path is always ready before any screen renders
+Step 1.7 implementation:
+- Added `sqflite_common_ffi_web: ^1.0.2` (resolves to 1.1.1), `sqflite_common: ^2.5.6+1`, as direct `dependencies`.
+- Moved `sqlite3` back to `dev_dependencies` (no longer directly imported at runtime — `sqflite_common_ffi_web` loads its own WASM build of sqlite3 separately).
+- Removed `typed_data` from direct dependencies (was only needed for the now-replaced in-memory VFS approach).
+- Ran `dart run sqflite_common_ffi_web:setup` to copy `web/sqlite3.wasm` (730 KB) and `web/sqflite_sw.js` (253 KB) into the `web/` folder. `sqlite3.wasm` is required; `sqflite_sw.js` is generated but not used by the no-worker factory variant.
+- Created `lib/services/bible_service.dart` — platform-neutral static class with lazy singleton `Database` and the following public API:
+  - `ensureOpen()` — opens the DB once, concurrent-safe via `_openFuture ??= _doOpen().whenComplete(...)` guard. If the open fails, `_openFuture` is reset to `null` so callers can retry. (native: reads on-disk path from `BibleSetupService.dbPath`; web: seeds IndexedDB on first load, opens from there on subsequent loads)
+  - `getBibleInfo()` → `Future<BibleInfo?>` — metadata row from `bible_info` table
+  - `getBooks()` → `Future<List<Book>>` — all books in canonical order
+  - `getChapters(bookCode)` → `Future<List<int>>` — sorted list of chapter numbers for a book
+  - `getChapter(bookCode, chapterNumber)` → `Future<Chapter?>` — full chapter record (includes raw USFX XML)
+  - `getVerses(bookCode, chapterNumber)` → `Future<List<Verse>>` — verses in canonical order (`ORDER BY rowid ASC`)
+- Created `lib/services/bible_service_web.dart` — web implementation: sets `databaseFactory = databaseFactoryFfiWebNoWebWorker` (IndexedDB-backed), checks `databaseExists`, writes asset bytes via `writeDatabaseBytes` on first load, then opens read-only. The IndexedDB key is `p.basename(assetPath)` (e.g. `'eng-web.db'`), derived at call time so different Bible assets are stored under distinct keys.
+- Created `lib/services/bible_service_io.dart` — thin native stub (throws `UnsupportedError`; the main `bible_service.dart` handles native opening directly).
+- Uses the same conditional-import pattern as `BibleSetupService` to keep platform-specific packages out of cross-platform builds.
+
+**Web implementation (IndexedDB-backed):** On the first page load, `eng-web.db` bytes are written into browser IndexedDB (takes ~1-3 seconds). On subsequent page loads the write is skipped — only WASM loading + IndexedDB open (~0.5s). Data persists across page reloads. **Known limitation (Phase 1):** if a future app release ships an updated `eng-web.db`, the `databaseExists()` guard will prevent re-seeding — existing web users keep the stale copy. Phase 3.2 will replace this with a versioned strategy (compare a bundled version marker against the stored one, re-seed when the app DB is newer).
 
 **Tests:**
-- `test/services/bible_setup_service_test.dart` — 1 unit test: verifies `dbPath` throws `StateError` before `ensureReady()` is called (pure Dart logic).
-- **Deferred integration tests:** `ensureReady()` depends on `path_provider` and `rootBundle`, which are platform plugins that cannot be exercised in plain unit tests without channel mocking. Full coverage of the copy-on-first-launch path requires an integration test (run on a real device/emulator via `flutter test integration_test/`). This will be added when the integration-test scaffold is set up.
+- `test/services/bible_service_test.dart` — 5 unit tests: each query method throws `StateError` when called before `ensureOpen()`.
+- **Deferred integration tests:** Methods like `getBooks()` and `getVerses()` require an open sqflite database, which in turn requires `BibleSetupService.ensureReady()` and platform plugins. Full integration coverage requires a device/emulator test via `flutter test integration_test/`. Will be added when the integration-test scaffold is set up.
+- **Deferred concurrency tests:** The `_openFuture` retry-on-failure behavior (reset when `_doOpen()` throws) requires either a `@visibleForTesting` reset hook or platform-plugin mocking to simulate a failed open. Deferred to the same integration-test step.
 
-`flutter analyze` → No issues. `flutter test` → 61 passed.
+`flutter analyze lib/ test/` → No issues. `flutter test` → 66 passed.
 
-Next: Step 1.7 — Bible service layer (`BibleService` class with `getBooks()`, `getChapters()`, `getVerses()` methods reading from the SQLite DB via `sqflite`).
+Next: Step 1.8 — Book selection screen (lists all Bible books, OT and NT sections, tapping navigates to chapter selection).
 
 ---
 
