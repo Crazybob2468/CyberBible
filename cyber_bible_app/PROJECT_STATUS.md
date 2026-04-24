@@ -94,13 +94,13 @@ Step 1.7 implementation:
 - Removed `typed_data` from direct dependencies (was only needed for the now-replaced in-memory VFS approach).
 - Ran `dart run sqflite_common_ffi_web:setup` to copy `web/sqlite3.wasm` (730 KB) and `web/sqflite_sw.js` (253 KB) into the `web/` folder. `sqlite3.wasm` is required; `sqflite_sw.js` is generated but not used by the no-worker factory variant.
 - Created `lib/services/bible_service.dart` — platform-neutral static class with lazy singleton `Database` and the following public API:
-  - `ensureOpen()` — opens the DB once (native: reads on-disk path from `BibleSetupService.dbPath`; web: seeds IndexedDB with asset bytes on first load, opens from there on subsequent loads)
+  - `ensureOpen()` — opens the DB once, concurrent-safe via `_openFuture ??= _doOpen().whenComplete(...)` guard. If the open fails, `_openFuture` is reset to `null` so callers can retry. (native: reads on-disk path from `BibleSetupService.dbPath`; web: seeds IndexedDB on first load, opens from there on subsequent loads)
   - `getBibleInfo()` → `Future<BibleInfo?>` — metadata row from `bible_info` table
   - `getBooks()` → `Future<List<Book>>` — all books in canonical order
   - `getChapters(bookCode)` → `Future<List<int>>` — sorted list of chapter numbers for a book
   - `getChapter(bookCode, chapterNumber)` → `Future<Chapter?>` — full chapter record (includes raw USFX XML)
   - `getVerses(bookCode, chapterNumber)` → `Future<List<Verse>>` — verses in canonical order (`ORDER BY rowid ASC`)
-- Created `lib/services/bible_service_web.dart` — web implementation: sets `databaseFactory = databaseFactoryFfiWebNoWebWorker` (IndexedDB-backed), checks `databaseExists`, writes asset bytes via `writeDatabaseBytes` on first load, then opens read-only.
+- Created `lib/services/bible_service_web.dart` — web implementation: sets `databaseFactory = databaseFactoryFfiWebNoWebWorker` (IndexedDB-backed), checks `databaseExists`, writes asset bytes via `writeDatabaseBytes` on first load, then opens read-only. The IndexedDB key is `p.basename(assetPath)` (e.g. `'eng-web.db'`), derived at call time so different Bible assets are stored under distinct keys.
 - Created `lib/services/bible_service_io.dart` — thin native stub (throws `UnsupportedError`; the main `bible_service.dart` handles native opening directly).
 - Uses the same conditional-import pattern as `BibleSetupService` to keep platform-specific packages out of cross-platform builds.
 
@@ -109,6 +109,7 @@ Step 1.7 implementation:
 **Tests:**
 - `test/services/bible_service_test.dart` — 5 unit tests: each query method throws `StateError` when called before `ensureOpen()`.
 - **Deferred integration tests:** Methods like `getBooks()` and `getVerses()` require an open sqflite database, which in turn requires `BibleSetupService.ensureReady()` and platform plugins. Full integration coverage requires a device/emulator test via `flutter test integration_test/`. Will be added when the integration-test scaffold is set up.
+- **Deferred concurrency tests:** The `_openFuture` retry-on-failure behavior (reset when `_doOpen()` throws) requires either a `@visibleForTesting` reset hook or platform-plugin mocking to simulate a failed open. Deferred to the same integration-test step.
 
 `flutter analyze lib/ test/` → No issues. `flutter test` → 66 passed.
 
