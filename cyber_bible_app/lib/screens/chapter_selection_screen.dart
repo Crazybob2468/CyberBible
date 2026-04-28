@@ -24,24 +24,8 @@ import '../models/book.dart';
 import '../app_routes.dart';
 import '../services/bible_service.dart';
 
-// ---------------------------------------------------------------------------
-// Testament label helper
-// ---------------------------------------------------------------------------
-
-/// Returns the human-readable testament label for a [Book].
-///
-/// Used in the expanded header so the user always knows which section of
-/// the Bible they are in without having to navigate back.
-String _testamentLabel(Book book) {
-  switch (book.testament) {
-    case Testament.ot:
-      return 'Old Testament';
-    case Testament.nt:
-      return 'New Testament';
-    case Testament.dc:
-      return 'Deuterocanon / Apocrypha';
-  }
-}
+// Note: testament display labels come from `Testament.label` (book.dart) —
+// the single source of truth shared with BookSelectionScreen.
 
 // ---------------------------------------------------------------------------
 // Main screen widget
@@ -76,13 +60,50 @@ class _ChapterSelectionScreenState extends State<ChapterSelectionScreen> {
   /// Non-null when the chapter-load operation threw an error.
   String? _errorMessage;
 
+  /// Scroll controller for the [CustomScrollView].
+  ///
+  /// Used to detect when the [SliverAppBar] has fully collapsed so the
+  /// compact toolbar title can be shown only when the large expanded header
+  /// has scrolled out of view — avoiding the redundant double-title that
+  /// occurs when [SliverAppBar.title] is always visible.
+  late final ScrollController _scrollController;
+
+  /// True when the [SliverAppBar] has collapsed to its minimum (toolbar) height.
+  ///
+  /// Drives the visibility of the compact book title in the AppBar toolbar.
+  /// Flips to `true` once the scroll offset exceeds
+  /// `expandedHeight − kToolbarHeight` (≈ 104 px).
+  bool _isCollapsed = false;
+
   // ---- Lifecycle ----
 
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController()..addListener(_onScroll);
     // Load chapters as soon as the screen mounts.
     _loadChapters();
+  }
+
+  @override
+  void dispose() {
+    // Always dispose controllers to avoid memory leaks.
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  // ---- Scroll tracking ----
+
+  /// Listens to scroll events and updates [_isCollapsed] accordingly.
+  ///
+  /// The SliverAppBar finishes collapsing when the scroll offset exceeds
+  /// `expandedHeight (160) − kToolbarHeight (≈ 56) = 104 px`.
+  void _onScroll() {
+    const collapseThreshold = 160.0 - kToolbarHeight;
+    final collapsed = _scrollController.offset > collapseThreshold;
+    if (collapsed != _isCollapsed) {
+      setState(() => _isCollapsed = collapsed);
+    }
   }
 
   // ---- Data loading ----
@@ -143,6 +164,8 @@ class _ChapterSelectionScreenState extends State<ChapterSelectionScreen> {
       // share a single scroll position — the header collapses naturally
       // as the user scrolls down into the grid.
       body: CustomScrollView(
+        // Attach controller so _onScroll can track the collapse state.
+        controller: _scrollController,
         slivers: [
           _buildSliverAppBar(colorScheme),
           _buildBody(colorScheme),
@@ -155,8 +178,10 @@ class _ChapterSelectionScreenState extends State<ChapterSelectionScreen> {
 
   /// Builds the collapsible SliverAppBar.
   ///
-  /// Expanded state: large header with book name + testament label.
-  /// Collapsed state: compact AppBar showing only the book short name.
+  /// When expanded: the large flexible-space header is the only visible title;
+  /// the toolbar title is hidden so the book name is not shown twice.
+  /// When collapsed (scroll offset > 104 px): the compact toolbar title
+  /// appears and the flexible space has scrolled away.
   SliverAppBar _buildSliverAppBar(ColorScheme colorScheme) {
     return SliverAppBar(
       // Height of the expanded (large) header area.
@@ -166,11 +191,15 @@ class _ChapterSelectionScreenState extends State<ChapterSelectionScreen> {
       // Background color for both expanded and collapsed states.
       backgroundColor: colorScheme.primaryContainer,
       foregroundColor: colorScheme.onPrimaryContainer,
-      // Collapsed title — shown when the header has fully scrolled away.
-      title: Text(
-        widget.book.nameShort,
-        style: const TextStyle(fontWeight: FontWeight.w700),
-      ),
+      // Show the compact title only once the expanded header has scrolled
+      // away — avoids displaying the book name in both the toolbar and the
+      // large flexible-space header at the same time.
+      title: _isCollapsed
+          ? Text(
+              widget.book.nameShort,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            )
+          : null,
       // Expanded content — the large decorative header.
       flexibleSpace: FlexibleSpaceBar(
         // Disable the default title (we supply our own content below).
@@ -194,8 +223,9 @@ class _ChapterSelectionScreenState extends State<ChapterSelectionScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Testament label — small, slightly subdued.
+          // Testament.label is the single source of truth (book.dart).
           Text(
-            _testamentLabel(widget.book).toUpperCase(),
+            widget.book.testament.label.toUpperCase(),
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
@@ -327,21 +357,32 @@ class _ChapterTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      // Rounded-square tile background.
-      color: colorScheme.primaryContainer,
-      borderRadius: BorderRadius.circular(14),
-      // InkWell provides the ripple effect inside the rounded rect.
-      child: InkWell(
-        onTap: onTap,
+    return Semantics(
+      // Announce "Chapter N" to screen readers instead of just the bare
+      // number — gives assistive technology enough context to describe the
+      // action without the user needing to infer it from surroundings.
+      label: 'Chapter $chapter',
+      button: true,
+      child: Material(
+        // Rounded-square tile background.
+        color: colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(14),
-        child: Center(
-          child: Text(
-            '$chapter',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: colorScheme.onPrimaryContainer,
+        // InkWell provides the ripple effect inside the rounded rect.
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          // ExcludeSemantics prevents the Text widget from adding a
+          // duplicate bare-number announcement on top of our label.
+          child: ExcludeSemantics(
+            child: Center(
+              child: Text(
+                '$chapter',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: colorScheme.onPrimaryContainer,
+                ),
+              ),
             ),
           ),
         ),

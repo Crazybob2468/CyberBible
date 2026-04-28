@@ -102,12 +102,17 @@ Step 1.9 implementation:
 - **Theme seed updated** (`lib/app.dart`): seed changed from calm blue (`0xFF2E5A88`) to forest green (`0xFF2D6A4F`) to harmonise with the home screen's fixed brand gradient. Light/dark system-mode response unchanged. Step 1.16 will let users override this seed via the settings screen.
 
 **Tests (Step 1.9):**
-- UI-only step. No new pure Dart logic was added (chapter loading goes through the already-tested `BibleService`).
+- **New pure Dart logic added**: `Testament.label` getter in `lib/models/book.dart` — single source of truth for testament display strings.
+- **Unit tests written**: 4 new tests added to `test/models/models_test.dart` in a `Testament.label` group (ot/nt/dc correct strings + non-empty guard for all values).
 - **Deferred widget tests:** Widget tests for `ChapterSelectionScreen` (loading/error/grid states) deferred to the integration-test scaffold step along with other deferred UI tests.
 
-`flutter analyze lib/ test/` → No issues. `flutter test` → 66 passed.
+- **PR #11 review fixes**:
+  - `Testament.label` getter added to `lib/models/book.dart` — single source of truth for "Old Testament" / "New Testament" / "Deuterocanon / Apocrypha" strings. Both `BookSelectionScreen` (removed `_labelOT`/`_labelNT`/`_labelDC` constants) and `ChapterSelectionScreen` (removed `_testamentLabel()` helper) now call `testament.label`.
+  - `_isCollapsed` scroll tracking added to `ChapterSelectionScreen`: `ScrollController` listener hides the toolbar title when the expanded header is visible, preventing the book name from appearing twice.
+  - `_ChapterTile` wrapped in `Semantics(label: 'Chapter N', button: true)` with `ExcludeSemantics` on the inner `Text` — screen readers now announce "Chapter 1" instead of bare "1".
+  - 4 unit tests added for `Testament.label` in `test/models/models_test.dart`.
 
-Next: Step 1.10 — Scripture reading screen (display a full chapter of formatted Bible text with book name + chapter number header and scrolling).
+`flutter analyze lib/ test/` → No issues. `flutter test` → 70 passed. (display a full chapter of formatted Bible text with book name + chapter number header and scrolling).
 
 Step 1.8 implementation:
 - Added `lib/app_routes.dart` — `AppRoutes` constants (`/`, `/books`, `/chapters`, `/read`), `ChapterArgs` and `ReadingArgs` argument classes. Added `lib/routes.dart` — `onGenerateRoute()` function only; re-exports `app_routes.dart` so callers that import `routes.dart` get the constants for free. Screens import `app_routes.dart` directly to avoid a circular import chain.
