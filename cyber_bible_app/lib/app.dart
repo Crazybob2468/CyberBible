@@ -19,9 +19,15 @@ class CyberBibleApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
 
       // Light theme — used when system is in light mode.
+      //
+      // Seed color: forest green (0xFF2D6A4F) — harmonises with the home
+      // screen's fixed dark-green brand gradient. Material 3 derives a full
+      // coherent ColorScheme from this single seed, so primaryContainer,
+      // onPrimaryContainer, surface, error, etc. are all set automatically.
+      // Step 1.16 will let users override this with their own accent seed.
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2E5A88), // Calm blue
+          seedColor: const Color(0xFF2D6A4F), // Forest green
           brightness: Brightness.light,
         ),
         useMaterial3: true,
@@ -31,9 +37,10 @@ class CyberBibleApp extends StatelessWidget {
       ),
 
       // Dark theme — used when system is in dark mode.
+      // Same seed; Material 3 adjusts lightness/chroma for dark surfaces.
       darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2E5A88), // Same seed, dark variant
+          seedColor: const Color(0xFF2D6A4F), // Forest green (dark variant)
           brightness: Brightness.dark,
         ),
         useMaterial3: true,

@@ -99,6 +99,7 @@ Step 1.9 implementation:
 - `BibleService.ensureOpen()` called before `getChapters()` — web deep-link / browser-refresh safety, consistent with `BookSelectionScreen`.
 - `_testamentLabel(Book)` top-level helper maps `Testament` enum → display string.
 - All colours use `ColorScheme.*` — adapts to light/dark mode and Step 1.16 accent colour picker automatically.
+- **Theme seed updated** (`lib/app.dart`): seed changed from calm blue (`0xFF2E5A88`) to forest green (`0xFF2D6A4F`) to harmonise with the home screen's fixed brand gradient. Light/dark system-mode response unchanged. Step 1.16 will let users override this seed via the settings screen.
 
 **Tests (Step 1.9):**
 - UI-only step. No new pure Dart logic was added (chapter loading goes through the already-tested `BibleService`).
