@@ -13,7 +13,7 @@ import '../models/book.dart';
 /// Placeholder scripture reading screen.
 ///
 /// Receives a [Book] and a chapter number via the route arguments
-/// (see `ReadingArgs` in routes.dart). The actual formatted reading UI
+/// (see `ReadingArgs` in `app_routes.dart`). The actual formatted reading UI
 /// is coming in Step 1.10.
 class ReadingScreen extends StatelessWidget {
   /// The book being read.

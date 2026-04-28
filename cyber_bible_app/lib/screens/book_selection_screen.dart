@@ -11,8 +11,8 @@
 //     Deuterocanon books appear inline in the sorted list — no special
 //     handling needed.
 //
-// Tapping any book navigates to [ChapterSelectionScreen] via the named
-// route [AppRoutes.chapters].
+// Tapping any book navigates to `ChapterSelectionScreen` via the named
+// route `AppRoutes.chapters`.
 
 import 'package:flutter/foundation.dart'; // kDebugMode, debugPrint
 import 'package:flutter/material.dart';
@@ -258,15 +258,27 @@ class _TraditionalTab extends StatelessWidget {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/// Returns the uppercase first letter of [book]'s short name for use as an
-/// alphabetical group key.
+/// Returns the uppercase first character of [book]'s short name for use as
+/// an alphabetical group key.
 ///
 /// Falls back to `'#'` when [Book.nameShort] is empty, so an unusual
-/// translation with a missing name never causes a [RangeError] on the
-/// `[0]` index access. Using a shared helper ensures both the current and
-/// next-item comparisons in the list builder use identical logic.
-String _groupLetter(Book book) =>
-    book.nameShort.isNotEmpty ? book.nameShort[0].toUpperCase() : '#';
+/// translation with a missing name never causes an error while deriving the
+/// group label.
+///
+/// Uses `String.runes` to read the first Unicode code point rather than
+/// indexing the string with `[0]`, which would only read the first UTF-16
+/// code unit and could split surrogate pairs for non-BMP characters (scripts
+/// outside the Basic Multilingual Plane). This keeps grouping correct for
+/// any writing system.
+///
+/// Using a shared helper ensures both the current and next-item comparisons
+/// in the list builder use identical logic.
+String _groupLetter(Book book) {
+  if (book.nameShort.isEmpty) return '#';
+  // Convert the first code point back to a one-character string before
+  // uppercasing — avoids the surrogate-pair hazard of direct [0] indexing.
+  return String.fromCharCode(book.nameShort.runes.first).toUpperCase();
+}
 
 // ---------------------------------------------------------------------------
 // Alphabetical tab

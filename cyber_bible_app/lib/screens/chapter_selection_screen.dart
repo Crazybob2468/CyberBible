@@ -12,9 +12,9 @@ import '../models/book.dart';
 
 /// Placeholder chapter selection screen.
 ///
-/// Receives a [Book] via the route arguments (see `ChapterArgs` in routes.dart)
-/// and shows the book name as a title. The actual chapter grid UI is coming
-/// in Step 1.9.
+/// Receives a [Book] via the route arguments (see `ChapterArgs` in
+/// `app_routes.dart`) and shows the book name as a title. The actual
+/// chapter grid UI is coming in Step 1.9.
 class ChapterSelectionScreen extends StatelessWidget {
   /// The book whose chapters will eventually be displayed.
   final Book book;
