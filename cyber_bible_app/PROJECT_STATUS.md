@@ -82,11 +82,45 @@ cyber_bible_app/
 
 ## Current Status
 
-**Phase 1 — Step 1.7 Complete: Bible service layer**
+**Phase 1 — Step 1.8 Complete: Book selection screen**
 
 Step 1.5 ✅ MERGED (PR #7). The SQLite build tool, 60 unit tests, and generated `eng-web.db` are on `main`.
 Step 1.6 ✅ MERGED. `BibleSetupService` (DB copy on first launch), startup wiring, and unit tests.
 Step 1.7 ✅ COMPLETE. `BibleService` reads books, chapters, and verses from the SQLite DB, with full Flutter Web support (IndexedDB-backed SQLite persistence via `sqflite_common_ffi_web`).
+Step 1.8 ✅ COMPLETE. Book selection screen with Traditional/Alphabetical tabs. Full named-route architecture wired up.
+
+Step 1.8 implementation:
+- Added `lib/routes.dart` — `AppRoutes` constants (`/`, `/books`, `/chapters`, `/read`), `ChapterArgs` and `ReadingArgs` argument classes, and `onGenerateRoute()` function. All navigation uses named routes and typed arguments; no magic strings elsewhere.
+- Added `lib/screens/book_selection_screen.dart` — `StatefulWidget` that calls `BibleService.getBooks()` on mount. Two tabs:
+  - **Traditional**: books in canonical `sortOrder` under styled section headers (4 px left accent bar in `primary`, `primaryContainer` tinted background, icon, ALL-CAPS bold label). Each header: OT (`history_edu`), NT (`auto_stories`), DC (`library_books`, only if present). Each book tile has a rounded abbreviation badge (`primaryContainer`), `w500` title, compact chapter count + chevron. Thin indented `Divider` between tiles within each group.
+  - **Alphabetical**: all books sorted by `nameShort`; letter-group headers (in `primary` color) inserted between groups like a contacts app. Same tile style as Traditional.
+  - Loading spinner while books are fetched; error message + Retry button if the fetch fails.
+  - All colors use `ColorScheme.*` — adapts to light/dark mode and future Step 1.16 accent color changes automatically.
+- Added `lib/screens/chapter_selection_screen.dart` — placeholder stub for Step 1.9. Accepts a `Book` argument and shows the book name as the title.
+- Added `lib/screens/reading_screen.dart` — placeholder stub for Step 1.10. Accepts a `Book` + chapter number and shows them as the title.
+- Updated `lib/app.dart` — replaced `home: const HomeScreen()` with `initialRoute: AppRoutes.home` + `onGenerateRoute: onGenerateRoute`.
+- Updated `lib/screens/home_screen.dart` — converted from `StatelessWidget` to `StatefulWidget`. Calls `BibleService.ensureOpen()` in `initState`. Three UI states: loading ("Loading Cyber Bible..." + gold-tinted spinner on dark green gradient), error (frosted-glass card + Retry), ready (branded full-bleed dark-forest-green + gold gradient; glowing gold-bordered book icon; "Cyber" white + "Bible" gold display title; Genesis 1:1 verse in frosted-glass card; gold gradient "Read the Bible" `_GoldButton`). Home screen uses fixed brand colors — not affected by system dark/light mode. All inner screens continue to follow the system theme. Status bar icons forced light so they contrast with the dark background.
+
+**PR #10 review fixes (second pass):**
+- `lib/screens/book_selection_screen.dart` — added `await BibleService.ensureOpen()` at the start of `_loadBooks()` so navigating directly to `/books` (Flutter Web refresh or deep link) opens the DB before querying, instead of throwing an unrecoverable `StateError`.
+- `lib/screens/home_screen.dart` + `book_selection_screen.dart` — replaced raw `$e` in user-facing error strings with friendly messages ("Could not open the Bible database. Please try again." / "Could not load the books list. Please try again."). Raw exception details are now logged via `debugPrint` under `kDebugMode` only, keeping internal paths and SQL out of production UI.
+- `lib/screens/book_selection_screen.dart` — removed trailing whitespace after `...[` in `_SectionHeader` widget.
+- Added `import 'package:flutter/foundation.dart'` to both screen files for `kDebugMode` / `debugPrint`.
+
+**PR #10 review fixes (third pass):**
+- Created `lib/app_routes.dart` — extracted `AppRoutes`, `ChapterArgs`, and `ReadingArgs` from `routes.dart` into a standalone file. Screens import `app_routes.dart` directly; `routes.dart` re-exports it and contains only `onGenerateRoute`. This eliminates the circular import chain (screens → routes.dart → screens).
+- `lib/routes.dart` — fallback `MaterialPageRoute` for missing `/chapters` and `/read` arguments now uses `const RouteSettings(name: AppRoutes.home)` so the browser URL and Navigator history match the `HomeScreen` that is actually displayed.
+- `lib/screens/home_screen.dart` — `_GoldButton` docstring corrected from "full-width CTA style" to "larger CTA styling" (widget uses `mainAxisSize.min`, never expands to fill width).
+- `lib/screens/chapter_selection_screen.dart` + `reading_screen.dart` — replaced unresolvable dartdoc bracket links (`[ChapterArgs]`, `[ReadingArgs]`) with backtick references to avoid `comment_references` lint warnings.
+- `lib/screens/home_screen.dart` + `book_selection_screen.dart` — updated imports from `routes.dart` to `app_routes.dart`.
+
+**Tests (Step 1.8):**
+- This is a UI-only step. No new pure Dart logic was added (all data access goes through the already-tested `BibleService`).
+- **Deferred widget tests:** Widget tests for `BookSelectionScreen`, `HomeScreen` (loading/error/ready states), `ChapterSelectionScreen`, and `ReadingScreen` are deferred to the integration-test scaffold step. Will be added then.
+
+`flutter analyze lib/ test/` → No issues. `flutter test` → 66 passed.
+
+Next: Step 1.9 — Chapter selection screen (grid of chapter numbers for the selected book; tapping navigates to the reading screen).
 
 Step 1.7 implementation:
 - Added `sqflite_common_ffi_web: ^1.0.2` (resolves to 1.1.1), `sqflite_common: ^2.5.6+1`, as direct `dependencies`.
@@ -113,7 +147,7 @@ Step 1.7 implementation:
 
 `flutter analyze lib/ test/` → No issues. `flutter test` → 66 passed.
 
-Next: Step 1.8 — Book selection screen (lists all Bible books, OT and NT sections, tapping navigates to chapter selection).
+Next: Step 1.9 — Chapter selection screen (grid of chapter numbers for the selected book; tapping navigates to the reading screen).
 
 ---
 
@@ -143,7 +177,7 @@ The goal: open the app, pick a book and chapter, and read formatted Bible text.
 | 1.13 | **Chapter-to-chapter navigation** | Add previous/next chapter buttons or swipe gestures to move between chapters seamlessly. |
 | 1.14 | **Bookmarks — data layer** | Create a `Bookmark` model and SQLite table. Methods: `addBookmark(reference)`, `removeBookmark(id)`, `getBookmarks()`. |
 | 1.15 | **Bookmarks — UI** | Add a way to bookmark the current location (long-press or button). Build a bookmarks list screen accessible from the home screen or menu. |
-| 1.16 | **Settings screen (font & theme)** | Build a settings screen with: font size slider, light/dark theme toggle. Persist settings with `shared_preferences`. |
+| 1.16 | **Settings screen (font & theme)** | Build a settings screen with: font size slider; light/dark/system theme toggle; accent color picker (let users choose from a curated palette of seed colors that drive the Material 3 `ColorScheme` — e.g. the default calm blue, forest green, crimson, gold, purple, etc.); words-of-Christ color toggle (red or black). Persist all settings with `shared_preferences`. The home screen branded gradient is fixed and unaffected by theme changes; all inner screens (book selection, chapter selection, reading) respond to the chosen theme. |
 | 1.17 | **Internationalization setup** | Set up Flutter l10n with ARB files. Extract all hard-coded UI strings into localizable constants. Start with English. Add structure for additional languages. |
 
 ### Phase 2 — Study Features
