@@ -28,6 +28,17 @@ import '../services/bible_service.dart';
 // the single source of truth shared with BookSelectionScreen.
 
 // ---------------------------------------------------------------------------
+// Layout constants
+// ---------------------------------------------------------------------------
+
+/// Height of the SliverAppBar's expanded flexible space (in logical pixels).
+///
+/// Defined as a single constant so [SliverAppBar.expandedHeight] and the
+/// collapse-detection threshold in [_ChapterSelectionScreenState._onScroll]
+/// always stay in sync — changing one value here updates both automatically.
+const double _expandedHeight = 160.0;
+
+// ---------------------------------------------------------------------------
 // Main screen widget
 // ---------------------------------------------------------------------------
 
@@ -37,7 +48,7 @@ import '../services/bible_service.dart';
 /// While loading, a centred activity indicator is shown. If loading fails,
 /// an error card with a Retry button is shown instead.
 ///
-/// Tapping a chapter navigates to [ReadingScreen] via [AppRoutes.reading]
+/// Tapping a chapter navigates to the reading screen via [AppRoutes.reading]
 /// carrying a [ReadingArgs] instance.
 class ChapterSelectionScreen extends StatefulWidget {
   /// The book whose chapters are displayed.
@@ -97,9 +108,9 @@ class _ChapterSelectionScreenState extends State<ChapterSelectionScreen> {
   /// Listens to scroll events and updates [_isCollapsed] accordingly.
   ///
   /// The SliverAppBar finishes collapsing when the scroll offset exceeds
-  /// `expandedHeight (160) − kToolbarHeight (≈ 56) = 104 px`.
+  /// `_expandedHeight − kToolbarHeight (≈ 56) = 104 px`.
   void _onScroll() {
-    const collapseThreshold = 160.0 - kToolbarHeight;
+    const collapseThreshold = _expandedHeight - kToolbarHeight;
     final collapsed = _scrollController.offset > collapseThreshold;
     if (collapsed != _isCollapsed) {
       setState(() => _isCollapsed = collapsed);
@@ -184,8 +195,8 @@ class _ChapterSelectionScreenState extends State<ChapterSelectionScreen> {
   /// appears and the flexible space has scrolled away.
   SliverAppBar _buildSliverAppBar(ColorScheme colorScheme) {
     return SliverAppBar(
-      // Height of the expanded (large) header area.
-      expandedHeight: 160,
+      // Height of the expanded (large) header area — must match _expandedHeight.
+      expandedHeight: _expandedHeight,
       // Pin the collapsed bar at the top while the user scrolls.
       pinned: true,
       // Background color for both expanded and collapsed states.

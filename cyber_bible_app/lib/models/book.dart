@@ -12,12 +12,12 @@ enum Testament {
   /// Human-readable display label for this testament.
   ///
   /// This is the single source of truth for testament names used across the
-  /// app — [BookSelectionScreen] section headers and [ChapterSelectionScreen]
+  /// app — `BookSelectionScreen` section headers and `ChapterSelectionScreen`
   /// collapsible header both call this getter instead of defining their own
   /// string literals.
   ///
   /// Returns title-case text (e.g. "Old Testament"). Call
-  /// [String.toUpperCase] at the call site if an ALL-CAPS variant is needed.
+  /// `String.toUpperCase` at the call site if an ALL-CAPS variant is needed.
   String get label {
     switch (this) {
       case Testament.ot:

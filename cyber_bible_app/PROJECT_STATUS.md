@@ -97,7 +97,7 @@ Step 1.9 implementation:
 - **Loading state**: centred `CircularProgressIndicator` while chapters are fetched.
 - **Error state**: error icon + user-friendly message + `FilledButton` Retry (raw exception logged via `debugPrint` under `kDebugMode` only).
 - `BibleService.ensureOpen()` called before `getChapters()` — web deep-link / browser-refresh safety, consistent with `BookSelectionScreen`.
-- `_testamentLabel(Book)` top-level helper maps `Testament` enum → display string.
+- `Testament.label` getter (see `lib/models/book.dart`) used for testament display strings — replaced by the PR #11 refactor described below.
 - All colours use `ColorScheme.*` — adapts to light/dark mode and Step 1.16 accent colour picker automatically.
 - **Theme seed updated** (`lib/app.dart`): seed changed from calm blue (`0xFF2E5A88`) to forest green (`0xFF2D6A4F`) to harmonise with the home screen's fixed brand gradient. Light/dark system-mode response unchanged. Step 1.16 will let users override this seed via the settings screen.
 
@@ -112,7 +112,9 @@ Step 1.9 implementation:
   - `_ChapterTile` wrapped in `Semantics(label: 'Chapter N', button: true)` with `ExcludeSemantics` on the inner `Text` — screen readers now announce "Chapter 1" instead of bare "1".
   - 4 unit tests added for `Testament.label` in `test/models/models_test.dart`.
 
-`flutter analyze lib/ test/` → No issues. `flutter test` → 70 passed. (display a full chapter of formatted Bible text with book name + chapter number header and scrolling).
+`flutter analyze lib/ test/` → No issues. `flutter test` → 70 passed.
+
+Next: Step 1.10 — Scripture reading screen (display a full chapter of formatted Bible text with book name + chapter number header and scrolling). `ReadingScreen` is currently a placeholder stub.
 
 Step 1.8 implementation:
 - Added `lib/app_routes.dart` — `AppRoutes` constants (`/`, `/books`, `/chapters`, `/read`), `ChapterArgs` and `ReadingArgs` argument classes. Added `lib/routes.dart` — `onGenerateRoute()` function only; re-exports `app_routes.dart` so callers that import `routes.dart` get the constants for free. Screens import `app_routes.dart` directly to avoid a circular import chain.
