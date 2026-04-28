@@ -82,11 +82,31 @@ cyber_bible_app/
 
 ## Current Status
 
-**Phase 1 — Step 1.7 Complete: Bible service layer**
+**Phase 1 — Step 1.8 Complete: Book selection screen**
 
 Step 1.5 ✅ MERGED (PR #7). The SQLite build tool, 60 unit tests, and generated `eng-web.db` are on `main`.
 Step 1.6 ✅ MERGED. `BibleSetupService` (DB copy on first launch), startup wiring, and unit tests.
 Step 1.7 ✅ COMPLETE. `BibleService` reads books, chapters, and verses from the SQLite DB, with full Flutter Web support (IndexedDB-backed SQLite persistence via `sqflite_common_ffi_web`).
+Step 1.8 ✅ COMPLETE. Book selection screen with Traditional/Alphabetical tabs. Full named-route architecture wired up.
+
+Step 1.8 implementation:
+- Added `lib/routes.dart` — `AppRoutes` constants (`/`, `/books`, `/chapters`, `/read`), `ChapterArgs` and `ReadingArgs` argument classes, and `onGenerateRoute()` function. All navigation uses named routes and typed arguments; no magic strings elsewhere.
+- Added `lib/screens/book_selection_screen.dart` — `StatefulWidget` that calls `BibleService.getBooks()` on mount. Two tabs:
+  - **Traditional**: books in canonical `sortOrder` under section headers "Old Testament", "New Testament", and (only when the translation has DC books) "Deuterocanon / Apocrypha". Headers use `surfaceContainerHighest` tint. Each book tile shows the short name + chapter count.
+  - **Alphabetical**: all books sorted by `nameShort` — works for any language/script since names come from the DB.
+  - Loading spinner while books are fetched; error message + Retry button if the fetch fails.
+- Added `lib/screens/chapter_selection_screen.dart` — placeholder stub for Step 1.9. Accepts a `Book` argument and shows the book name as the title.
+- Added `lib/screens/reading_screen.dart` — placeholder stub for Step 1.10. Accepts a `Book` + chapter number and shows them as the title.
+- Updated `lib/app.dart` — replaced `home: const HomeScreen()` with `initialRoute: AppRoutes.home` + `onGenerateRoute: onGenerateRoute`.
+- Updated `lib/screens/home_screen.dart` — converted from `StatelessWidget` to `StatefulWidget`. Calls `BibleService.ensureOpen()` in `initState`. Three UI states: loading ("Loading Cyber Bible..." + spinner), error (message + Retry), ready (book icon + title + "Read the Bible" `FilledButton` navigating to `AppRoutes.bookSelect`).
+
+**Tests (Step 1.8):**
+- This is a UI-only step. No new pure Dart logic was added (all data access goes through the already-tested `BibleService`).
+- **Deferred widget tests:** Widget tests for `BookSelectionScreen`, `HomeScreen` (loading/error/ready states), `ChapterSelectionScreen`, and `ReadingScreen` are deferred to the integration-test scaffold step. Will be added then.
+
+`flutter analyze lib/ test/` → No issues. `flutter test` → 66 passed.
+
+Next: Step 1.9 — Chapter selection screen (grid of chapter numbers for the selected book; tapping navigates to the reading screen).
 
 Step 1.7 implementation:
 - Added `sqflite_common_ffi_web: ^1.0.2` (resolves to 1.1.1), `sqflite_common: ^2.5.6+1`, as direct `dependencies`.
@@ -113,7 +133,7 @@ Step 1.7 implementation:
 
 `flutter analyze lib/ test/` → No issues. `flutter test` → 66 passed.
 
-Next: Step 1.8 — Book selection screen (lists all Bible books, OT and NT sections, tapping navigates to chapter selection).
+Next: Step 1.9 — Chapter selection screen (grid of chapter numbers for the selected book; tapping navigates to the reading screen).
 
 ---
 
