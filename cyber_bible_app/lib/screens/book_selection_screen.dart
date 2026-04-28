@@ -212,22 +212,26 @@ class _TraditionalTab extends StatelessWidget {
     final items = <Widget>[];
 
     // --- Old Testament ---
-    items.add(const _SectionHeader(label: _labelOT));
-    for (final book in otBooks) {
-      items.add(_BookTile(book: book, onTap: onBookTapped));
+    items.add(const _SectionHeader(label: _labelOT, icon: Icons.history_edu));
+    for (int i = 0; i < otBooks.length; i++) {
+      items.add(_BookTile(book: otBooks[i], onTap: onBookTapped));
+      // Add a divider between tiles but not after the last one in the group.
+      if (i < otBooks.length - 1) items.add(const _TileDivider());
     }
 
     // --- New Testament ---
-    items.add(const _SectionHeader(label: _labelNT));
-    for (final book in ntBooks) {
-      items.add(_BookTile(book: book, onTap: onBookTapped));
+    items.add(const _SectionHeader(label: _labelNT, icon: Icons.auto_stories));
+    for (int i = 0; i < ntBooks.length; i++) {
+      items.add(_BookTile(book: ntBooks[i], onTap: onBookTapped));
+      if (i < ntBooks.length - 1) items.add(const _TileDivider());
     }
 
     // --- Deuterocanon / Apocrypha (only if translation includes them) ---
     if (dcBooks.isNotEmpty) {
-      items.add(const _SectionHeader(label: _labelDC));
-      for (final book in dcBooks) {
-        items.add(_BookTile(book: book, onTap: onBookTapped));
+      items.add(const _SectionHeader(label: _labelDC, icon: Icons.library_books));
+      for (int i = 0; i < dcBooks.length; i++) {
+        items.add(_BookTile(book: dcBooks[i], onTap: onBookTapped));
+        if (i < dcBooks.length - 1) items.add(const _TileDivider());
       }
     }
 
@@ -264,13 +268,37 @@ class _AlphabeticalTab extends StatelessWidget {
     final sorted = [...books]
       ..sort((a, b) => a.nameShort.compareTo(b.nameShort));
 
+    // Build a flat list of items interleaved with letter-group headers.
+    // A new [_LetterHeader] is inserted whenever the first character of
+    // nameShort changes — like a contacts list.
+    final items = <Widget>[];
+    String? currentLetter;
+
+    for (int i = 0; i < sorted.length; i++) {
+      final book = sorted[i];
+      // First character of the book name, upper-cased for grouping.
+      final letter =
+          book.nameShort.isNotEmpty ? book.nameShort[0].toUpperCase() : '#';
+
+      // Insert a letter header whenever the group changes.
+      if (letter != currentLetter) {
+        currentLetter = letter;
+        items.add(_LetterHeader(letter: letter));
+      }
+
+      items.add(_BookTile(book: book, onTap: onBookTapped));
+
+      // Add a divider between tiles within the same letter group, but not
+      // before the next letter header (which provides its own visual break).
+      final isLastInGroup = i == sorted.length - 1 ||
+          sorted[i + 1].nameShort[0].toUpperCase() != letter;
+      if (!isLastInGroup) items.add(const _TileDivider());
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.only(bottom: 24),
-      itemCount: sorted.length,
-      itemBuilder: (_, index) => _BookTile(
-        book: sorted[index],
-        onTap: onBookTapped,
-      ),
+      itemCount: items.length,
+      itemBuilder: (_, index) => items[index],
     );
   }
 }
@@ -279,31 +307,56 @@ class _AlphabeticalTab extends StatelessWidget {
 // Reusable widgets
 // ---------------------------------------------------------------------------
 
-/// A non-interactive section header row.
+/// A styled section header row used between testament groups in the
+/// Traditional tab.
 ///
-/// Used between groups of books in the Traditional tab.
-/// Styled to stand out clearly from the book tiles beneath it.
+/// Features a 4 px left accent bar in [ColorScheme.primary], a tinted
+/// [ColorScheme.primaryContainer] background, an optional leading [icon],
+/// and uppercase bold text — all driven by the active Material theme so
+/// it looks correct in both light and dark mode and respects any accent
+/// color the user picks in Settings (Step 1.16).
 class _SectionHeader extends StatelessWidget {
-  /// The text to display in the header (e.g. "Old Testament").
+  /// The text to display (e.g. "Old Testament").
   final String label;
 
-  const _SectionHeader({required this.label});
+  /// Optional leading icon displayed to the left of the label.
+  final IconData? icon;
+
+  const _SectionHeader({required this.label, this.icon});
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+
     return Container(
-      // Tinted background to differentiate headers from list tiles.
-      color: colorScheme.surfaceContainerHighest,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 0.8,
-          color: colorScheme.onSurfaceVariant,
+      // A small top margin visually separates consecutive sections.
+      margin: const EdgeInsets.only(top: 8),
+      decoration: BoxDecoration(
+        // Muted primary tint as background — readable in both themes.
+        color: colorScheme.primaryContainer,
+        border: Border(
+          // 4 px accent bar on the left edge in the primary brand color.
+          left: BorderSide(color: colorScheme.primary, width: 4),
         ),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Row(
+        children: [
+          if (icon != null) ...[           
+            Icon(icon, size: 16, color: colorScheme.onPrimaryContainer),
+            const SizedBox(width: 8),
+          ],
+          Text(
+            // All-caps gives a strong section-header feel.
+            label.toUpperCase(),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.2,
+              color: colorScheme.onPrimaryContainer,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -324,24 +377,144 @@ class _BookTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Chapter count label — singular "chapter" vs plural "chapters".
-    final chapterLabel = book.chapterCount == 1
-        ? '1 chapter'
-        : '${book.chapterCount} chapters';
+    final colorScheme = Theme.of(context).colorScheme;
+
+    // Compact chapter count — "39 ch." saves horizontal space for the chevron.
+    final chapterLabel =
+        book.chapterCount == 1 ? '1 ch.' : '${book.chapterCount} ch.';
 
     return ListTile(
-      // Book name as the primary content.
-      title: Text(book.nameShort),
-      // Chapter count as a secondary hint on the right side.
-      trailing: Text(
-        chapterLabel,
-        style: TextStyle(
-          fontSize: 13,
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-        ),
+      // Abbreviation badge on the left — gives each row a visual anchor.
+      leading: _AbbreviationBadge(abbreviation: book.abbreviation),
+      // Book name as the primary content, slightly bolder than default.
+      title: Text(
+        book.nameShort,
+        style: const TextStyle(fontWeight: FontWeight.w500),
+      ),
+      // Chapter count + forward chevron on the right.
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            chapterLabel,
+            style: TextStyle(
+              fontSize: 12,
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(width: 2),
+          Icon(
+            Icons.chevron_right_rounded,
+            size: 20,
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ],
       ),
       // Navigate to chapter selection on tap.
       onTap: () => onTap(book),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Reusable: abbreviation badge
+// ---------------------------------------------------------------------------
+
+/// A small rounded-rectangle badge displaying a book abbreviation.
+///
+/// Uses [ColorScheme.primaryContainer] as the background and
+/// [ColorScheme.onPrimaryContainer] as the text color, so it adapts
+/// automatically to both light and dark mode and to any theme accent color
+/// chosen in Settings (Step 1.16).
+class _AbbreviationBadge extends StatelessWidget {
+  /// The abbreviation text to display (e.g. "Gen", "Matt", "Rev").
+  ///
+  /// Capped at 4 characters to keep the badge compact.
+  final String abbreviation;
+
+  const _AbbreviationBadge({required this.abbreviation});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    // Cap at 4 characters — some abbreviations can be longer.
+    final display = abbreviation.length > 4
+        ? abbreviation.substring(0, 4)
+        : abbreviation;
+
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: colorScheme.primaryContainer,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        display,
+        style: TextStyle(
+          color: colorScheme.onPrimaryContainer,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.2,
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Reusable: tile divider
+// ---------------------------------------------------------------------------
+
+/// A thin horizontal divider placed between book tiles within a section.
+///
+/// The [indent] of 72 px aligns the left edge of the line with the start of
+/// the book name text (after the leading badge). This is a common Material
+/// convention that keeps the list from feeling too cluttered.
+class _TileDivider extends StatelessWidget {
+  const _TileDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Divider(
+      height: 1,
+      indent: 72,  // aligns with the title text start
+      endIndent: 16,
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Reusable: alphabetical letter header
+// ---------------------------------------------------------------------------
+
+/// A compact letter-group header used in the Alphabetical tab.
+///
+/// Displayed between groups of books that start with the same letter,
+/// similar to a contacts list. Uses [ColorScheme.primary] for the letter
+/// text so it picks up the active theme accent color automatically.
+class _LetterHeader extends StatelessWidget {
+  /// The uppercase letter for this group (e.g. "A", "G", "R").
+  final String letter;
+
+  const _LetterHeader({required this.letter});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 2),
+      child: Text(
+        letter,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: colorScheme.primary,
+          letterSpacing: 1.0,
+        ),
+      ),
     );
   }
 }
