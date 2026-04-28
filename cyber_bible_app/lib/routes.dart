@@ -1,75 +1,27 @@
-// Named route constants and route generation for Cyber Bible.
+// Route generator for Cyber Bible.
 //
-// All navigation in the app goes through these named routes so that:
-//   - Route strings are never duplicated as magic strings across the codebase.
-//   - Route arguments are defined in one place and are type-safe.
-//   - New routes are easy to add in future steps.
+// This file contains only the onGenerateRoute factory function.
+// Route constants (AppRoutes) and argument classes (ChapterArgs, ReadingArgs)
+// live in app_routes.dart so screens can import them without creating a
+// circular dependency (screens → app_routes; routes.dart → app_routes + screens).
+//
+// app_routes.dart is re-exported here so callers that only import routes.dart
+// (e.g. app.dart) continue to get AppRoutes/ChapterArgs/ReadingArgs for free.
 //
 // How navigation works:
 //   Navigator.pushNamed(context, AppRoutes.bookSelect);
 //   Navigator.pushNamed(context, AppRoutes.chapters, arguments: ChapterArgs(book: myBook));
 //   Navigator.pushNamed(context, AppRoutes.reading,  arguments: ReadingArgs(book: myBook, chapter: 1));
 
+export 'app_routes.dart'; // Re-export so consumers of routes.dart still get AppRoutes etc.
+
 import 'package:flutter/material.dart';
 
-import 'models/book.dart';
+import 'app_routes.dart';
 import 'screens/home_screen.dart';
 import 'screens/book_selection_screen.dart';
 import 'screens/chapter_selection_screen.dart';
 import 'screens/reading_screen.dart';
-
-// ---------------------------------------------------------------------------
-// Route path constants
-// ---------------------------------------------------------------------------
-
-/// All named route paths used in the app.
-///
-/// Use these constants instead of plain strings wherever you call
-/// [Navigator.pushNamed] or set [MaterialApp.initialRoute].
-class AppRoutes {
-  AppRoutes._(); // Prevent instantiation — this is a namespace class.
-
-  /// The home / landing screen. Initial route shown on app launch.
-  static const String home = '/';
-
-  /// Book selection screen — lists all books of the Bible.
-  static const String bookSelect = '/books';
-
-  /// Chapter selection screen — lists chapters for a chosen book.
-  /// Expects a [ChapterArgs] instance as the route argument.
-  static const String chapters = '/chapters';
-
-  /// Scripture reading screen — displays a single chapter.
-  /// Expects a [ReadingArgs] instance as the route argument.
-  static const String reading = '/read';
-}
-
-// ---------------------------------------------------------------------------
-// Route argument classes
-// ---------------------------------------------------------------------------
-
-/// Arguments passed to [AppRoutes.chapters].
-///
-/// Contains the [Book] the user selected on the book-selection screen.
-class ChapterArgs {
-  /// The book whose chapters should be displayed.
-  final Book book;
-
-  const ChapterArgs({required this.book});
-}
-
-/// Arguments passed to [AppRoutes.reading].
-///
-/// Contains both the [Book] and the chapter number to display.
-class ReadingArgs {
-  /// The book being read.
-  final Book book;
-
-  /// The 1-based chapter number to display.
-  final int chapter;
-
-  const ReadingArgs({required this.book, required this.chapter});
-}
 
 // ---------------------------------------------------------------------------
 // Route generator
@@ -105,9 +57,11 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
       // Web if the user refreshes the browser while on this route, or if a
       // caller forgets to pass a ChapterArgs instance. Redirect home safely
       // rather than crashing with a cast error.
+      // Override RouteSettings.name to AppRoutes.home so the browser URL and
+      // Navigator history match the screen that is actually shown.
       if (settings.arguments is! ChapterArgs) {
         return MaterialPageRoute<void>(
-          settings: settings,
+          settings: const RouteSettings(name: AppRoutes.home),
           builder: (_) => const HomeScreen(),
         );
       }
@@ -121,9 +75,10 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
     case AppRoutes.reading:
       // Same guard as above — missing or wrong-typed args redirect home
       // instead of throwing a cast error at runtime.
+      // Override RouteSettings.name so Navigator history stays consistent.
       if (settings.arguments is! ReadingArgs) {
         return MaterialPageRoute<void>(
-          settings: settings,
+          settings: const RouteSettings(name: AppRoutes.home),
           builder: (_) => const HomeScreen(),
         );
       }

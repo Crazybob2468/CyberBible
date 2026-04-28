@@ -18,7 +18,7 @@ import 'package:flutter/foundation.dart'; // kDebugMode, debugPrint
 import 'package:flutter/material.dart';
 
 import '../models/book.dart';
-import '../routes.dart';
+import '../app_routes.dart';
 import '../services/bible_service.dart';
 
 // ---------------------------------------------------------------------------
