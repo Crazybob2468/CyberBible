@@ -14,6 +14,7 @@
 // Tapping any book navigates to [ChapterSelectionScreen] via the named
 // route [AppRoutes.chapters].
 
+import 'package:flutter/foundation.dart'; // kDebugMode, debugPrint
 import 'package:flutter/material.dart';
 
 import '../models/book.dart';
@@ -95,13 +96,22 @@ class _BookSelectionScreenState extends State<BookSelectionScreen>
     });
 
     try {
+      // Ensure the database is open before querying. HomeScreen normally
+      // handles this, but guarding here makes /books safe when the user
+      // navigates directly (e.g., Flutter Web browser refresh or deep link).
+      await BibleService.ensureOpen();
       final books = await BibleService.getBooks();
       if (mounted) {
         setState(() => _books = books);
       }
     } catch (e) {
+      // Log the raw exception in debug builds only — internal paths and SQL
+      // errors should not be surfaced to end users in production.
+      if (kDebugMode) {
+        debugPrint('BookSelectionScreen._loadBooks() failed: $e');
+      }
       if (mounted) {
-        setState(() => _errorMessage = 'Could not load books: $e');
+        setState(() => _errorMessage = 'Could not load the books list. Please try again.');
       }
     }
   }
@@ -357,7 +367,7 @@ class _SectionHeader extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       child: Row(
         children: [
-          if (icon != null) ...[           
+          if (icon != null) ...[
             Icon(icon, size: 16, color: colorScheme.onPrimaryContainer),
             const SizedBox(width: 8),
           ],

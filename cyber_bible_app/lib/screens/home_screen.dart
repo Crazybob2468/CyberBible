@@ -17,6 +17,7 @@
 //   always the same, like a splash page. All inner screens (book selection,
 //   chapter selection, reading) continue to follow the system theme normally.
 
+import 'package:flutter/foundation.dart'; // kDebugMode, debugPrint
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // SystemUiOverlayStyle
 
@@ -96,10 +97,15 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() => _loading = false);
       }
     } catch (e) {
+      // Log the raw exception in debug builds only — paths and SQL details
+      // should not be surfaced to end users in production.
+      if (kDebugMode) {
+        debugPrint('HomeScreen._openDatabase() failed: $e');
+      }
       if (mounted) {
         setState(() {
           _loading = false;
-          _errorMessage = 'Could not open the Bible database: $e';
+          _errorMessage = 'Could not open the Bible database. Please try again.';
         });
       }
     }
