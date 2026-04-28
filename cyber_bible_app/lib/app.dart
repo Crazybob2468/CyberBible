@@ -3,11 +3,11 @@
 // Sets up MaterialApp with:
 // - Light and dark themes (follows system preference)
 // - Material 3 design
-// - App-wide routing (to be expanded in later steps)
+// - App-wide named routing via AppRoutes and onGenerateRoute (routes.dart)
 
 import 'package:flutter/material.dart';
 
-import 'screens/home_screen.dart';
+import 'routes.dart';
 
 class CyberBibleApp extends StatelessWidget {
   const CyberBibleApp({super.key});
@@ -45,7 +45,11 @@ class CyberBibleApp extends StatelessWidget {
       // Follow the device's light/dark setting automatically.
       themeMode: ThemeMode.system,
 
-      home: const HomeScreen(),
+      // Named route configuration — all routes defined in routes.dart.
+      // Using onGenerateRoute instead of a static routes map so we can pass
+      // typed arguments (ChapterArgs, ReadingArgs) to each screen.
+      initialRoute: AppRoutes.home,
+      onGenerateRoute: onGenerateRoute,
     );
   }
 }
