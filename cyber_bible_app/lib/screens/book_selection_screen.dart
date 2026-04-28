@@ -245,6 +245,20 @@ class _TraditionalTab extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/// Returns the uppercase first letter of [book]'s short name for use as an
+/// alphabetical group key.
+///
+/// Falls back to `'#'` when [Book.nameShort] is empty, so an unusual
+/// translation with a missing name never causes a [RangeError] on the
+/// `[0]` index access. Using a shared helper ensures both the current and
+/// next-item comparisons in the list builder use identical logic.
+String _groupLetter(Book book) =>
+    book.nameShort.isNotEmpty ? book.nameShort[0].toUpperCase() : '#';
+
+// ---------------------------------------------------------------------------
 // Alphabetical tab
 // ---------------------------------------------------------------------------
 
@@ -277,8 +291,7 @@ class _AlphabeticalTab extends StatelessWidget {
     for (int i = 0; i < sorted.length; i++) {
       final book = sorted[i];
       // First character of the book name, upper-cased for grouping.
-      final letter =
-          book.nameShort.isNotEmpty ? book.nameShort[0].toUpperCase() : '#';
+      final letter = _groupLetter(book);
 
       // Insert a letter header whenever the group changes.
       if (letter != currentLetter) {
@@ -290,8 +303,10 @@ class _AlphabeticalTab extends StatelessWidget {
 
       // Add a divider between tiles within the same letter group, but not
       // before the next letter header (which provides its own visual break).
+      // Use the same _groupLetter helper for the next item so an empty
+      // nameShort never causes a RangeError on the [0] index access.
       final isLastInGroup = i == sorted.length - 1 ||
-          sorted[i + 1].nameShort[0].toUpperCase() != letter;
+          _groupLetter(sorted[i + 1]) != letter;
       if (!isLastInGroup) items.add(const _TileDivider());
     }
 

@@ -203,8 +203,8 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  // white at 10% opacity — baked into the hex value to avoid
-                  // the deprecated Color.withOpacity() method.
+                  // White at 10% opacity, baked into the ARGB hex value so
+                  // this color remains a const and avoids an extra method call.
                   color: const Color(0x1AFFFFFF),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
@@ -255,7 +255,7 @@ class _HomeScreenState extends State<HomeScreen> {
   ///   • "Cyber Bible" title (white + gold)
   ///   • Tagline
   ///   • Thin gold divider
-  ///   • John 1:1 verse in a frosted-glass block
+  ///   • Genesis 1:1 verse in a frosted-glass block
   ///   • "Read the Bible" gold gradient button
   Widget _buildReadyState() {
     return Stack(
@@ -329,7 +329,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 32),
 
-                  // Featured verse: John 1:1.
+                  // Featured verse: Genesis 1:1.
                   _buildVerseBlock(),
                   const SizedBox(height: 48),
 
@@ -415,7 +415,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// Frosted-glass card displaying the featured verse (John 1:1).
+  /// Frosted-glass card displaying the featured verse (Genesis 1:1).
   ///
   /// The verse text and attribution are hardcoded here. A future "Verse of
   /// the Day" feature (Phase 2+) can replace this with a dynamic lookup.
@@ -423,7 +423,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       decoration: BoxDecoration(
-        // Frosted glass: white at 10% — baked into hex to avoid withOpacity().
+        // Frosted glass: white at 10% opacity, baked into ARGB hex (const-safe).
         color: const Color(0x1AFFFFFF),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(

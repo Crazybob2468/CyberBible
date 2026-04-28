@@ -101,18 +101,39 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
 
     // ---- Chapter selection ----
     case AppRoutes.chapters:
-      final args = settings.arguments as ChapterArgs;
+      // Guard against missing/wrong-typed arguments — can happen on Flutter
+      // Web if the user refreshes the browser while on this route, or if a
+      // caller forgets to pass a ChapterArgs instance. Redirect home safely
+      // rather than crashing with a cast error.
+      if (settings.arguments is! ChapterArgs) {
+        return MaterialPageRoute<void>(
+          settings: settings,
+          builder: (_) => const HomeScreen(),
+        );
+      }
+      final chapterArgs = settings.arguments as ChapterArgs;
       return MaterialPageRoute<void>(
         settings: settings,
-        builder: (_) => ChapterSelectionScreen(book: args.book),
+        builder: (_) => ChapterSelectionScreen(book: chapterArgs.book),
       );
 
     // ---- Reading screen ----
     case AppRoutes.reading:
-      final args = settings.arguments as ReadingArgs;
+      // Same guard as above — missing or wrong-typed args redirect home
+      // instead of throwing a cast error at runtime.
+      if (settings.arguments is! ReadingArgs) {
+        return MaterialPageRoute<void>(
+          settings: settings,
+          builder: (_) => const HomeScreen(),
+        );
+      }
+      final readingArgs = settings.arguments as ReadingArgs;
       return MaterialPageRoute<void>(
         settings: settings,
-        builder: (_) => ReadingScreen(book: args.book, chapter: args.chapter),
+        builder: (_) => ReadingScreen(
+          book: readingArgs.book,
+          chapter: readingArgs.chapter,
+        ),
       );
 
     // ---- Unknown route fallback ----
