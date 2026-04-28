@@ -3,6 +3,7 @@
 /// Tests cover:
 ///   - [BibleInfo] — toMap() / fromMap() round trip
 ///   - [Book] — toMap() / fromMap() round trip, including testament enum
+///   - [Testament] — label getter returns correct display string for each value
 ///   - [Chapter] — toMap() / fromMap() round trip
 ///   - [Verse] — toMap() / fromMap() round trip, plus [Verse.reference] getter
 ///   - [BibleSchema] — verifies table names and required SQL are present
@@ -164,6 +165,36 @@ void main() {
     test('toString contains code and short name', () {
       expect(genesis.toString(), contains('GEN'));
       expect(genesis.toString(), contains('Genesis'));
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // Testament.label
+  // ---------------------------------------------------------------------------
+
+  group('Testament.label', () {
+    // These tests verify the single source of truth for testament display
+    // strings used by BookSelectionScreen and ChapterSelectionScreen.
+
+    test('ot returns "Old Testament"', () {
+      expect(Testament.ot.label, 'Old Testament');
+    });
+
+    test('nt returns "New Testament"', () {
+      expect(Testament.nt.label, 'New Testament');
+    });
+
+    test('dc returns "Deuterocanon / Apocrypha"', () {
+      expect(Testament.dc.label, 'Deuterocanon / Apocrypha');
+    });
+
+    test('every Testament value has a non-empty label', () {
+      // Guards against accidentally returning an empty string for a new
+      // enum value added in a future Bible-data expansion.
+      for (final t in Testament.values) {
+        expect(t.label, isNotEmpty,
+            reason: 'Testament.${t.name}.label must not be empty');
+      }
     });
   });
 

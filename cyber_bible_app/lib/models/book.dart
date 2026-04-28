@@ -7,7 +7,27 @@ enum Testament {
   nt,
 
   /// Deuterocanon / Apocrypha.
-  dc,
+  dc;
+
+  /// Human-readable display label for this testament.
+  ///
+  /// This is the single source of truth for testament names used across the
+  /// app — `BookSelectionScreen` section headers and `ChapterSelectionScreen`
+  /// collapsible header both call this getter instead of defining their own
+  /// string literals.
+  ///
+  /// Returns title-case text (e.g. "Old Testament"). Call
+  /// `String.toUpperCase` at the call site if an ALL-CAPS variant is needed.
+  String get label {
+    switch (this) {
+      case Testament.ot:
+        return 'Old Testament';
+      case Testament.nt:
+        return 'New Testament';
+      case Testament.dc:
+        return 'Deuterocanon / Apocrypha';
+    }
+  }
 }
 
 /// A book of the Bible within a translation module.

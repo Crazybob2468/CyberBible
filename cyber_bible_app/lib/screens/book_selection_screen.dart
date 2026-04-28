@@ -22,19 +22,6 @@ import '../app_routes.dart';
 import '../services/bible_service.dart';
 
 // ---------------------------------------------------------------------------
-// Section header labels
-// ---------------------------------------------------------------------------
-
-/// Display label for the Old Testament section header.
-const _labelOT = 'Old Testament';
-
-/// Display label for the New Testament section header.
-const _labelNT = 'New Testament';
-
-/// Display label for the Deuterocanon / Apocrypha section header.
-const _labelDC = 'Deuterocanon / Apocrypha';
-
-// ---------------------------------------------------------------------------
 // Main screen widget
 // ---------------------------------------------------------------------------
 
@@ -222,7 +209,8 @@ class _TraditionalTab extends StatelessWidget {
     final items = <Widget>[];
 
     // --- Old Testament ---
-    items.add(const _SectionHeader(label: _labelOT, icon: Icons.history_edu));
+    // Testament.ot.label is the single-source-of-truth label (book.dart).
+    items.add(_SectionHeader(label: Testament.ot.label, icon: Icons.history_edu));
     for (int i = 0; i < otBooks.length; i++) {
       items.add(_BookTile(book: otBooks[i], onTap: onBookTapped));
       // Add a divider between tiles but not after the last one in the group.
@@ -230,7 +218,7 @@ class _TraditionalTab extends StatelessWidget {
     }
 
     // --- New Testament ---
-    items.add(const _SectionHeader(label: _labelNT, icon: Icons.auto_stories));
+    items.add(_SectionHeader(label: Testament.nt.label, icon: Icons.auto_stories));
     for (int i = 0; i < ntBooks.length; i++) {
       items.add(_BookTile(book: ntBooks[i], onTap: onBookTapped));
       if (i < ntBooks.length - 1) items.add(const _TileDivider());
@@ -238,7 +226,7 @@ class _TraditionalTab extends StatelessWidget {
 
     // --- Deuterocanon / Apocrypha (only if translation includes them) ---
     if (dcBooks.isNotEmpty) {
-      items.add(const _SectionHeader(label: _labelDC, icon: Icons.library_books));
+      items.add(_SectionHeader(label: Testament.dc.label, icon: Icons.library_books));
       for (int i = 0; i < dcBooks.length; i++) {
         items.add(_BookTile(book: dcBooks[i], onTap: onBookTapped));
         if (i < dcBooks.length - 1) items.add(const _TileDivider());
