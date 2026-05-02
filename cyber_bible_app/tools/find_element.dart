@@ -8,6 +8,18 @@ library;
 import 'dart:io';
 import 'package:sqlite3/sqlite3.dart';
 
+/// Entry point: opens `assets/bibles/eng-web.db`, queries chapters that
+/// contain [tagName] as a complete USFX element name, and prints up to
+/// [maxPerChapter] USFX context snippets per chapter.
+///
+/// The SQL filter matches the tag followed by a space, `>`, or `/` so that
+/// searching for `q` does not accidentally match chapters that only contain
+/// `<qs>` or other `q`-prefixed elements.
+///
+/// Run from the `cyber_bible_app/` directory:
+/// ```
+/// dart run tools/find_element.dart <element_name> [max_per_chapter]
+/// ```
 void main(List<String> args) {
   if (args.isEmpty) {
     print('Usage: dart run tools/find_element.dart <element_name> [max_per_chapter]');
@@ -17,9 +29,13 @@ void main(List<String> args) {
   final maxPerChapter = args.length > 1 ? int.parse(args[1]) : 2;
 
   final db = sqlite3.open('assets/bibles/eng-web.db');
+  // Use three LIKE patterns to match the tag followed by a space, close `>`,
+  // or self-close `/>` — avoiding false positives from prefix-matched names
+  // (e.g. `<q` would otherwise also match `<qs>`).
   final rows = db.select(
     "SELECT book_code, number, content_usfx FROM chapters "
-    "WHERE content_usfx LIKE '%<$tagName%'",
+    "WHERE content_usfx LIKE ? OR content_usfx LIKE ? OR content_usfx LIKE ?",
+    ['%<$tagName %', '%<$tagName>%', '%<$tagName/>%'],
   );
 
   print('Chapters containing <$tagName>: ${rows.length}');

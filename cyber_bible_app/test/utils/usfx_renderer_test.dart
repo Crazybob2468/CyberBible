@@ -93,14 +93,11 @@ void main() {
       expect(fnHtml, contains(_footnoteColor));
     });
 
-    /// Malformed XML must not throw — the renderer should return an empty body
-    /// rather than crashing the app.
-    test('malformed XML returns empty body without throwing', () {
-      expect(() => _render('<p>unclosed'), returnsNormally);
-      final html = _render('<p>unclosed');
-      expect(html, contains('<body>'));
-      // The body should be empty (no paragraph content rendered).
-      expect(html, isNot(contains('<p>')));
+    /// Malformed XML must throw so that `ReadingScreen._loadChapter()` can
+    /// catch the error and show the error state with a Retry button.
+    /// Returning empty HTML would silently present a blank page.
+    test('malformed XML throws a parse exception', () {
+      expect(() => _render('<p>unclosed'), throwsA(isA<Exception>()));
     });
   });
 

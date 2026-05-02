@@ -116,8 +116,13 @@ Step 1.11 implementation:
 - All 105 tests pass (`flutter test`): 70 pre-existing + 35 new renderer tests.
 - `flutter analyze lib/ test/` → No issues.
 
-**Known regression (Step 1.11):**
-- **Accessibility — structured verse semantics**: Step 1.10's `SliverList` wrapped each verse in `Semantics(label: 'Verse N: text')` so screen readers announced each verse as one coherent unit. The `HtmlWidget` approach does not reproduce this structured labelling; it relies on the HTML element tree for accessibility. This is a known regression tracked for a dedicated accessibility step (tentatively Step 1.16). A future step should explore `flutter_widget_from_html_core`'s `WidgetFactory` extension points or a post-render `Semantics` wrapper approach.
+**Known regression (Step 1.11) — tracked for Step 1.16:**
+- **Accessibility — structured verse semantics**:
+  - **What broke**: Step 1.10's `SliverList` wrapped each verse in `Semantics(label: 'Verse N: <text>', child: ExcludeSemantics(...))`, so TalkBack/VoiceOver announced every verse as one coherent sentence: *"Verse 3: For God so loved the world."* The `HtmlWidget` replacement discards this structure — the a11y tree sees disconnected inline elements: a bare `<sup>3</sup>` node, then sentence fragments wherever inline `<span>` or `<sup>` tags break the paragraph flow.
+  - **User impact**: Swiping through a chapter with a screen reader produces fragments like *"3"*, *"For God so loved the"*, *"world,"* instead of complete verse units. Users cannot navigate verse-by-verse.
+  - **Recommended fix for Step 1.16 (hybrid approach)**: Keep `HtmlWidget` for visual rendering but add a transparent semantic overlay. Fetch the plain-text verse list via the existing `BibleService.getVerses()` call (already tested, fast), then stack invisible `Semantics(label: 'Verse N: text', excludeSemantics: true)` widgets on top of the `HtmlWidget` using a `Stack`. This reuses the proven Step 1.10 pattern without modifying the renderer.
+  - **Alternative**: Subclass `flutter_widget_from_html_core`'s `WidgetFactory`, override `onBuildWidget()` to inject `Semantics` at each `<p>` block — gives paragraph-level (not verse-level) granularity, which is still a major improvement.
+  - **Acceptance criteria**: On Android TalkBack, swiping through a chapter should announce *"Verse 1: In the beginning…"*, *"Verse 2: The earth was…"* as complete units. No bare number or mid-sentence fragment swipe stops.
 
 **Architecture decision recorded — colour passthrough pattern:**
 `renderChapterToHtml` takes CSS color strings (not `Color` objects) so it has no dependency on `package:flutter`. The call site in `ReadingScreen._buildHtmlContent()` converts `Color` → CSS via `_colorToCss()`. This keeps the renderer a pure-Dart utility (usable in build tools or tests without Flutter).

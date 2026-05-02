@@ -176,11 +176,13 @@ class _UsfxRenderer {
     final XmlDocument doc;
     try {
       doc = XmlDocument.parse('<chapter>$usfxFragment</chapter>');
-    } catch (_) {
-      // Malformed XML — return an empty body rather than crashing.
-      // `ReadingScreen` detects an empty/blank chapter and shows its own
-      // error state, so the user is never silently presented a blank screen.
-      return _wrapDocument(styles, '');
+    } catch (e) {
+      // Malformed XML — re-throw so `_loadChapter()` in ReadingScreen catches
+      // it and surfaces the error state (error icon + message + Retry button).
+      // Returning empty HTML would leave the user with a silent blank page and
+      // no way to retry, because the screen only enters the error state when
+      // the Future throws.
+      rethrow;
     }
 
     final root = doc.rootElement;

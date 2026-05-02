@@ -6,6 +6,17 @@ library;
 
 import 'package:sqlite3/sqlite3.dart';
 
+/// Entry point: scans every chapter in `assets/bibles/eng-web.db`, tallies
+/// each USFX element name by total occurrence count, and prints the results
+/// sorted from most to least frequent.
+///
+/// This is a one-off diagnostic tool used to discover which USFX elements are
+/// actually present in the WEB Bible so the renderer can handle them all.
+///
+/// Run from the `cyber_bible_app/` directory:
+/// ```
+/// dart run tools/scan_elements.dart
+/// ```
 void main() {
   final db = sqlite3.open('assets/bibles/eng-web.db');
   final rows = db.select('SELECT content_usfx FROM chapters');

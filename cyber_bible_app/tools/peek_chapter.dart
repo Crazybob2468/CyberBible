@@ -8,6 +8,15 @@ library;
 import 'dart:io';
 import 'package:sqlite3/sqlite3.dart';
 
+/// Entry point: opens `assets/bibles/eng-web.db`, looks up the USFX XML for
+/// the given [bookCode] and chapter [chapterNum], and prints the first
+/// [maxChars] characters so the raw markup can be inspected without writing
+/// a full query.
+///
+/// Run from the `cyber_bible_app/` directory:
+/// ```
+/// dart run tools/peek_chapter.dart <book_code> <chapter_num> [max_chars]
+/// ```
 void main(List<String> args) {
   if (args.length < 2) {
     print('Usage: dart run tools/peek_chapter.dart <book_code> <chapter_num> [max_chars]');
