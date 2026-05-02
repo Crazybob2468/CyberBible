@@ -370,21 +370,22 @@ void main() {
         '<f caller="+"><fr>3:3 </fr><ft>Footnote body text.</ft></f>'
         '<ve/></p>',
       );
-      // Footnote uses inline style — check the caller symbol appears in a sup.
-      expect(html, contains('>+</sup>'));
+      // Footnote uses inline style — always renders as ✝ (U+2020), ignoring
+      // the caller attribute from the USFX source.
+      expect(html, contains('>†</sup>'));
       expect(html, contains('vertical-align:super'));
       // The footnote body text must NOT appear in the output.
       expect(html, isNot(contains('Footnote body text.')));
     });
 
-    /// Empty or missing caller attribute falls back to '*'.
-    test('empty caller falls back to *', () {
+    /// Caller attribute is ignored — always renders ✝ regardless of value.
+    test('empty caller still renders \u2020 dagger', () {
       final html = _render(
         '<p style="p"><v id="1" bcv="GEN.1.1"/>Text.'
         '<f caller=""><ft>Body.</ft></f>'
         '<ve/></p>',
       );
-      expect(html, contains('>*</sup>'));
+      expect(html, contains('>†</sup>'));
     });
 
     /// Cross-references (<x>) must be completely suppressed — no caller marker
@@ -549,8 +550,8 @@ void main() {
       expect(html, contains('color:#e53935'));
       expect(html, contains('Most certainly I tell you'));
 
-      // Footnote caller rendered, body text suppressed
-      expect(html, contains('>+</sup>'));
+      // Footnote caller rendered as ✝, body text suppressed
+      expect(html, contains('>†</sup>'));
       expect(html, isNot(contains('also means')));
 
       // Verse number rendered

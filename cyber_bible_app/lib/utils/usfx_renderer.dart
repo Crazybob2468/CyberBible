@@ -390,15 +390,15 @@ class _UsfxRenderer {
       // ---- Footnotes and cross-references -----------------------------------
 
       case 'f':
-        // Footnote — only the `caller` symbol (e.g. '+', '*', 'a') is shown as
-        // a superscript. The full footnote text pop-up is deferred to Step 2.1.
-        final caller = el.getAttribute('caller') ?? '*';
-        final marker = caller.trim().isEmpty ? '*' : _escapeHtml(caller);
+        // Footnote — only a dagger symbol (✝) is shown as a superscript.
+        // The caller attribute in the USFX (e.g. '+', '*', 'a') is ignored
+        // because footnotes are not yet interactive. When Step 2.1 adds
+        // tappable footnote popups the caller value will become relevant again.
         return '<sup style="'
             'color:$footnoteColorCss;'
             'font-size:${_smallPx}px;'
             'vertical-align:super;'
-            '">$marker</sup>';
+            '">\u2020</sup>';
 
       case 'fr':
       case 'ft':
