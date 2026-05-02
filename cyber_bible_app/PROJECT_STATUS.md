@@ -84,35 +84,36 @@ cyber_bible_app/
 
 **Phase 1 — Step 1.11 Complete: Basic text formatting**
 
-Step 1.11 ✅ COMPLETE. Replaced plain-text verse rendering with a full USFX → HTML pipeline using `flutter_widget_from_html`. Reading screen now shows formatted Bible text: paragraphs, poetry indentation, section headings, Psalm superscriptions, verse number superscripts, words of Jesus in red, and footnote markers.
+Step 1.11 ✅ COMPLETE. Replaced plain-text verse rendering with a full USFX → HTML pipeline using `flutter_widget_from_html`. Reading screen now shows formatted Bible text: paragraphs, poetry indentation, Psalm superscriptions, verse number superscripts, words of Jesus in red, footnote markers, Selah markers, and stanza spacing.
 
 Step 1.11 implementation:
 - **New package**: `flutter_widget_from_html: ^0.17.2` added (renders HTML as native Flutter widgets — no WebView, no platform overhead).
-- **New utility**: `lib/utils/usfx_renderer.dart` — pure-Dart USFX XML → HTML converter. Entry point: `renderChapterToHtml(usfxFragment, {bodyColorCss, verseNumColorCss, headingColorCss, dHeadingColorCss, footnoteColorCss, baseFontSizePx})`. Returns a complete self-contained `<!DOCTYPE html>` document. Handles all USFX elements encountered in the WEB database:
-  - `<p style="p">` — normal paragraph
-  - `<p sfm="m" style="m">` — continuation paragraph (no indent)
-  - `<p sfm="pi" style="pi1/pi2">` — indented paragraphs
-  - `<p sfm="ms" style="ms1">` — major section heading (bold, centered)
-  - `<q style="q1/q2/q3">` — poetry lines (1.5/3.0/4.5 em indent)
-  - `<s style="s1">` — section headings (italic, centered, de-emphasised)
-  - `<d style="d">` — Psalm superscription (italic, de-emphasised)
-  - `<v id="N">` — verse start milestone → inline `<sup class="vn">N</sup>`
+- **CRITICAL constraint**: `flutter_widget_from_html` does NOT apply `<style>` block CSS class selectors (e.g., `span.wj { color: red }`). All per-element styling must use inline `style=` attributes. The `<style>` block only works for `body{}` and `p{}` (universal defaults the package does honour).
+- **New utility**: `lib/utils/usfx_renderer.dart` — pure-Dart USFX XML → HTML converter using `_UsfxRenderer` class with inline `style=` attributes throughout. Entry point: `renderChapterToHtml(usfxFragment, {bodyColorCss, verseNumColorCss, headingColorCss, dHeadingColorCss, footnoteColorCss, baseFontSizePx})`. Handles all USFX elements encountered in the WEB database (confirmed by full DB scan):
+  - `<p style="p/m">` — normal / continuation paragraph
+  - `<p style="pi1/pi2">` — indented paragraphs (1.5/3.0em)
+  - `<p style="ms1">` — major section heading (bold, centered)
+  - `<q style="q1/q2/q3">` — poetry lines (1.5/3.0/4.5em indent)
+  - `<s style="s1">` — section headings (italic, centered) — NOTE: only 4 chapters in WEB have these (Deuterocanonical: Baruch 6, Daniel 3/13/14)
+  - `<d style="d">` — Psalm superscription (italic, de-emphasised) — 139 chapters
+  - `<b style="b"/>` — blank stanza separator (1,070 uses) → spacer paragraph
+  - `<qs>` — "Selah" / meditation marker (74 uses in Psalms) → right-aligned italic
+  - `<v id="N">` — verse number → inline `<sup>` with colour/size inline styles
   - `<ve/>` — verse end milestone (no output)
-  - `<wj>` — words of Jesus → `<span class="wj">` (red `#e53935`, always on)
-  - `<f>` — footnote → `<sup class="fn">[†]</sup>` superscript marker (not tappable — Step 2.1)
+  - `<wj>` — words of Jesus → `<span style="color:#e53935;">` (red, always on)
+  - `<f>` — footnote → caller superscript only (not tappable — Step 2.1)
   - `<w s="...">` — Strong's words → strip tag, keep text (linking in Phase 4)
-  - `<add>` — supplied text → `<em class="add">` (defensive, rare in WEB)
-  - `<nd>` — divine names → `<span class="nd">` with `font-variant: small-caps` (defensive, rare in WEB)
-- **Updated `ReadingScreen`**: `_loadVerses()` + `BibleService.getVerses()` replaced by `_loadChapter()` + `BibleService.getChapter()`. `_buildVerseList()` and `_VerseItem` (both marked TEMPORARY since Step 1.10) replaced by `_buildHtmlContent()` which calls `renderChapterToHtml()` and renders via `HtmlWidget`.
-- `_colorToCss()` helper converts Flutter `Color` → CSS `#rrggbb` / `rgba(r,g,b,a)` so callers can pass `ColorScheme.*` values without the renderer depending on `package:flutter`.
-- All CSS colours sourced from `ColorScheme` — text, verse numbers, headings, and footnote markers adapt automatically to light/dark mode and the Step 1.16 accent colour picker.
-- **Section heading toggle**: headings (`<s>`, `<ms>`) are always shown in this step. A user toggle ("Show section headings") is deferred to the settings screen (Step 1.16).
-- **Words of Jesus toggle**: always red in this step. The "Words of Christ colour" toggle (red vs. default text colour) is deferred to Step 1.16 settings.
-- **Footnote interactivity**: superscript marker only. Tappable footnote popups are Step 2.1.
+  - `<add>` — supplied text → `<em>` italic
+  - `<nd>` — divine names → `<span style="font-variant:small-caps;">`
+  - `<x>`, `<ref>` — cross-references → skipped (Phase 2)
+- **Updated `ReadingScreen`**: `_loadVerses()` + `getVerses()` replaced by `_loadChapter()` + `getChapter()`. `HtmlWidget` renders the output HTML. `_colorToCss()` helper converts `Color` → CSS hex/rgba.
+- **Section heading toggle**: always shown; toggle deferred to Step 1.16.
+- **Words of Jesus toggle**: always red; deferred to Step 1.16.
+- **Footnote interactivity**: marker only; tappable popups in Step 2.1.
 
 **Tests (Step 1.11):**
-- New `test/utils/usfx_renderer_test.dart` — 33 unit tests covering every USFX element type, HTML escaping, empty input, multi-block chapters, and colour/font passthrough.
-- All 103 tests pass (`flutter test`): 70 pre-existing + 33 new renderer tests.
+- New `test/utils/usfx_renderer_test.dart` — 35 unit tests covering every USFX element type, HTML escaping, empty input, multi-block chapters, and colour/font passthrough (including `<b>` stanza separator and `<qs>` Selah marker added in inline-style fix pass).
+- All 105 tests pass (`flutter test`): 70 pre-existing + 35 new renderer tests.
 - `flutter analyze lib/ test/` → No issues.
 
 **Architecture decision recorded — colour passthrough pattern:**

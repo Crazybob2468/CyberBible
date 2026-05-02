@@ -244,6 +244,31 @@ void main() {
       expect(html, contains('Line A.'));
       expect(html, contains('Line B.'));
     });
+
+    /// <b> is a blank-line stanza separator (1,070 uses in the WEB Bible).
+    /// It must produce a visible gap between stanzas, not be silently dropped.
+    test('<b> blank stanza separator produces a spacer paragraph', () {
+      final html = _render(
+        '<q style="q1"><v id="1" bcv="PSA.46.1"/>God is our refuge.<ve/></q>'
+        '<b style="b"/>'
+        '<q style="q1"><v id="7" bcv="PSA.46.7"/>Yahweh of Armies is with us.<ve/></q>',
+      );
+      // The <b> must produce some output so stanzas are visually separated.
+      // We expect a paragraph containing a non-breaking space as the spacer.
+      expect(html, contains('&nbsp;'));
+    });
+
+    /// <qs> is the "Selah" / meditation marker (74 uses in the WEB Psalms).
+    /// It must appear as right-aligned italic text, not be swallowed silently.
+    test('<qs> Selah renders as right-aligned italic paragraph', () {
+      final html = _render(
+        '<q style="q1"><v id="2" bcv="PSA.3.2"/>I lie down and sleep.<ve/></q>'
+        '<qs>Selah.</qs>',
+      );
+      expect(html, contains('text-align:right'));
+      expect(html, contains('font-style:italic'));
+      expect(html, contains('Selah.'));
+    });
   });
 
   // ---------------------------------------------------------------------------

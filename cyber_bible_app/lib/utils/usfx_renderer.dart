@@ -24,6 +24,8 @@
 /// | `<q style="q1|q2|q3">`           | Poetry line with increasing left indent      |
 /// | `<s style="s1">` (section hd)    | Section heading (italic, centred)            |
 /// | `<d>` (Psalm descriptive heading) | Psalm superscription (italic, de-emphasised) |
+/// | `<b style="b"/>`                  | Blank stanza separator — spacer paragraph    |
+/// | `<qs>` (Selah)                    | Right-aligned italic meditation marker       |
 /// | `<v id="N" .../>`                | Inline verse number `<sup>` marker           |
 /// | `<ve/>`                          | Verse end milestone — no output              |
 /// | `<wj>...</wj>`                   | Words of Jesus — red (Step 1.16 toggle)      |
@@ -200,7 +202,8 @@ class _UsfxRenderer {
   /// Renders a single top-level USFX block element to an HTML string.
   ///
   /// Block elements are the direct children of the synthetic `<chapter>` root:
-  /// `<p>`, `<q>`, `<s>`, and `<d>`. Unknown tags fall back to a plain `<p>`.
+  /// `<p>`, `<q>`, `<s>`, `<d>`, `<b>`, and `<qs>`. Unknown tags fall back
+  /// to a plain `<p>` so that verse text is never silently swallowed.
   String _renderBlock(XmlElement el) {
     switch (el.name.local) {
       case 'p':
@@ -211,6 +214,22 @@ class _UsfxRenderer {
         return _renderSectionHeading(el);
       case 'd':
         return _renderDescriptiveHeading(el);
+      case 'b':
+        // Blank-line separator between poetry stanzas (1,070 uses in WEB).
+        // Emits a zero-height paragraph whose bottom margin provides the
+        // visual gap. Using &nbsp; prevents the package from collapsing it.
+        return '<p style="margin:0 0 0.5em 0;">&nbsp;</p>';
+      case 'qs':
+        // "Selah" / meditation marker — right-aligned italic at end of stanza.
+        // Appears 74 times in the Psalms (e.g. "Selah.", "Meditation. Selah.").
+        final text = _extractTextOnly(el);
+        if (text.isEmpty) return '';
+        return '<p style="'
+            'color:$dHeadingColorCss;'
+            'font-style:italic;'
+            'text-align:right;'
+            'margin:0 0 0.3em 0;'
+            '">$text</p>';
       default:
         // Unknown top-level element — render its inline content inside a plain
         // paragraph so that verse text is never silently swallowed.
