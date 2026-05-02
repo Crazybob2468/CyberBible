@@ -82,9 +82,38 @@ cyber_bible_app/
 
 ## Current Status
 
-**Phase 1 — Step 1.9 Complete: Chapter selection screen**
+**Phase 1 — Step 1.10 Complete: Scripture reading screen**
 
-Step 1.5 ✅ MERGED (PR #7). The SQLite build tool, 60 unit tests, and generated `eng-web.db` are on `main`.
+Step 1.10 ✅ COMPLETE. Scripture reading screen — collapsible header + scrollable plain-text verse list with inline verse numbers.
+
+Step 1.10 implementation:
+- Replaced the `ReadingScreen` placeholder stub with a full `StatefulWidget` implementation.
+- **Header**: `SliverAppBar` with `expandedHeight: 200` (taller than Step 1.9 to fit three lines). Expanded state shows the testament label (small caps, de-emphasised), the book name (32px, w800), and "Chapter N" (18px, w600) — all in `onPrimaryContainer` on a `primaryContainer` background. Collapses to a compact AppBar showing "{nameShort} {chapter}" (e.g. "Genesis 1") as the title.
+- **Verse list**: `SliverList` of `_VerseItem` widgets. Each item is a `Text.rich` with an inline verse number (11px, w700, `primary` color) followed by the plain verse text (17px, w400, 1.65 line height). Side padding 16px, bottom padding 48px.
+- **Empty state**: graceful fallback message for chapters with no indexed verse rows (rare in partial translations).
+- **Loading state**: centred `CircularProgressIndicator` while verses are fetched.
+- **Error state**: error icon + user-friendly message + `FilledButton` Retry; raw exception logged via `debugPrint` under `kDebugMode` only.
+- `BibleService.ensureOpen()` called before `getVerses()` — web deep-link / browser-refresh safety, consistent with all other inner screens.
+- `_isCollapsed` scroll tracking (same pattern as `ChapterSelectionScreen`) prevents the book name appearing in both the toolbar and the expanded header simultaneously.
+- `Testament.label` used for the testament label text — the single source of truth in `lib/models/book.dart`.
+- All colours use `ColorScheme.*` — adapts to light/dark mode and Step 1.16 accent colour picker automatically.
+
+**Plain text is intentional for Step 1.10 — formatting comes in Step 1.11:**
+The screen uses `BibleService.getVerses()` (plain text from the `verses` table) rather than the raw USFX XML in the `chapters` table. This is a deliberate scope boundary: Step 1.10 completes end-to-end navigation; Step 1.11 adds proper text formatting. Both `reading_screen.dart` (top-of-file comment block + `_buildVerseList()` / `_VerseItem` inline TODOs) document exactly what Step 1.11 must do:
+  1. Switch to `BibleService.getChapter()` for the raw USFX XML.
+  2. Write a `lib/utils/usfx_renderer.dart` USFX → HTML converter covering paragraphs, poetry, section headings, verse numbers, words of Jesus, footnote markers, supplied-text italics, divine names small caps.
+  3. Replace the `SliverList` with a `flutter_widget_from_html` or WebView HTML widget.
+  4. Delete `_buildVerseList()` and `_VerseItem`.
+
+**Tests (Step 1.10):**
+- **New pure Dart logic**: none — the screen is pure UI over existing `BibleService` and `Verse` model, both already tested.
+- **Deferred widget tests:** Widget tests for `ReadingScreen` (loading/error/verse-list/empty states) deferred to the integration-test scaffold step along with other deferred UI tests.
+
+`flutter analyze lib/ test/` → No issues. `flutter test` → 70 passed.
+
+Next: Step 1.11 — Basic text formatting. Replace plain-text verse rendering with a proper USFX → HTML converter and an HTML display widget. See the top-of-file comment in `lib/screens/reading_screen.dart` for the exact migration plan.
+
+Step 1.9 ✅ MERGED (PR #11). Chapter selection screen with collapsible header + 4-column chapter grid.
 Step 1.6 ✅ MERGED. `BibleSetupService` (DB copy on first launch), startup wiring, and unit tests.
 Step 1.7 ✅ COMPLETE. `BibleService` reads books, chapters, and verses from the SQLite DB, with full Flutter Web support (IndexedDB-backed SQLite persistence via `sqflite_common_ffi_web`).
 Step 1.8 ✅ MERGED. Book selection screen with Traditional/Alphabetical tabs. Full named-route architecture wired up.
@@ -147,8 +176,6 @@ Step 1.8 implementation:
 
 `flutter analyze lib/ test/` → No issues. `flutter test` → 66 passed.
 
-Next: Step 1.9 — Chapter selection screen (grid of chapter numbers for the selected book; tapping navigates to the reading screen).
-
 Step 1.7 implementation:
 - Added `sqflite_common_ffi_web: ^1.0.2` (resolves to 1.1.1), `sqflite_common: ^2.5.6+1`, as direct `dependencies`.
 - Moved `sqlite3` back to `dev_dependencies` (no longer directly imported at runtime — `sqflite_common_ffi_web` loads its own WASM build of sqlite3 separately).
@@ -174,8 +201,6 @@ Step 1.7 implementation:
 
 `flutter analyze lib/ test/` → No issues. `flutter test` → 66 passed.
 
-Next: Step 1.9 — Chapter selection screen (grid of chapter numbers for the selected book; tapping navigates to the reading screen).
-
 ---
 
 ## Development Roadmap
@@ -198,7 +223,7 @@ The goal: open the app, pick a book and chapter, and read formatted Bible text.
 | 1.7 | **Bible service layer** | Create `BibleService` — Dart class that reads from the SQLite DB. Methods: `getBooks()`, `getChapters(bookId)`, `getVerses(bookId, chapterId)`. |
 | 1.8 | **Book selection screen** | Build a screen that lists all books of the Bible (OT and NT sections). Tapping a book navigates to chapter selection. |
 | 1.9 ✅ | **Chapter selection screen** | Build a screen showing a grid of chapter numbers for the selected book. Tapping a chapter navigates to the reading screen. |
-| 1.10 | **Scripture reading screen** | Build the main reading screen. Display a full chapter of formatted Bible text. Include the book name and chapter number as a header. Support scrolling. |
+| 1.10 ✅ | **Scripture reading screen** | Build the main reading screen. Display a full chapter of formatted Bible text. Include the book name and chapter number as a header. Support scrolling. |
 | 1.11 | **Basic text formatting** | Render Bible text with paragraph breaks, poetry indentation, section headers, and verse numbers. Use HTML rendering or rich text widgets. |
 | 1.12 | **Verse navigation** | Add ability to jump to a specific verse within a chapter (scroll to verse). Add a quick-nav control (book > chapter > verse). |
 | 1.13 | **Chapter-to-chapter navigation** | Add previous/next chapter buttons or swipe gestures to move between chapters seamlessly. |
