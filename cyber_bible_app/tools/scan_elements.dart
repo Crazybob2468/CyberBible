@@ -4,7 +4,6 @@
 /// Usage: dart run tools/scan_elements.dart
 library;
 
-import 'dart:io';
 import 'package:sqlite3/sqlite3.dart';
 
 void main() {

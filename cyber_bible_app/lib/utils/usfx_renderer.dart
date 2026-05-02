@@ -2,7 +2,7 @@
 ///
 /// This is a pure-Dart library (no Flutter imports). It converts a raw USFX
 /// XML chapter fragment (as stored in `chapters.content_usfx`) into an HTML
-/// string that [flutter_widget_from_html]'s `HtmlWidget` can render natively.
+/// string that `flutter_widget_from_html_core`'s `HtmlWidget` can render natively.
 ///
 /// ## Why HTML?
 ///
@@ -19,7 +19,7 @@
 /// |-----------------------------------|----------------------------------------------|
 /// | `<p style="p">`                   | Regular prose paragraph `<p>`                |
 /// | `<p style="m">`                   | Continuation paragraph (no indent) `<p>`     |
-/// | `<p style="pi1|pi2">`             | Indented paragraph `<p class="pi1|pi2">`     |
+/// | `<p style="pi1|pi2">`             | Indented paragraph (inline left-margin style) |
 /// | `<p style="ms1">` (major sec hd)  | Major section heading block                  |
 /// | `<q style="q1|q2|q3">`           | Poetry line with increasing left indent      |
 /// | `<s style="s1">` (section hd)    | Section heading (italic, centred)            |
@@ -29,7 +29,7 @@
 /// | `<v id="N" .../>`                | Inline verse number `<sup>` marker           |
 /// | `<ve/>`                          | Verse end milestone — no output              |
 /// | `<wj>...</wj>`                   | Words of Jesus — red (Step 1.16 toggle)      |
-/// | `<f caller="...">...</f>`        | Footnote — superscript `caller` only         |
+/// | `<f caller="...">...</f>`        | Footnote — `caller` symbol as superscript    |
 /// | `<x>...</x>`                     | Cross-reference — skipped (Phase 2)          |
 /// | `<add>...</add>`                 | Supplied text — `<em>` italic                |
 /// | `<nd>...</nd>`                   | Divine name — small caps `<span>`            |
@@ -114,7 +114,7 @@ String renderChapterToHtml(
 /// reference `this.*` directly.
 ///
 /// **All styling is emitted as inline `style=` attributes**, not CSS class
-/// rules in a `<style>` block. `flutter_widget_from_html`'s CSS engine does
+/// rules in a `<style>` block. `flutter_widget_from_html_core`'s CSS engine does
 /// not reliably apply stylesheet class selectors, so inline styles are the
 /// only portable approach. The `<style>` block is kept only for the two
 /// universal defaults (`body` colour/size and `p` margin) that the package
@@ -154,7 +154,7 @@ class _UsfxRenderer {
   /// Parses [usfxFragment] and returns a complete HTML document string.
   String render(String usfxFragment) {
     // Minimal <style> block: only the two universal defaults that
-    // flutter_widget_from_html honours from a stylesheet. All per-element
+    // flutter_widget_from_html_core honours from a stylesheet. All per-element
     // colours, sizes, and layout are emitted as inline style= attributes.
     final styles = '<style>'
         'body{'
@@ -177,8 +177,9 @@ class _UsfxRenderer {
     try {
       doc = XmlDocument.parse('<chapter>$usfxFragment</chapter>');
     } catch (_) {
-      // Malformed XML — return an empty body rather than crashing. The caller
-      // should show an appropriate "no text" fallback message.
+      // Malformed XML — return an empty body rather than crashing.
+      // `ReadingScreen` detects an empty/blank chapter and shows its own
+      // error state, so the user is never silently presented a blank screen.
       return _wrapDocument(styles, '');
     }
 
@@ -390,15 +391,17 @@ class _UsfxRenderer {
       // ---- Footnotes and cross-references -----------------------------------
 
       case 'f':
-        // Footnote — only a dagger symbol (✝) is shown as a superscript.
-        // The caller attribute in the USFX (e.g. '+', '*', 'a') is ignored
-        // because footnotes are not yet interactive. When Step 2.1 adds
-        // tappable footnote popups the caller value will become relevant again.
+        // Footnote — only the `caller` symbol (e.g. '+', '*', 'a') is shown
+        // as a superscript. The full footnote text pop-up is deferred to
+        // Step 2.1, but preserving the caller keeps distinct notes
+        // distinguishable even before tap interaction is added.
+        final caller = el.getAttribute('caller') ?? '*';
+        final marker = caller.trim().isEmpty ? '*' : _escapeHtml(caller);
         return '<sup style="'
             'color:$footnoteColorCss;'
             'font-size:${_smallPx}px;'
             'vertical-align:super;'
-            '">\u2020</sup>';
+            '">$marker</sup>';
 
       case 'fr':
       case 'ft':

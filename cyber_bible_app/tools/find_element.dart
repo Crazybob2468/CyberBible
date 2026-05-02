@@ -10,7 +10,7 @@ import 'package:sqlite3/sqlite3.dart';
 
 void main(List<String> args) {
   if (args.isEmpty) {
-    print('Usage: dart run tools/find_element.dart <element_name>');
+    print('Usage: dart run tools/find_element.dart <element_name> [max_per_chapter]');
     exit(1);
   }
   final tagName = args[0];

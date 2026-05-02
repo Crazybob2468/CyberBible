@@ -3,14 +3,14 @@
 // Displays a fully formatted chapter of Bible text for the selected book and
 // chapter. The raw USFX XML fragment is loaded from BibleService.getChapter(),
 // converted to HTML+CSS by usfx_renderer.dart, and rendered as native Flutter
-// widgets by flutter_widget_from_html's HtmlWidget.
+// widgets by flutter_widget_from_html_core's HtmlWidget.
 //
 // Navigation flow:
 //   HomeScreen → BookSelectionScreen → ChapterSelectionScreen → ReadingScreen
 
 import 'package:flutter/foundation.dart'; // kDebugMode, debugPrint
 import 'package:flutter/material.dart';
-import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
+import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 
 import '../models/book.dart';
 import '../models/chapter.dart';
@@ -394,7 +394,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 48),
-        // HtmlWidget (flutter_widget_from_html) renders the HTML as native
+        // HtmlWidget (flutter_widget_from_html_core) renders the HTML as native
         // Flutter widgets — no WebView, no platform overhead.
         child: HtmlWidget(html),
       ),

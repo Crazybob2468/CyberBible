@@ -5,6 +5,9 @@ version: 0.1.0+1
 
 environment:
   sdk: ^3.11.4
+  # flutter: minimum version constraint. flutter_widget_from_html_core 0.17.x
+  # requires Flutter 3.22+. Set here per pub.dev packaging best practice.
+  flutter: ">=3.22.0"
 
 dependencies:
   flutter:
@@ -31,7 +34,12 @@ dependencies:
   # global setter used in bible_service_web.dart. Declared as a direct dep to
   # satisfy the depend_on_referenced_packages lint.
   sqflite_common: ^2.5.6+1
-  flutter_widget_from_html: ^0.17.2
+  # flutter_widget_from_html_core: lightweight HTML-to-widgets renderer with no
+  # transitive media plugins (no webview, video_player, audio, url_launcher).
+  # We only use HtmlWidget for scripture text display, so the core package is
+  # sufficient. Use flutter_widget_from_html (the full package) only if media
+  # element support is needed in the future.
+  flutter_widget_from_html_core: ^0.17.2
 
 dev_dependencies:
   flutter_test:

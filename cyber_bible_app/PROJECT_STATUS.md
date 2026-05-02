@@ -84,11 +84,11 @@ cyber_bible_app/
 
 **Phase 1 — Step 1.11 Complete: Basic text formatting**
 
-Step 1.11 ✅ COMPLETE. Replaced plain-text verse rendering with a full USFX → HTML pipeline using `flutter_widget_from_html`. Reading screen now shows formatted Bible text: paragraphs, poetry indentation, Psalm superscriptions, verse number superscripts, words of Jesus in red, footnote markers, Selah markers, and stanza spacing.
+Step 1.11 ✅ COMPLETE. Replaced plain-text verse rendering with a full USFX → HTML pipeline using `flutter_widget_from_html_core`. Reading screen now shows formatted Bible text: paragraphs, poetry indentation, Psalm superscriptions, verse number superscripts, words of Jesus in red, footnote markers, Selah markers, and stanza spacing.
 
 Step 1.11 implementation:
-- **New package**: `flutter_widget_from_html: ^0.17.2` added (renders HTML as native Flutter widgets — no WebView, no platform overhead).
-- **CRITICAL constraint**: `flutter_widget_from_html` does NOT apply `<style>` block CSS class selectors (e.g., `span.wj { color: red }`). All per-element styling must use inline `style=` attributes. The `<style>` block only works for `body{}` and `p{}` (universal defaults the package does honour).
+- **New package**: `flutter_widget_from_html_core: ^0.17.2` added (renders HTML as native Flutter widgets — no WebView, no platform overhead, no transitive media plugins). The full `flutter_widget_from_html` package was considered but rejected: it pulls in video_player, just_audio, webview_flutter, and url_launcher as transitive dependencies, none of which the app uses.
+- **CRITICAL constraint**: `flutter_widget_from_html_core` does NOT apply `<style>` block CSS class selectors (e.g., `span.wj { color: red }`). All per-element styling must use inline `style=` attributes. The `<style>` block only works for `body{}` and `p{}` (universal defaults the package does honour).
 - **New utility**: `lib/utils/usfx_renderer.dart` — pure-Dart USFX XML → HTML converter using `_UsfxRenderer` class with inline `style=` attributes throughout. Entry point: `renderChapterToHtml(usfxFragment, {bodyColorCss, verseNumColorCss, headingColorCss, dHeadingColorCss, footnoteColorCss, baseFontSizePx})`. Handles all USFX elements encountered in the WEB database (confirmed by full DB scan):
   - `<p style="p/m">` — normal / continuation paragraph
   - `<p style="pi1/pi2">` — indented paragraphs (1.5/3.0em)
@@ -115,6 +115,9 @@ Step 1.11 implementation:
 - New `test/utils/usfx_renderer_test.dart` — 35 unit tests covering every USFX element type, HTML escaping, empty input, multi-block chapters, and colour/font passthrough (including `<b>` stanza separator and `<qs>` Selah marker added in inline-style fix pass).
 - All 105 tests pass (`flutter test`): 70 pre-existing + 35 new renderer tests.
 - `flutter analyze lib/ test/` → No issues.
+
+**Known regression (Step 1.11):**
+- **Accessibility — structured verse semantics**: Step 1.10's `SliverList` wrapped each verse in `Semantics(label: 'Verse N: text')` so screen readers announced each verse as one coherent unit. The `HtmlWidget` approach does not reproduce this structured labelling; it relies on the HTML element tree for accessibility. This is a known regression tracked for a dedicated accessibility step (tentatively Step 1.16). A future step should explore `flutter_widget_from_html_core`'s `WidgetFactory` extension points or a post-render `Semantics` wrapper approach.
 
 **Architecture decision recorded — colour passthrough pattern:**
 `renderChapterToHtml` takes CSS color strings (not `Color` objects) so it has no dependency on `package:flutter`. The call site in `ReadingScreen._buildHtmlContent()` converts `Color` → CSS via `_colorToCss()`. This keeps the renderer a pure-Dart utility (usable in build tools or tests without Flutter).
