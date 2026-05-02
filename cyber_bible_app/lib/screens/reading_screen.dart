@@ -381,6 +381,15 @@ class _ReadingScreenState extends State<ReadingScreen> {
   // plain text from the `verses` table, which intentionally skips all
   // formatting markup (paragraphs, poetry, headings, red letters, etc.).
   //
+  // KNOWN CONTENT GAPS (all fixed by Step 1.11 switching to getChapter()):
+  //   - Psalm superscriptions (e.g. "A Psalm of David") — stored in the USFX
+  //     chapter fragment but not indexed as verse rows; silently absent here.
+  //   - Introductory prose before verse 1 — same: present in content_usfx,
+  //     not in the verses table, so not shown by this renderer.
+  //   - Standalone section headings and paragraph breaks inside a chapter —
+  //     present in USFX markup, invisible here because getVerses() returns
+  //     only the plain text of each <v>…<ve/> block.
+  //
   // Step 1.11 must:
   //   1. Replace `BibleService.getVerses()` (in `_loadVerses()` above) with
   //      `BibleService.getChapter()` to load the raw USFX XML fragment.
@@ -393,8 +402,14 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
   /// Builds a scrollable [SliverList] of [_VerseItem] widgets.
   ///
-  /// Handles the empty-list edge case (partial translations may have chapters
-  /// with no indexed verses).
+  /// Only content indexed as verse rows (`<v>…<ve/>` milestones) is shown.
+  /// Non-verse chapter content — Psalm superscriptions, introductory prose
+  /// before verse 1, and standalone section/paragraph blocks — is present in
+  /// `chapters.content_usfx` but absent here. Step 1.11 fixes this by
+  /// switching to [BibleService.getChapter] and rendering the full USFX XML.
+  ///
+  /// Also handles the empty-list edge case (partial translations may have
+  /// chapters with no indexed verses).
   ///
   /// **TEMPORARY** — will be replaced by a USFX → HTML widget in Step 1.11.
   Widget _buildVerseList(ColorScheme colorScheme, List<Verse> verses) {
