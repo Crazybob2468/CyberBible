@@ -30,8 +30,8 @@
 //        - Poetry indentation     <q1>, <q2>, <q3>
 //        - Section headings       <s>, <ms>
 //        - Verse numbers          <v id="N" />…<ve/>
-//        - Words of Jesus         <wj>…<wj*>  (red or black — Step 1.16 pref)
-//        - Footnote markers       <f>…<f*>    (tappable in Step 2.1)
+//        - Words of Jesus         <wj>…</wj>  (red or black — Step 1.16 pref)
+//        - Footnote markers       <f>…</f>    (tappable in Step 2.1)
 //        - Supplied-text italics  <add>…</add>
 //        - Divine names small caps <nd>…</nd>
 //      Use the patterns in `lib/utils/usfx_utils.dart` as a reference.
@@ -175,8 +175,9 @@ class _ReadingScreenState extends State<ReadingScreen> {
   /// Calls `ensureOpen()` as defence-in-depth for any in-app navigation path
   /// that reaches [ReadingScreen] before [HomeScreen] has opened the database.
   /// Note: a raw browser refresh on `/read` redirects to [HomeScreen] via
-  /// `onGenerateRoute` (missing [ReadingArgs] guard), so `ensureOpen()` here
-  /// is not a web deep-link fix — it guards in-app navigation only.
+  /// `onGenerateRoute` (the `ReadingArgs` type guard redirects when args are
+  /// absent), so `ensureOpen()` here is not a web deep-link fix — it guards
+  /// in-app navigation only.
   ///
   /// On failure, [_errorMessage] is set so the UI can show a Retry button.
   Future<void> _loadVerses() async {

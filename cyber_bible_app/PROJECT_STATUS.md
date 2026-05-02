@@ -93,7 +93,7 @@ Step 1.10 implementation:
 - **Empty state**: graceful fallback message for chapters with no indexed verse rows (rare in partial translations).
 - **Loading state**: centred `CircularProgressIndicator` while verses are fetched.
 - **Error state**: error icon + user-friendly message + `FilledButton` Retry; raw exception logged via `debugPrint` under `kDebugMode` only.
-- `BibleService.ensureOpen()` called before `getVerses()` — defence-in-depth guard for any in-app navigation path that bypasses `HomeScreen`. Note: a raw browser refresh on `/read` redirects to `HomeScreen` via `onGenerateRoute` (missing `ReadingArgs` guard), so this is not a web deep-link fix.
+- `BibleService.ensureOpen()` called before `getVerses()` — defence-in-depth guard for any in-app navigation path that bypasses `HomeScreen`. Note: a raw browser refresh on `/read` redirects to `HomeScreen` via `onGenerateRoute` (the `ReadingArgs` type guard in `routes.dart` redirects when args are absent), so this is not a web deep-link fix.
 - `_isCollapsed` scroll tracking (same pattern as `ChapterSelectionScreen`) prevents the book name appearing in both the toolbar and the expanded header simultaneously.
 - `Testament.label` used for the testament label text — the single source of truth in `lib/models/book.dart`.
 - All colours use `ColorScheme.*` — adapts to light/dark mode and Step 1.16 accent colour picker automatically.
