@@ -82,7 +82,43 @@ cyber_bible_app/
 
 ## Current Status
 
-**Phase 1 — Step 1.10 Complete: Scripture reading screen**
+**Phase 1 — Step 1.11 Complete: Basic text formatting**
+
+Step 1.11 ✅ COMPLETE. Replaced plain-text verse rendering with a full USFX → HTML pipeline using `flutter_widget_from_html`. Reading screen now shows formatted Bible text: paragraphs, poetry indentation, section headings, Psalm superscriptions, verse number superscripts, words of Jesus in red, and footnote markers.
+
+Step 1.11 implementation:
+- **New package**: `flutter_widget_from_html: ^0.17.2` added (renders HTML as native Flutter widgets — no WebView, no platform overhead).
+- **New utility**: `lib/utils/usfx_renderer.dart` — pure-Dart USFX XML → HTML converter. Entry point: `renderChapterToHtml(usfxFragment, {bodyColorCss, verseNumColorCss, headingColorCss, dHeadingColorCss, footnoteColorCss, baseFontSizePx})`. Returns a complete self-contained `<!DOCTYPE html>` document. Handles all USFX elements encountered in the WEB database:
+  - `<p style="p">` — normal paragraph
+  - `<p sfm="m" style="m">` — continuation paragraph (no indent)
+  - `<p sfm="pi" style="pi1/pi2">` — indented paragraphs
+  - `<p sfm="ms" style="ms1">` — major section heading (bold, centered)
+  - `<q style="q1/q2/q3">` — poetry lines (1.5/3.0/4.5 em indent)
+  - `<s style="s1">` — section headings (italic, centered, de-emphasised)
+  - `<d style="d">` — Psalm superscription (italic, de-emphasised)
+  - `<v id="N">` — verse start milestone → inline `<sup class="vn">N</sup>`
+  - `<ve/>` — verse end milestone (no output)
+  - `<wj>` — words of Jesus → `<span class="wj">` (red `#e53935`, always on)
+  - `<f>` — footnote → `<sup class="fn">[†]</sup>` superscript marker (not tappable — Step 2.1)
+  - `<w s="...">` — Strong's words → strip tag, keep text (linking in Phase 4)
+  - `<add>` — supplied text → `<em class="add">` (defensive, rare in WEB)
+  - `<nd>` — divine names → `<span class="nd">` with `font-variant: small-caps` (defensive, rare in WEB)
+- **Updated `ReadingScreen`**: `_loadVerses()` + `BibleService.getVerses()` replaced by `_loadChapter()` + `BibleService.getChapter()`. `_buildVerseList()` and `_VerseItem` (both marked TEMPORARY since Step 1.10) replaced by `_buildHtmlContent()` which calls `renderChapterToHtml()` and renders via `HtmlWidget`.
+- `_colorToCss()` helper converts Flutter `Color` → CSS `#rrggbb` / `rgba(r,g,b,a)` so callers can pass `ColorScheme.*` values without the renderer depending on `package:flutter`.
+- All CSS colours sourced from `ColorScheme` — text, verse numbers, headings, and footnote markers adapt automatically to light/dark mode and the Step 1.16 accent colour picker.
+- **Section heading toggle**: headings (`<s>`, `<ms>`) are always shown in this step. A user toggle ("Show section headings") is deferred to the settings screen (Step 1.16).
+- **Words of Jesus toggle**: always red in this step. The "Words of Christ colour" toggle (red vs. default text colour) is deferred to Step 1.16 settings.
+- **Footnote interactivity**: superscript marker only. Tappable footnote popups are Step 2.1.
+
+**Tests (Step 1.11):**
+- New `test/utils/usfx_renderer_test.dart` — 33 unit tests covering every USFX element type, HTML escaping, empty input, multi-block chapters, and colour/font passthrough.
+- All 103 tests pass (`flutter test`): 70 pre-existing + 33 new renderer tests.
+- `flutter analyze lib/ test/` → No issues.
+
+**Architecture decision recorded — colour passthrough pattern:**
+`renderChapterToHtml` takes CSS color strings (not `Color` objects) so it has no dependency on `package:flutter`. The call site in `ReadingScreen._buildHtmlContent()` converts `Color` → CSS via `_colorToCss()`. This keeps the renderer a pure-Dart utility (usable in build tools or tests without Flutter).
+
+Next: Step 1.12 — Verse navigation. Add ability to jump to a specific verse within a chapter (scroll to verse). Add a quick-nav control (book > chapter > verse).
 
 Step 1.10 ✅ COMPLETE. Scripture reading screen — collapsible header + scrollable plain-text verse list with inline verse numbers.
 
@@ -224,12 +260,12 @@ The goal: open the app, pick a book and chapter, and read formatted Bible text.
 | 1.8 | **Book selection screen** | Build a screen that lists all books of the Bible (OT and NT sections). Tapping a book navigates to chapter selection. |
 | 1.9 ✅ | **Chapter selection screen** | Build a screen showing a grid of chapter numbers for the selected book. Tapping a chapter navigates to the reading screen. |
 | 1.10 ✅ | **Scripture reading screen** | Build the main reading screen. Display a full chapter of Bible text (plain-text verse list for Step 1.10; full formatting in Step 1.11). Include the book name and chapter number as a collapsible header. Support scrolling. |
-| 1.11 | **Basic text formatting** | Render Bible text with paragraph breaks, poetry indentation, section headers, and verse numbers. Use HTML rendering or rich text widgets. |
+| 1.11 ✅ | **Basic text formatting** | Render Bible text with paragraph breaks, poetry indentation, section headers, and verse numbers. Use HTML rendering or rich text widgets. |
 | 1.12 | **Verse navigation** | Add ability to jump to a specific verse within a chapter (scroll to verse). Add a quick-nav control (book > chapter > verse). |
 | 1.13 | **Chapter-to-chapter navigation** | Add previous/next chapter buttons or swipe gestures to move between chapters seamlessly. |
 | 1.14 | **Bookmarks — data layer** | Create a `Bookmark` model and SQLite table. Methods: `addBookmark(reference)`, `removeBookmark(id)`, `getBookmarks()`. |
 | 1.15 | **Bookmarks — UI** | Add a way to bookmark the current location (long-press or button). Build a bookmarks list screen accessible from the home screen or menu. |
-| 1.16 | **Settings screen (font & theme)** | Build a settings screen with: font size slider; light/dark/system theme toggle; accent color picker (let users choose from a curated palette of seed colors that drive the Material 3 `ColorScheme` — e.g. the default calm blue, forest green, crimson, gold, purple, etc.); words-of-Christ color toggle (red or black). Persist all settings with `shared_preferences`. The home screen branded gradient is fixed and unaffected by theme changes; all inner screens (book selection, chapter selection, reading) respond to the chosen theme. |
+| 1.16 | **Settings screen (font & theme)** | Build a settings screen with: font size slider; light/dark/system theme toggle; accent color picker (let users choose from a curated palette of seed colors that drive the Material 3 `ColorScheme` — e.g. the default calm blue, forest green, crimson, gold, purple, etc.); words-of-Christ color toggle (red or black); section headings toggle (show/hide `<s>` and `<d>` noncanonical text, per design doc); verse numbers toggle (show/hide inline verse number superscripts). Persist all settings with `shared_preferences`. The home screen branded gradient is fixed and unaffected by theme changes; all inner screens (book selection, chapter selection, reading) respond to the chosen theme. |
 | 1.17 | **Internationalization setup** | Set up Flutter l10n with ARB files. Extract all hard-coded UI strings into localizable constants. Start with English. Add structure for additional languages. |
 
 ### Phase 2 — Study Features

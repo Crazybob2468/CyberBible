@@ -1,59 +1,21 @@
-// Scripture reading screen — Step 1.10.
+// Scripture reading screen — updated in Step 1.11.
 //
-// Displays a full chapter of Bible text for the selected book and chapter.
-// Verses are fetched from BibleService.getVerses() and shown as a scrollable,
-// verse-numbered list. The collapsible SliverAppBar matches the visual style
-// established in ChapterSelectionScreen (Step 1.9).
+// Displays a fully formatted chapter of Bible text for the selected book and
+// chapter. The raw USFX XML fragment is loaded from BibleService.getChapter(),
+// converted to HTML+CSS by usfx_renderer.dart, and rendered as native Flutter
+// widgets by flutter_widget_from_html's HtmlWidget.
 //
 // Navigation flow:
 //   HomeScreen → BookSelectionScreen → ChapterSelectionScreen → ReadingScreen
-//
-// =============================================================================
-// IMPORTANT — Step 1.11 (Basic text formatting) MUST complete this screen:
-// =============================================================================
-//
-// This screen INTENTIONALLY renders PLAIN TEXT from the `verses` table. That
-// approach is correct for Step 1.10 because it is simple, works offline with
-// no extra packages, and unblocks end-to-end navigation testing.
-//
-// Step 1.11 MUST replace plain-text rendering with proper USFX → HTML output:
-//
-//   1. Load data differently:
-//      Replace the `BibleService.getVerses()` call in `_loadVerses()` with
-//      `BibleService.getChapter()` to get the raw `content_usfx` XML string
-//      stored in the `chapters` table.
-//
-//   2. Write a USFX → HTML converter:
-//      Create `lib/utils/usfx_renderer.dart` (or similar). It should accept
-//      a USFX XML string and return an HTML+CSS string that preserves:
-//        - Paragraph breaks       <p>, <pi>, <m>
-//        - Poetry indentation     <q1>, <q2>, <q3>
-//        - Section headings       <s>, <ms>
-//        - Verse numbers          <v id="N" />…<ve/>
-//        - Words of Jesus         <wj>…</wj>  (red or black — Step 1.16 pref)
-//        - Footnote markers       <f>…</f>    (tappable in Step 2.1)
-//        - Supplied-text italics  <add>…</add>
-//        - Divine names small caps <nd>…</nd>
-//      Use the patterns in `lib/utils/usfx_utils.dart` as a reference.
-//
-//   3. Render the HTML:
-//      Add `flutter_widget_from_html` (or a WebView) to pubspec.yaml and
-//      replace `_buildVerseList()` / `_VerseItem` with an HTML widget that
-//      renders the converter output. Ensure the HTML widget respects
-//      ColorScheme text colors and the font size from Step 1.16.
-//
-//   4. Clean up:
-//      Delete `_buildVerseList()` and the `_VerseItem` class below once the
-//      HTML renderer is working and all verses display correctly.
-//
-// =============================================================================
 
 import 'package:flutter/foundation.dart'; // kDebugMode, debugPrint
 import 'package:flutter/material.dart';
+import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 
 import '../models/book.dart';
-import '../models/verse.dart';
+import '../models/chapter.dart';
 import '../services/bible_service.dart';
+import '../utils/usfx_renderer.dart';
 
 // ---------------------------------------------------------------------------
 // Layout constants
@@ -74,12 +36,19 @@ const double _expandedHeight = 200.0;
 /// The main scripture reading screen.
 ///
 /// Receives a `Book` and a `chapter` number from route arguments (see
-/// `ReadingArgs` in `app_routes.dart`). Fetches all verses for that chapter
-/// from `BibleService` and displays them as a scrollable, verse-numbered list.
+/// `ReadingArgs` in `app_routes.dart`). Loads the raw USFX XML for that
+/// chapter from `BibleService`, converts it to HTML via [renderChapterToHtml],
+/// and renders it as native Flutter widgets using `HtmlWidget`.
 ///
-/// **Step 1.11 note:** This screen currently renders plain verse text. Step 1.11
-/// will replace this with a proper USFX → HTML renderer. See the top-of-file
-/// comment block for the full migration plan.
+/// Formatting rendered in Step 1.11:
+///   - Prose paragraphs (`<p>`, `<m>`) and indented paragraphs (`<pi>`)
+///   - Poetry stanzas (`<q1>`, `<q2>`, `<q3>`) with indented lines
+///   - Section headings (`<s>`) and major-section headings (`<ms>`)
+///   - Psalm descriptive headings (`<d>`) — resolves Step 1.10 content gap
+///   - Inline verse numbers from `<v id="N"/>` milestones
+///   - Words of Jesus in red (`<wj>`) — toggle deferred to Step 1.16
+///   - Footnote superscript markers (`<f>`) — tappable pop-up in Step 2.1
+///   - Supplied-text italics (`<add>`) and divine-name small caps (`<nd>`)
 class ReadingScreen extends StatefulWidget {
   /// The book being read.
   final Book book;
@@ -96,17 +65,19 @@ class ReadingScreen extends StatefulWidget {
 class _ReadingScreenState extends State<ReadingScreen> {
   // ---- State ----
 
-  /// Verses loaded from [BibleService.getVerses()].
+  /// The loaded chapter data, or null while the initial load is in progress.
   ///
-  /// Null while the initial load is in progress. An empty list is a valid
-  /// result — some partial Bible translations have chapters with no indexed
-  /// verse content.
-  List<Verse>? _verses;
+  /// Contains the raw USFX XML in [Chapter.contentUsfx], which is converted
+  /// to HTML by [renderChapterToHtml] when the body is built. A null value
+  /// while [_errorMessage] is also null means loading is still in progress.
+  Chapter? _chapter;
 
-  /// Non-null when the verse-load operation threw an error.
+  /// Non-null when the chapter-load operation threw an error, or when
+  /// [BibleService.getChapter] returned null (chapter absent from this
+  /// translation).
   ///
   /// When set, the error card with a Retry button is shown instead of the
-  /// verse list.
+  /// chapter HTML.
   String? _errorMessage;
 
   /// Scroll controller for the [CustomScrollView].
@@ -138,8 +109,8 @@ class _ReadingScreenState extends State<ReadingScreen> {
   void initState() {
     super.initState();
     _scrollController = ScrollController()..addListener(_onScroll);
-    // Load verses as soon as the screen mounts.
-    _loadVerses();
+    // Load the chapter as soon as the screen mounts.
+    _loadChapter();
   }
 
   @override
@@ -166,7 +137,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
   // ---- Data loading ----
 
-  /// Fetches all verses for the current book + chapter from [BibleService].
+  /// Loads the raw USFX XML for the current book + chapter from [BibleService].
   ///
   /// Increments [_loadGeneration] on each call so that results from any
   /// concurrent or earlier in-flight request are discarded — preventing a
@@ -179,8 +150,10 @@ class _ReadingScreenState extends State<ReadingScreen> {
   /// absent), so `ensureOpen()` here is not a web deep-link fix — it guards
   /// in-app navigation only.
   ///
-  /// On failure, [_errorMessage] is set so the UI can show a Retry button.
-  Future<void> _loadVerses() async {
+  /// On failure — including when `getChapter()` returns null because this
+  /// translation lacks the requested chapter — [_errorMessage] is set so the
+  /// UI can show a Retry button.
+  Future<void> _loadChapter() async {
     // Capture the generation for this call. Results are applied only when
     // generation == _loadGeneration, discarding any stale concurrent loads.
     final generation = ++_loadGeneration;
@@ -188,7 +161,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
     // Reset state so a Retry press shows a fresh loading spinner.
     setState(() {
       _errorMessage = null;
-      _verses = null;
+      _chapter = null;
     });
 
     try {
@@ -197,17 +170,24 @@ class _ReadingScreenState extends State<ReadingScreen> {
       // bypasses HomeScreen. It is NOT a web browser-refresh fix — a raw
       // refresh on /read redirects to HomeScreen before this widget builds.
       await BibleService.ensureOpen();
-      final verses =
-          await BibleService.getVerses(widget.book.code, widget.chapter);
+      final chapter =
+          await BibleService.getChapter(widget.book.code, widget.chapter);
+
       // Only apply the result if no newer load has superseded this one.
-      if (mounted && generation == _loadGeneration) {
-        setState(() => _verses = verses);
+      if (!mounted || generation != _loadGeneration) return;
+
+      if (chapter == null) {
+        // This translation does not have the requested chapter (common in
+        // partial or New-Testament-only translations).
+        setState(() => _errorMessage = 'No text available for this chapter.');
+      } else {
+        setState(() => _chapter = chapter);
       }
     } catch (e) {
       // Log raw error details in debug builds only — internal paths and SQL
       // messages must not be surfaced to users in production builds.
       if (kDebugMode) {
-        debugPrint('ReadingScreen._loadVerses() failed: $e');
+        debugPrint('ReadingScreen._loadChapter() failed: $e');
       }
       // Only apply the error if no newer load has superseded this one.
       if (mounted && generation == _loadGeneration) {
@@ -324,12 +304,17 @@ class _ReadingScreenState extends State<ReadingScreen> {
     );
   }
 
-  // ---- Body (loading / error / verse list) ----
+  // ---- Body (loading / error / HTML content) ----
 
   /// Returns the appropriate body sliver based on the current loading state.
+  ///
+  /// Three states:
+  ///   - Loading: [_chapter] is null and [_errorMessage] is null — spinner.
+  ///   - Error: [_errorMessage] is non-null — error card with Retry.
+  ///   - Content: [_chapter] is non-null — USFX → HTML rendered widget.
   Widget _buildBody(ColorScheme colorScheme) {
     // ---- Loading ----
-    if (_verses == null && _errorMessage == null) {
+    if (_chapter == null && _errorMessage == null) {
       return const SliverFillRemaining(
         child: Center(child: CircularProgressIndicator()),
       );
@@ -342,8 +327,8 @@ class _ReadingScreenState extends State<ReadingScreen> {
       );
     }
 
-    // ---- Verse list ----
-    return _buildVerseList(colorScheme, _verses!);
+    // ---- HTML content ----
+    return _buildHtmlContent(colorScheme, _chapter!);
   }
 
   /// Builds an error card with a friendly message and a Retry button.
@@ -364,7 +349,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
             ),
             const SizedBox(height: 24),
             FilledButton.icon(
-              onPressed: _loadVerses,
+              onPressed: _loadChapter,
               icon: const Icon(Icons.refresh_rounded),
               label: const Text('Retry'),
             ),
@@ -374,154 +359,77 @@ class _ReadingScreenState extends State<ReadingScreen> {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // STEP 1.11 TODO — Replace this verse list with USFX → HTML rendering.
-  //
-  // `_buildVerseList()` and `_VerseItem` below are TEMPORARY. They render
-  // plain text from the `verses` table, which intentionally skips all
-  // formatting markup (paragraphs, poetry, headings, red letters, etc.).
-  //
-  // KNOWN CONTENT GAPS (all fixed by Step 1.11 switching to getChapter()):
-  //   - Psalm superscriptions (e.g. "A Psalm of David") — stored in the USFX
-  //     chapter fragment but not indexed as verse rows; silently absent here.
-  //   - Introductory prose before verse 1 — same: present in content_usfx,
-  //     not in the verses table, so not shown by this renderer.
-  //   - Standalone section headings and paragraph breaks inside a chapter —
-  //     present in USFX markup, invisible here because getVerses() returns
-  //     only the plain text of each <v>…<ve/> block.
-  //
-  // Step 1.11 must:
-  //   1. Replace `BibleService.getVerses()` (in `_loadVerses()` above) with
-  //      `BibleService.getChapter()` to load the raw USFX XML fragment.
-  //   2. Write `lib/utils/usfx_renderer.dart` to convert USFX → HTML + CSS.
-  //   3. Render the HTML with `flutter_widget_from_html` or a WebView widget.
-  //   4. Delete `_buildVerseList()` and `_VerseItem` once working.
-  //
-  // See the top-of-file comment block for the full element-by-element plan.
-  // ---------------------------------------------------------------------------
+  // ---- HTML content rendering ----
 
-  /// Builds a scrollable [SliverList] of [_VerseItem] widgets.
+  /// Converts the chapter's raw USFX XML to an HTML document and renders it
+  /// inside a [SliverToBoxAdapter] via [HtmlWidget].
   ///
-  /// Only content indexed as verse rows (`<v>…<ve/>` milestones) is shown.
-  /// Non-verse chapter content — Psalm superscriptions, introductory prose
-  /// before verse 1, and standalone section/paragraph blocks — is present in
-  /// `chapters.content_usfx` but absent here. Step 1.11 fixes this by
-  /// switching to [BibleService.getChapter] and rendering the full USFX XML.
+  /// [renderChapterToHtml] takes CSS color strings, so Flutter [Color] values
+  /// are converted via [_colorToCss] before being passed in.  The conversion
+  /// produces `#rrggbb` for fully-opaque colours and `rgba(r,g,b,a)` for
+  /// partially-transparent ones (e.g. de-emphasised heading colours).
   ///
-  /// Also handles the empty-list edge case (partial translations may have
-  /// chapters with no indexed verses).
+  /// Colours are sourced from the current [ColorScheme] so the HTML content
+  /// adapts automatically to light/dark mode and dynamic colour themes.
   ///
-  /// **TEMPORARY** — will be replaced by a USFX → HTML widget in Step 1.11.
-  Widget _buildVerseList(ColorScheme colorScheme, List<Verse> verses) {
-    // Edge case: chapter exists in the DB but has no verse rows indexed.
-    // This can happen with some partial or in-progress translations.
-    if (verses.isEmpty) {
-      return SliverFillRemaining(
-        child: Center(
-          child: Text(
-            'No text available for this chapter.',
-            style: TextStyle(
-                color: colorScheme.onSurface.withAlpha(153)),
-          ),
-        ),
-      );
-    }
+  /// The 48 px bottom padding ensures the last line of text is never hidden
+  /// behind a bottom navigation bar or gesture handle.
+  Widget _buildHtmlContent(ColorScheme colorScheme, Chapter chapter) {
+    // Convert the USFX XML fragment to a self-contained HTML document string.
+    // baseFontSizePx 17 matches the reading size used by the plain-text
+    // fallback removed in this step.
+    final html = renderChapterToHtml(
+      chapter.contentUsfx,
+      bodyColorCss: _colorToCss(colorScheme.onSurface),
+      verseNumColorCss: _colorToCss(colorScheme.primary),
+      // Section and major-section headings slightly de-emphasised (60 %).
+      headingColorCss: _colorToCss(colorScheme.onSurface.withAlpha(153)),
+      // Psalm superscription headings further de-emphasised (50 %).
+      dHeadingColorCss: _colorToCss(colorScheme.onSurface.withAlpha(127)),
+      // Footnote superscript markers share the primary accent colour.
+      footnoteColorCss: _colorToCss(colorScheme.primary),
+      baseFontSizePx: 17.0,
+    );
 
-    return SliverPadding(
-      // Comfortable side margins; generous bottom padding so the last verse
-      // is not hidden behind any future bottom navigation bar.
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 48),
-      sliver: SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (context, index) => _VerseItem(
-            verse: verses[index],
-            colorScheme: colorScheme,
-          ),
-          childCount: verses.length,
-        ),
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 48),
+        // HtmlWidget (flutter_widget_from_html) renders the HTML as native
+        // Flutter widgets — no WebView, no platform overhead.
+        child: HtmlWidget(html),
       ),
     );
   }
-}
 
-// ---------------------------------------------------------------------------
-// Verse item widget  (TEMPORARY — deleted in Step 1.11)
-// ---------------------------------------------------------------------------
-//
-// STEP 1.11 TODO — Delete this class once USFX → HTML rendering is in place.
-// ---------------------------------------------------------------------------
+  // ---- Colour utilities ----
 
-/// A single Bible verse rendered as an inline verse number + plain text.
-///
-/// The verse number is displayed as a small, bold, primary-coloured label at
-/// the start of the verse text — the conventional inline style used by most
-/// modern Bible-reading apps and printed study Bibles.
-///
-/// **TEMPORARY:** This widget will be deleted in Step 1.11 when the USFX → HTML
-/// renderer replaces plain-text verse rendering. See the top-of-file comment
-/// block for the full migration plan.
-class _VerseItem extends StatelessWidget {
-  /// The verse data to display.
-  final Verse verse;
+  /// Converts a Flutter [Color] to a CSS color string suitable for injection
+  /// into inline `<style>` blocks.
+  ///
+  /// Returns `#rrggbb` for fully-opaque colours (alpha == 255) and
+  /// `rgba(r, g, b, a)` for partially-transparent ones (alpha < 255), where
+  /// `a` is a decimal fraction rounded to three places (e.g. `0.600`).
+  ///
+  /// This avoids a dependency on `package:flutter/painting.dart` colour
+  /// utilities inside [renderChapterToHtml], which is a pure-Dart function.
+  static String _colorToCss(Color c) {
+    // Dart 3 Color uses floating-point channels in [0.0, 1.0].
+    // Convert to 8-bit integer values for CSS output.
+    final r = (c.r * 255.0).round().clamp(0, 255);
+    final g = (c.g * 255.0).round().clamp(0, 255);
+    final b = (c.b * 255.0).round().clamp(0, 255);
+    final a = (c.a * 255.0).round().clamp(0, 255);
 
-  /// The app's current colour scheme — used for verse-number and text colours.
-  final ColorScheme colorScheme;
+    // Fully opaque: shortest CSS representation, no floating-point rounding.
+    if (a >= 255) {
+      return '#'
+          '${r.toRadixString(16).padLeft(2, '0')}'
+          '${g.toRadixString(16).padLeft(2, '0')}'
+          '${b.toRadixString(16).padLeft(2, '0')}';
+    }
 
-  const _VerseItem({required this.verse, required this.colorScheme});
-
-  @override
-  Widget build(BuildContext context) {
-    // Build a single combined semantic label (e.g. "Verse 1: In the beginning
-    // God created...") so screen readers announce the entire verse as one
-    // coherent unit. ExcludeSemantics on the inner Row prevents assistive
-    // technology from also traversing the two child Text widgets individually
-    // (which would read the bare number "1" and the text as separate nodes).
-    return Semantics(
-      label: 'Verse ${verse.verse}: ${verse.textPlain}',
-      child: ExcludeSemantics(
-        child: Padding(
-          // Vertical breathing room between verses — makes the text easier to
-          // scan without being so spaced that the chapter feels fragmented.
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          // Row layout: verse number pinned top-left, verse text in an Expanded
-          // column beside it. CrossAxisAlignment.start ensures the number aligns
-          // to the very top of the text block regardless of how many lines the
-          // verse wraps to — more reliable than inline TextSpan baseline tricks.
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Verse number — small, bold, primary color, top-aligned.
-              // Separate Text widget in a Row so it is visually pinned to the
-              // top-left corner of the verse block — the conventional typography
-              // style used in printed study Bibles and modern Bible apps.
-              Text(
-                '${verse.verse} ',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: colorScheme.primary,
-                ),
-              ),
-              // Verse text — plain text for Step 1.10.
-              // Step 1.11 will replace this Text with formatted USFX → HTML
-              // content (paragraphs, poetry, headings, red letters, etc.).
-              Expanded(
-                child: Text(
-                  verse.textPlain,
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w400,
-                    color: colorScheme.onSurface,
-                    // Generous line height — Bible prose benefits from more
-                    // vertical breathing room than typical UI body text.
-                    height: 1.65,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+    // Partially transparent: use rgba() with three-decimal alpha fraction.
+    final alpha = (a / 255.0).toStringAsFixed(3);
+    return 'rgba($r, $g, $b, $alpha)';
   }
 }
