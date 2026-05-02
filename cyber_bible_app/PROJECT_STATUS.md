@@ -89,7 +89,7 @@ Step 1.10 ✅ COMPLETE. Scripture reading screen — collapsible header + scroll
 Step 1.10 implementation:
 - Replaced the `ReadingScreen` placeholder stub with a full `StatefulWidget` implementation.
 - **Header**: `SliverAppBar` with `expandedHeight: 200` (taller than Step 1.9 to fit three lines). Expanded state shows the testament label (small caps, de-emphasised), the book name (32px, w800), and "Chapter N" (18px, w600) — all in `onPrimaryContainer` on a `primaryContainer` background. Collapses to a compact AppBar showing "{nameShort} {chapter}" (e.g. "Genesis 1") as the title.
-- **Verse list**: `SliverList` of `_VerseItem` widgets. Each item is a `Text.rich` with an inline verse number (11px, w700, `primary` color) followed by the plain verse text (17px, w400, 1.65 line height). Side padding 16px, bottom padding 48px.
+- **Verse list**: `SliverList` of `_VerseItem` widgets. Each item is a `Row(crossAxisAlignment: CrossAxisAlignment.start)` with a verse number `Text` (11px, w700, `primary` color) and an `Expanded` verse text `Text` (17px, w400, 1.65 line height). The `Row` is wrapped in `Semantics(label: 'Verse N: ...')` + `ExcludeSemantics` so screen readers announce each verse as one coherent unit rather than two separate nodes. Side padding 16px, bottom padding 48px.
 - **Empty state**: graceful fallback message for chapters with no indexed verse rows (rare in partial translations).
 - **Loading state**: centred `CircularProgressIndicator` while verses are fetched.
 - **Error state**: error icon + user-friendly message + `FilledButton` Retry; raw exception logged via `debugPrint` under `kDebugMode` only.
@@ -223,7 +223,7 @@ The goal: open the app, pick a book and chapter, and read formatted Bible text.
 | 1.7 | **Bible service layer** | Create `BibleService` — Dart class that reads from the SQLite DB. Methods: `getBooks()`, `getChapters(bookId)`, `getVerses(bookId, chapterId)`. |
 | 1.8 | **Book selection screen** | Build a screen that lists all books of the Bible (OT and NT sections). Tapping a book navigates to chapter selection. |
 | 1.9 ✅ | **Chapter selection screen** | Build a screen showing a grid of chapter numbers for the selected book. Tapping a chapter navigates to the reading screen. |
-| 1.10 ✅ | **Scripture reading screen** | Build the main reading screen. Display a full chapter of formatted Bible text. Include the book name and chapter number as a header. Support scrolling. |
+| 1.10 ✅ | **Scripture reading screen** | Build the main reading screen. Display a full chapter of Bible text (plain-text verse list for Step 1.10; full formatting in Step 1.11). Include the book name and chapter number as a collapsible header. Support scrolling. |
 | 1.11 | **Basic text formatting** | Render Bible text with paragraph breaks, poetry indentation, section headers, and verse numbers. Use HTML rendering or rich text widgets. |
 | 1.12 | **Verse navigation** | Add ability to jump to a specific verse within a chapter (scroll to verse). Add a quick-nav control (book > chapter > verse). |
 | 1.13 | **Chapter-to-chapter navigation** | Add previous/next chapter buttons or swipe gestures to move between chapters seamlessly. |

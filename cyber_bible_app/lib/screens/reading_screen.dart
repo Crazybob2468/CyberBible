@@ -432,46 +432,56 @@ class _VerseItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      // Vertical breathing room between verses — makes the text easier to
-      // scan without being so spaced that the chapter feels fragmented.
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      // Row layout: verse number pinned top-left, verse text in an Expanded
-      // column beside it. CrossAxisAlignment.start ensures the number aligns
-      // to the very top of the text block regardless of how many lines the
-      // verse wraps to — more reliable than inline TextSpan baseline tricks.
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Verse number — small, bold, primary color, top-aligned.
-          // Separate Text widget in a Row so it is visually pinned to the
-          // top-left corner of the verse block — the conventional typography
-          // style used in printed study Bibles and modern Bible apps.
-          Text(
-            '${verse.verse} ',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: colorScheme.primary,
-            ),
-          ),
-          // Verse text — plain text for Step 1.10.
-          // Step 1.11 will replace this Text with formatted USFX → HTML
-          // content (paragraphs, poetry, headings, red letters, etc.).
-          Expanded(
-            child: Text(
-              verse.textPlain,
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w400,
-                color: colorScheme.onSurface,
-                // Generous line height — Bible prose benefits from more
-                // vertical breathing room than typical UI body text.
-                height: 1.65,
+    // Build a single combined semantic label (e.g. "Verse 1: In the beginning
+    // God created...") so screen readers announce the entire verse as one
+    // coherent unit. ExcludeSemantics on the inner Row prevents assistive
+    // technology from also traversing the two child Text widgets individually
+    // (which would read the bare number "1" and the text as separate nodes).
+    return Semantics(
+      label: 'Verse ${verse.verse}: ${verse.textPlain}',
+      child: ExcludeSemantics(
+        child: Padding(
+          // Vertical breathing room between verses — makes the text easier to
+          // scan without being so spaced that the chapter feels fragmented.
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          // Row layout: verse number pinned top-left, verse text in an Expanded
+          // column beside it. CrossAxisAlignment.start ensures the number aligns
+          // to the very top of the text block regardless of how many lines the
+          // verse wraps to — more reliable than inline TextSpan baseline tricks.
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Verse number — small, bold, primary color, top-aligned.
+              // Separate Text widget in a Row so it is visually pinned to the
+              // top-left corner of the verse block — the conventional typography
+              // style used in printed study Bibles and modern Bible apps.
+              Text(
+                '${verse.verse} ',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: colorScheme.primary,
+                ),
               ),
-            ),
+              // Verse text — plain text for Step 1.10.
+              // Step 1.11 will replace this Text with formatted USFX → HTML
+              // content (paragraphs, poetry, headings, red letters, etc.).
+              Expanded(
+                child: Text(
+                  verse.textPlain,
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w400,
+                    color: colorScheme.onSurface,
+                    // Generous line height — Bible prose benefits from more
+                    // vertical breathing room than typical UI body text.
+                    height: 1.65,
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
