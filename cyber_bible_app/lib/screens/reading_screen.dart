@@ -123,6 +123,15 @@ class _ReadingScreenState extends State<ReadingScreen> {
   /// `_expandedHeight − kToolbarHeight` (≈ 144 px).
   bool _isCollapsed = false;
 
+  /// Generation counter used to discard results from stale in-flight loads.
+  ///
+  /// Incremented at the start of every [_loadVerses] call. After the async
+  /// work completes, the result is applied only if the counter still matches
+  /// the value captured at the start of that call. This prevents a slow
+  /// earlier request (e.g. from a Retry tap) from overwriting the result of
+  /// a faster, newer request.
+  int _loadGeneration = 0;
+
   // ---- Lifecycle ----
 
   @override
@@ -146,7 +155,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
   /// transitions between expanded and collapsed states.
   ///
   /// The SliverAppBar finishes collapsing when the scroll offset exceeds
-  /// `_expandedHeight − kToolbarHeight (≈ 56 px) = 144 px`.
+  /// `_expandedHeight (200 px) − kToolbarHeight (≈ 56 px) ≈ 144 px`.
   void _onScroll() {
     const collapseThreshold = _expandedHeight - kToolbarHeight;
     final collapsed = _scrollController.offset > collapseThreshold;
@@ -159,11 +168,22 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
   /// Fetches all verses for the current book + chapter from [BibleService].
   ///
-  /// Calls `ensureOpen()` first so navigating directly to `/read` via a web
-  /// deep-link or browser refresh still works even if HomeScreen hasn't had a
-  /// chance to open the database. On failure, [_errorMessage] is set so the
-  /// UI can show a user-friendly Retry button.
+  /// Increments [_loadGeneration] on each call so that results from any
+  /// concurrent or earlier in-flight request are discarded — preventing a
+  /// slow Retry from overwriting the UI state set by a newer request.
+  ///
+  /// Calls `ensureOpen()` as defence-in-depth for any in-app navigation path
+  /// that reaches [ReadingScreen] before [HomeScreen] has opened the database.
+  /// Note: a raw browser refresh on `/read` redirects to [HomeScreen] via
+  /// `onGenerateRoute` (missing [ReadingArgs] guard), so `ensureOpen()` here
+  /// is not a web deep-link fix — it guards in-app navigation only.
+  ///
+  /// On failure, [_errorMessage] is set so the UI can show a Retry button.
   Future<void> _loadVerses() async {
+    // Capture the generation for this call. Results are applied only when
+    // generation == _loadGeneration, discarding any stale concurrent loads.
+    final generation = ++_loadGeneration;
+
     // Reset state so a Retry press shows a fresh loading spinner.
     setState(() {
       _errorMessage = null;
@@ -171,13 +191,15 @@ class _ReadingScreenState extends State<ReadingScreen> {
     });
 
     try {
-      // Ensure the DB is open before querying — HomeScreen normally handles
-      // this, but this guard makes the /read route safe when the app arrives
-      // here directly (web deep-link, browser refresh, etc.).
+      // Ensure the DB is open before querying. HomeScreen normally handles
+      // this on startup; this guard covers any in-app navigation path that
+      // bypasses HomeScreen. It is NOT a web browser-refresh fix — a raw
+      // refresh on /read redirects to HomeScreen before this widget builds.
       await BibleService.ensureOpen();
       final verses =
           await BibleService.getVerses(widget.book.code, widget.chapter);
-      if (mounted) {
+      // Only apply the result if no newer load has superseded this one.
+      if (mounted && generation == _loadGeneration) {
         setState(() => _verses = verses);
       }
     } catch (e) {
@@ -186,7 +208,8 @@ class _ReadingScreenState extends State<ReadingScreen> {
       if (kDebugMode) {
         debugPrint('ReadingScreen._loadVerses() failed: $e');
       }
-      if (mounted) {
+      // Only apply the error if no newer load has superseded this one.
+      if (mounted && generation == _loadGeneration) {
         setState(() =>
             _errorMessage = 'Could not load the chapter. Please try again.');
       }
