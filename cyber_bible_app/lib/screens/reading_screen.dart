@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 
 import '../models/book.dart';
+import '../models/verse.dart';
 import '../services/bible_service.dart';
 import '../utils/usfx_renderer.dart';
 
@@ -100,6 +101,14 @@ class _ReadingScreenState extends State<ReadingScreen> {
   /// [_emptyMessage] because retrying may succeed for transient errors but
   /// cannot succeed for a permanently absent chapter.
   String? _errorMessage;
+
+  /// Plain-text verse list loaded alongside [_contentUsfx].
+  ///
+  /// Used to build the invisible semantic-label overlay in [_buildHtmlContent]
+  /// so TalkBack and VoiceOver users can navigate "Verse N: text" units
+  /// instead of the fragmented inline elements produced by [HtmlWidget].
+  /// Null before any chapter has successfully loaded.
+  List<Verse>? _verses;
 
   /// Scroll controller for the [CustomScrollView].
   ///
@@ -200,6 +209,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
       _emptyMessage = null;
       _contentUsfx = null;
       _html = null;
+      _verses = null;
     });
 
     try {
@@ -227,6 +237,17 @@ class _ReadingScreenState extends State<ReadingScreen> {
         // state with a Retry button instead of crashing the widget tree.
         // Storing _contentUsfx lets _rebuildHtml() re-render on theme changes.
         _contentUsfx = chapter.contentUsfx;
+        // Also fetch the plain-text verse list for the accessibility overlay
+        // in _buildHtmlContent (TalkBack/VoiceOver per-verse labels).
+        // getVerses() is a fast local DB call that runs only when the chapter
+        // is present, so it does not add latency for absent chapters.
+        _verses = await BibleService.getVerses(
+          widget.book.code,
+          widget.chapter,
+        );
+        // Guard again after the second await: a Retry tap during getVerses
+        // would have incremented the generation counter.
+        if (!mounted || generation != _loadGeneration) return;
         _rebuildHtml();
       }
     } catch (e) {
@@ -237,8 +258,15 @@ class _ReadingScreenState extends State<ReadingScreen> {
       }
       // Only apply the error if no newer load has superseded this one.
       if (mounted && generation == _loadGeneration) {
-        setState(() =>
-            _errorMessage = 'Could not load the chapter. Please try again.');
+        setState(() {
+          // Clear any partially-stored USFX so that a later
+          // didChangeDependencies() call does not try to re-render the same
+          // bad XML outside this try/catch, which would throw an unhandled
+          // exception from the framework.
+          _contentUsfx = null;
+          _verses = null;
+          _errorMessage = 'Could not load the chapter. Please try again.';
+        });
       }
     }
   }
@@ -248,15 +276,17 @@ class _ReadingScreenState extends State<ReadingScreen> {
   /// Renders [_contentUsfx] → HTML using the current [ColorScheme] and
   /// stores the result in [_html] via [setState].
   ///
-  /// Called from [_loadChapter] on initial load and from
-  /// [didChangeDependencies] when the theme changes (e.g., the device
-  /// switching between light and dark mode), so the HTML colour palette
-  /// always reflects the active theme.
+  /// Called from two sites:
   ///
-  /// Does not wrap in try/catch: [_contentUsfx] was already successfully
-  /// parsed during [_loadChapter] (a failed parse would have thrown and
-  /// set [_errorMessage] rather than storing the XML), so re-parsing the
-  /// same valid XML is safe.
+  /// 1. [_loadChapter] (initial load and Retry): the call is inside
+  ///    `_loadChapter`'s `try/catch`, so any XML parse error is caught there
+  ///    and surfaces the error state. [_contentUsfx] is null-cleared in the
+  ///    catch block so this method is never retried on bad XML.
+  /// 2. [didChangeDependencies] (theme change): [_contentUsfx] is only
+  ///    non-null after a successful parse in [_loadChapter], so the XML is
+  ///    guaranteed valid and re-parsing it is safe.
+  ///
+  /// Neither call site needs its own try/catch for these reasons.
   void _rebuildHtml() {
     final colorScheme = Theme.of(context).colorScheme;
     final html = renderChapterToHtml(
@@ -494,9 +524,48 @@ class _ReadingScreenState extends State<ReadingScreen> {
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 48),
-        // HtmlWidget (flutter_widget_from_html_core) renders the HTML as native
-        // Flutter widgets — no WebView, no platform overhead.
-        child: HtmlWidget(html),
+        child: Stack(
+          children: [
+            // Visual layer: HtmlWidget renders the fully-formatted chapter.
+            // Semantics are excluded here because the raw HTML produces
+            // fragmented nodes (bare verse-number superscripts, inline spans)
+            // that screen readers cannot navigate verse-by-verse.
+            ExcludeSemantics(
+              child: HtmlWidget(html),
+            ),
+            // Accessibility layer: invisible per-verse semantic labels so
+            // TalkBack and VoiceOver users hear "Verse 1: In the beginning…"
+            // instead of fragmented numbers and mid-sentence elements.
+            //
+            // Visibility(visible: false, maintainSize: true, maintainSemantics:
+            // true) keeps the Column in the semantic tree with no visual
+            // footprint. All children are SizedBox.shrink() (0×0) so the
+            // Column contributes zero height and does not affect layout.
+            if (_verses != null && _verses!.isNotEmpty)
+              Visibility(
+                visible: false,
+                maintainState: true,
+                maintainAnimation: true,
+                maintainSize: true,
+                maintainSemantics: true,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: _verses!
+                      .map(
+                        (v) => Semantics(
+                          // e.g. "Verse 3: For God so loved the world…"
+                          label: 'Verse ${v.verse}: ${v.textPlain}',
+                          // Exclude the inner SizedBox so it does not create
+                          // a redundant empty semantic node.
+                          excludeSemantics: true,
+                          child: const SizedBox.shrink(),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

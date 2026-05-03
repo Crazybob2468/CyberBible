@@ -27,14 +27,18 @@ void main(List<String> args) {
     print('Usage: dart run tools/find_element.dart <element_name> [max_per_chapter]');
     exit(1);
   }
-  final tagName = args[0];
-  // USFX element names consist of ASCII letters and digits only (e.g. "p",
-  // "q1", "wj"). Reject anything else to prevent SQL LIKE wildcard injection
+  // USFX element names are always lowercase in the database (e.g. "p", "q1",
+  // "wj"). Normalise to lowercase immediately so the RegExp (which is
+  // case-sensitive) matches database content even if the user typed uppercase.
+  // SQLite LIKE is case-insensitive for ASCII, so the SQL patterns are fine
+  // with either case, but the Dart RegExp is not.
+  final tagName = args[0].toLowerCase();
+  // Reject non-alphanumeric input to prevent SQL LIKE wildcard injection
   // (_ and % have special meaning) and regex metacharacter injection.
   if (!RegExp(r'^[a-zA-Z][a-zA-Z0-9]*$').hasMatch(tagName)) {
     print(
       'Error: element_name must be alphanumeric (e.g. "p", "q1", "wj"), '
-      'got "$tagName".',
+      'got "${args[0]}".',
     );
     exit(1);
   }
@@ -51,7 +55,18 @@ void main(List<String> args) {
     maxPerChapter = 2;
   }
 
-  final db = sqlite3.open('assets/bibles/eng-web.db');
+  // Opening a non-existent file with sqlite3.open() creates an empty database,
+  // causing the tool to silently report zero matches instead of failing
+  // visibly. Check up-front so the user gets an actionable error message.
+  const dbPath = 'assets/bibles/eng-web.db';
+  if (!File(dbPath).existsSync()) {
+    print(
+      'Error: database not found at "$dbPath". '
+      'Run `dart run tools/build_bible_db.dart` first.',
+    );
+    exit(1);
+  }
+  final db = sqlite3.open(dbPath);
   // Use three LIKE patterns to match the tag followed by a space, close `>`,
   // or self-close `/>` — avoiding false positives from prefix-matched names
   // (e.g. `<q` would otherwise also match `<qs>`).

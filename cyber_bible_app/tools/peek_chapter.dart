@@ -46,6 +46,16 @@ void main(List<String> args) {
   }
 
   final dbPath = 'assets/bibles/eng-web.db';
+  // Opening a non-existent file with sqlite3.open() creates an empty database,
+  // causing the tool to silently report no chapter instead of failing
+  // visibly. Check up-front so the user gets an actionable error message.
+  if (!File(dbPath).existsSync()) {
+    print(
+      'Error: database not found at "$dbPath". '
+      'Run `dart run tools/build_bible_db.dart` first.',
+    );
+    exit(1);
+  }
   final db = sqlite3.open(dbPath);
 
   final result = db.select(

@@ -6,6 +6,7 @@
 // CLI tool — print() is the correct output mechanism for a terminal script.
 library;
 
+import 'dart:io';
 import 'package:sqlite3/sqlite3.dart';
 
 /// Entry point: scans every chapter in `assets/bibles/eng-web.db`, tallies
@@ -20,7 +21,18 @@ import 'package:sqlite3/sqlite3.dart';
 /// dart run tools/scan_elements.dart
 /// ```
 void main() {
-  final db = sqlite3.open('assets/bibles/eng-web.db');
+  // Opening a non-existent file with sqlite3.open() creates an empty database,
+  // causing the tool to silently report zero elements instead of failing
+  // visibly. Check up-front so the user gets an actionable error message.
+  const dbPath = 'assets/bibles/eng-web.db';
+  if (!File(dbPath).existsSync()) {
+    print(
+      'Error: database not found at "$dbPath". '
+      'Run `dart run tools/build_bible_db.dart` first.',
+    );
+    exit(1);
+  }
+  final db = sqlite3.open(dbPath);
   final rows = db.select('SELECT content_usfx FROM chapters');
 
   final tagPattern = RegExp(r'<([a-zA-Z][a-zA-Z0-9]*)[\s>/]');

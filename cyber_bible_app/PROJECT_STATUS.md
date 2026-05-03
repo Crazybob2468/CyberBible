@@ -110,6 +110,13 @@ Step 1.11 ✅ COMPLETE. Replaced plain-text verse rendering with a full USFX →
 - **Stale test comments fixed**: "provides CSS classes" → "provides global defaults; per-element styling is inline"; "wrapped in span.wj" → "inline `style=\"color:#e53935;\"`".
 - **Accessibility regression**: Same deferred comment — documented for Step 1.16 (see Known regression section).
 
+**PR review round 6 changes:**
+- **A11y overlay implemented**: Resolved the recurring per-verse semantics regression. `_loadChapter()` now calls `BibleService.getVerses()` alongside `getChapter()` and stores the result in `List<Verse>? _verses`. `_buildHtmlContent()` wraps `HtmlWidget` in `ExcludeSemantics` (removing its fragmented HTML nodes from the a11y tree) and adds a `Visibility(visible: false, maintainSize: true, maintainSemantics: true, child: Column([Semantics(label: 'Verse N: text')...]))` overlay. TalkBack/VoiceOver now navigate "Verse 1: In the beginning…" units instead of bare superscript numbers and mid-sentence fragments.
+- **`_contentUsfx` cleared on load failure**: If `_rebuildHtml()` throws a parse error, the catch block now sets `_contentUsfx = null` (and `_verses = null`) so that a subsequent `didChangeDependencies()` call does not try to re-render the same bad XML outside the try/catch — which would throw an unhandled framework exception.
+- **`renderChapterToHtml()` `langCode`/`scriptDirection` params**: Added two optional parameters (`String langCode = 'en'`, `String scriptDirection = 'ltr'`) so that non-English and RTL Bible translations can set the correct `<html lang="…" dir="…">` attributes. The existing call site in `reading_screen.dart` continues to use the defaults; future steps pass the `bible_info.language_code` and `bible_info.script_direction` values.
+- **`find_element.dart` tagName lowercased**: USFX tags in the database are always lowercase. The input is now normalised to lowercase before validation so that typing `Q` or `S` finds the same chapters as `q` or `s`. (SQLite LIKE was already case-insensitive; the Dart RegExp was not.)
+- **`sqlite3.open()` missing-file guard**: All three diagnostic tools (`find_element.dart`, `peek_chapter.dart`, `scan_elements.dart`) now check that `assets/bibles/eng-web.db` exists before calling `sqlite3.open()`. Without this check, SQLite silently creates an empty database when the file is absent, causing the tool to report zero results instead of an error. `dart:io` import added to `scan_elements.dart`.
+
 Step 1.11 implementation:
 - **New package**: `flutter_widget_from_html_core: ^0.17.2` added (renders HTML as native Flutter widgets — no WebView, no platform overhead, no transitive media plugins). The full `flutter_widget_from_html` package was considered but rejected: it pulls in video_player, just_audio, webview_flutter, and url_launcher as transitive dependencies, none of which the app uses.
 - **CRITICAL constraint**: `flutter_widget_from_html_core` does NOT apply `<style>` block CSS class selectors (e.g., `span.wj { color: red }`). All per-element styling must use inline `style=` attributes. The `<style>` block only works for `body{}` and `p{}` (universal defaults the package does honour).
@@ -137,16 +144,13 @@ Step 1.11 implementation:
 
 **Tests (Step 1.11):**
 - New `test/utils/usfx_renderer_test.dart` — 35 unit tests covering every USFX element type, HTML escaping, empty input, multi-block chapters, and colour/font passthrough (including `<b>` stanza separator and `<qs>` Selah marker added in inline-style fix pass).
-- All 105 tests pass (`flutter test`): 70 pre-existing + 35 new renderer tests.
+- All 107 tests pass (`flutter test`): 70 pre-existing + 35 renderer tests (Step 1.11) + 2 `langCode`/`scriptDirection` tests (round 6).
 - `flutter analyze lib/ test/` → No issues.
 
-**Known regression (Step 1.11) — tracked for Step 1.16:**
-- **Accessibility — structured verse semantics**:
-  - **What broke**: Step 1.10's `SliverList` wrapped each verse in `Semantics(label: 'Verse N: <text>', child: ExcludeSemantics(...))`, so TalkBack/VoiceOver announced every verse as one coherent sentence: *"Verse 3: For God so loved the world."* The `HtmlWidget` replacement discards this structure — the a11y tree sees disconnected inline elements: a bare `<sup>3</sup>` node, then sentence fragments wherever inline `<span>` or `<sup>` tags break the paragraph flow.
-  - **User impact**: Swiping through a chapter with a screen reader produces fragments like *"3"*, *"For God so loved the"*, *"world,"* instead of complete verse units. Users cannot navigate verse-by-verse.
-  - **Recommended fix for Step 1.16 (hybrid approach)**: Keep `HtmlWidget` for visual rendering but add a transparent semantic overlay. Fetch the plain-text verse list via the existing `BibleService.getVerses()` call (already tested, fast), then stack invisible `Semantics(label: 'Verse N: text', excludeSemantics: true)` widgets on top of the `HtmlWidget` using a `Stack`. This reuses the proven Step 1.10 pattern without modifying the renderer.
-  - **Alternative**: Subclass `flutter_widget_from_html_core`'s `WidgetFactory`, override `onBuildWidget()` to inject `Semantics` at each `<p>` block — gives paragraph-level (not verse-level) granularity, which is still a major improvement.
-  - **Acceptance criteria**: On Android TalkBack, swiping through a chapter should announce *"Verse 1: In the beginning…"*, *"Verse 2: The earth was…"* as complete units. No bare number or mid-sentence fragment swipe stops.
+**A11y status after round 6 — partial fix applied, further polish in Step 1.16:**
+- **What was fixed**: `_buildHtmlContent()` now uses `ExcludeSemantics(HtmlWidget(...))` for visual rendering and a `Visibility(visible:false, maintainSemantics:true)` overlay of `Semantics(label:'Verse N: text')` widgets for the a11y tree. TalkBack/VoiceOver users now navigate "Verse 1: In the beginning…" units instead of bare `<sup>` numbers and fragmented inline spans.
+- **Remaining limitation**: Because the verse Semantics nodes are zero-height (all children are `SizedBox.shrink()`), the TalkBack focus rectangle appears at position (0,0) of the content area rather than at the visible verse location. Linear swipe-through navigation works correctly; the focus highlight position is cosmetically imperfect. Fixing the highlight requires knowing the rendered position of each verse — deferred to Step 1.16 (see approach in `_buildHtmlContent` comment).
+- **Acceptance criteria for Step 1.16**: On Android TalkBack, the focus rectangle should appear at the correct scroll position as the user swipes verse-by-verse. The "Verse N: text" announcement is already correct as of round 6.
 
 **Architecture decision recorded — colour passthrough pattern:**
 `renderChapterToHtml` takes CSS color strings (not `Color` objects) so it has no dependency on `package:flutter`. The call site in `ReadingScreen._rebuildHtml()` converts `Color` → CSS via `_colorToCss()`. This keeps the renderer a pure-Dart utility (usable in build tools or tests without Flutter).

@@ -89,6 +89,22 @@ String renderChapterToHtml(
 
   /// Base font size in logical pixels for verse body text.
   double baseFontSizePx = 17.0,
+
+  /// BCP 47 language code for the `lang` attribute of the HTML document root
+  /// (e.g. `'en'`, `'es'`, `'ar'`). Defaults to `'en'`.
+  ///
+  /// Set from the `language_code` column in the `bible_info` table so that
+  /// screen readers use correct pronunciation rules and browsers apply the
+  /// right hyphenation and quotation styles.
+  String langCode = 'en',
+
+  /// HTML text direction for the document root (`'ltr'` or `'rtl'`).
+  /// Defaults to `'ltr'`.
+  ///
+  /// Set to `'rtl'` for right-to-left scripts (Arabic, Hebrew, etc.).
+  /// Use the `script_direction` column from `bible_info`, lowercased
+  /// (the database stores `'LTR'` / `'RTL'`).
+  String scriptDirection = 'ltr',
 }) {
   // Delegate to the internal renderer class, which holds the colour/font
   // values as fields so every private method can access them without
@@ -100,6 +116,8 @@ String renderChapterToHtml(
     dHeadingColorCss: dHeadingColorCss,
     footnoteColorCss: footnoteColorCss,
     baseFontSizePx: baseFontSizePx,
+    langCode: langCode,
+    scriptDirection: scriptDirection,
   ).render(usfxFragment);
 }
 
@@ -127,6 +145,12 @@ class _UsfxRenderer {
   final String footnoteColorCss;
   final double baseFontSizePx;
 
+  /// BCP 47 language code for the HTML `lang` attribute (e.g. `'en'`).
+  final String langCode;
+
+  /// HTML text-direction attribute value (`'ltr'` or `'rtl'`).
+  final String scriptDirection;
+
   /// Verse-number and footnote-marker font size — 65 % of [baseFontSizePx].
   late final String _smallPx;
 
@@ -143,6 +167,8 @@ class _UsfxRenderer {
     required this.dHeadingColorCss,
     required this.footnoteColorCss,
     required this.baseFontSizePx,
+    this.langCode = 'en',
+    this.scriptDirection = 'ltr',
   }) {
     _smallPx = (baseFontSizePx * 0.65).toStringAsFixed(1);
     _s1Px = (baseFontSizePx * 0.85).toStringAsFixed(1);
@@ -168,7 +194,7 @@ class _UsfxRenderer {
 
     // Nothing to render — return the minimal document shell with empty body.
     if (usfxFragment.trim().isEmpty) {
-      return _wrapDocument(styles, '');
+      return _wrapDocument(styles, '', langCode, scriptDirection);
     }
 
     // The USFX chapter fragment is a sequence of sibling elements without a
@@ -197,7 +223,7 @@ class _UsfxRenderer {
       // Whitespace-only text nodes at the top level are ignored.
     }
 
-    return _wrapDocument(styles, bodyHtml.toString());
+    return _wrapDocument(styles, bodyHtml.toString(), langCode, scriptDirection);
   }
 
   // ---- Block-level element rendering ----
@@ -490,13 +516,22 @@ String _escapeHtml(String text) {
 /// Assembles a complete HTML document from [styles] (a `<style>` block) and
 /// [bodyHtml] (the rendered chapter content).
 ///
+/// [langCode] is a BCP 47 language tag placed on the `<html>` element for
+/// screen-reader pronunciation (e.g. `'en'`, `'ar'`).
+/// [scriptDirection] is `'ltr'` or `'rtl'` for the HTML `dir` attribute.
+///
 /// The `<style>` block is placed in `<head>` and the rendered verses in
 /// `<body>` — these are kept separate so neither leaks into the wrong section.
 ///
 /// The viewport meta tag ensures correct text scaling on high-DPI screens.
-String _wrapDocument(String styles, String bodyHtml) {
+String _wrapDocument(
+  String styles,
+  String bodyHtml,
+  String langCode,
+  String scriptDirection,
+) {
   return '<!DOCTYPE html>'
-      '<html lang="en">'
+      '<html lang="${_escapeHtml(langCode)}" dir="${_escapeHtml(scriptDirection)}">'
       '<head>'
       '<meta charset="utf-8">'
       '<meta name="viewport" content="width=device-width,initial-scale=1">'

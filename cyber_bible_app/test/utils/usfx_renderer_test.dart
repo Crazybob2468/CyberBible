@@ -94,6 +94,31 @@ void main() {
       expect(fnHtml, contains(_footnoteColor));
     });
 
+    /// Default lang and dir attributes — English LTR is the only translation
+    /// bundled in Step 1.11, so the defaults are applied automatically.
+    test('default lang="en" dir="ltr" appear on <html> element', () {
+      final html = _render('');
+      expect(html, contains('<html lang="en" dir="ltr">'));
+    });
+
+    /// Non-English RTL Bible — Arabic/Hebrew translations must set the correct
+    /// base direction so screen readers use the right pronunciation rules and
+    /// HtmlWidget lays out text from right to left.
+    test('custom langCode and scriptDirection appear on <html> element', () {
+      final html = renderChapterToHtml(
+        '',
+        bodyColorCss: _bodyColor,
+        verseNumColorCss: _verseNumColor,
+        headingColorCss: _headingColor,
+        dHeadingColorCss: _dHeadingColor,
+        footnoteColorCss: _footnoteColor,
+        baseFontSizePx: _fontSize,
+        langCode: 'ar',
+        scriptDirection: 'rtl',
+      );
+      expect(html, contains('<html lang="ar" dir="rtl">'));
+    });
+
     /// Malformed XML must throw so that `ReadingScreen._loadChapter()` can
     /// catch the error and show the error state with a Retry button.
     /// Returning empty HTML would silently present a blank page.
