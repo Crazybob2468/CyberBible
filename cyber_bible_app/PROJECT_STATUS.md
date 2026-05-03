@@ -147,10 +147,19 @@ Step 1.11 implementation:
 - All 107 tests pass (`flutter test`): 70 pre-existing + 35 renderer tests (Step 1.11) + 2 `langCode`/`scriptDirection` tests (round 6).
 - `flutter analyze lib/ test/` → No issues.
 
-**A11y status after round 6 — partial fix applied, further polish in Step 1.16:**
-- **What was fixed**: `_buildHtmlContent()` now uses `ExcludeSemantics(HtmlWidget(...))` for visual rendering and a `Visibility(visible:false, maintainSemantics:true)` overlay of `Semantics(label:'Verse N: text')` widgets for the a11y tree. TalkBack/VoiceOver users now navigate "Verse 1: In the beginning…" units instead of bare `<sup>` numbers and fragmented inline spans.
-- **Remaining limitation**: Because the verse Semantics nodes are zero-height (all children are `SizedBox.shrink()`), the TalkBack focus rectangle appears at position (0,0) of the content area rather than at the visible verse location. Linear swipe-through navigation works correctly; the focus highlight position is cosmetically imperfect. Fixing the highlight requires knowing the rendered position of each verse — deferred to Step 1.16 (see approach in `_buildHtmlContent` comment).
-- **Acceptance criteria for Step 1.16**: On Android TalkBack, the focus rectangle should appear at the correct scroll position as the user swipes verse-by-verse. The "Verse N: text" announcement is already correct as of round 6.
+**PR review round 7 changes:**
+- **`getVerses()` isolated from main load failure**: Wrapped `BibleService.getVerses()` in its own `try/catch` inside `_loadChapter()`. Previously, if the verses table query threw an exception, the outer catch block would replace the successfully-loaded chapter HTML with the red error state — an a11y-only failure becoming a complete reading failure. Now a `getVerses()` failure just sets `_verses = null`, which silently degrades to no a11y overlay while leaving the chapter text displayed normally.
+- **`peek_chapter.dart` book_code normalised to uppercase**: Database `book_code` values are stored uppercase (`GEN`, `MAT`, etc.). The CLI arg is now normalised with `.toUpperCase()` before the SQL query, so `dart run tools/peek_chapter.dart mat 5` works identically to `MAT 5`.
+
+**Deferred to Step 1.16 (a11y polish):**
+- **Focus rectangle position**: The `SizedBox.shrink()` children in the a11y overlay are 0×0, so TalkBack/VoiceOver's focus highlight sits at the top of the content area instead of at the visible verse. Swipe-through navigation and announcements are correct; only the highlight position is cosmetically wrong. Fixing it requires each semantic node to occupy the same screen area as its verse — requires Step 1.12 scroll anchors or a custom render-object approach. Deferred to Step 1.16.
+- **Non-verse content hidden from a11y tree**: `ExcludeSemantics` on the entire `HtmlWidget` also removes section headings, Psalm superscriptions (`<d>`), and any introductory prose before verse 1. The `_verses` overlay only covers numbered verses. Screen-reader users cannot reach those non-verse parts of the chapter at all. Fixing this requires extracting heading and superscription text from the USFX and injecting it into the overlay in the correct positions — deferred to Step 1.16 alongside the focus-rect fix.
+
+**A11y status after round 7 — overlay functional, two Step 1.16 polish items logged:**
+- **What works**: `ExcludeSemantics(HtmlWidget(...))` + `Visibility(maintainSemantics:true)` overlay of `Semantics(label:'Verse N: text')` widgets. TalkBack/VoiceOver navigate verse units correctly ("Verse 1: In the beginning…").
+- **Deferred (1) — focus highlight position**: Zero-height `SizedBox.shrink()` children cause the TalkBack focus rectangle to appear at (0,0) instead of at the verse. Deferred to Step 1.16.
+- **Deferred (2) — non-verse content absent from a11y tree**: Section headings and Psalm superscriptions are excluded along with `HtmlWidget`'s fragmented nodes. Deferred to Step 1.16.
+- **Step 1.16 acceptance criteria**: (a) TalkBack focus rectangle follows the verse being announced; (b) headings and superscriptions are reachable by screen readers.
 
 **Architecture decision recorded — colour passthrough pattern:**
 `renderChapterToHtml` takes CSS color strings (not `Color` objects) so it has no dependency on `package:flutter`. The call site in `ReadingScreen._rebuildHtml()` converts `Color` → CSS via `_colorToCss()`. This keeps the renderer a pure-Dart utility (usable in build tools or tests without Flutter).

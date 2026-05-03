@@ -24,7 +24,9 @@ void main(List<String> args) {
     print('Usage: dart run tools/peek_chapter.dart <book_code> <chapter_num> [max_chars]');
     exit(1);
   }
-  final bookCode = args[0];
+  // Book codes are stored uppercase in the database (e.g. "GEN", "MAT").
+  // Normalise to uppercase so lowercase input like "mat 5" still works.
+  final bookCode = args[0].toUpperCase();
   // Validate chapter_num — must be a positive integer.
   final parsedChapter = int.tryParse(args[1]);
   if (parsedChapter == null || parsedChapter < 1) {

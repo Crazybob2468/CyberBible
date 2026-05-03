@@ -237,14 +237,24 @@ class _ReadingScreenState extends State<ReadingScreen> {
         // state with a Retry button instead of crashing the widget tree.
         // Storing _contentUsfx lets _rebuildHtml() re-render on theme changes.
         _contentUsfx = chapter.contentUsfx;
-        // Also fetch the plain-text verse list for the accessibility overlay
+        // Fetch the plain-text verse list for the accessibility overlay
         // in _buildHtmlContent (TalkBack/VoiceOver per-verse labels).
-        // getVerses() is a fast local DB call that runs only when the chapter
-        // is present, so it does not add latency for absent chapters.
-        _verses = await BibleService.getVerses(
-          widget.book.code,
-          widget.chapter,
-        );
+        // This is wrapped in its own try/catch so that a failure in the
+        // verses table does NOT tear down the already-loaded chapter.
+        // If getVerses() throws, _verses stays null and the a11y overlay
+        // is simply omitted — the reading experience is unaffected.
+        try {
+          _verses = await BibleService.getVerses(
+            widget.book.code,
+            widget.chapter,
+          );
+        } catch (e) {
+          // Log in debug builds; silently degrade to no overlay in prod.
+          if (kDebugMode) {
+            debugPrint('ReadingScreen._loadChapter() getVerses() failed: $e');
+          }
+          _verses = null;
+        }
         // Guard again after the second await: a Retry tap during getVerses
         // would have incremented the generation counter.
         if (!mounted || generation != _loadGeneration) return;
