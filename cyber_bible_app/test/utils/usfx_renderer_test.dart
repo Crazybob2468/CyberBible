@@ -53,8 +53,9 @@ void main() {
       expect(html, contains('</html>'));
     });
 
-    /// The <style> block must always be present — it provides the CSS classes
-    /// referenced by every rendered element.
+    /// The <style> block must always be present — it provides global defaults
+    /// for `body` and `p` elements. Per-element styling is done with inline
+    /// `style=` attributes, not CSS classes.
     test('output always contains a <style> block', () {
       final html = _render('');
       expect(html, contains('<style>'));
@@ -107,12 +108,15 @@ void main() {
 
   group('verse milestones', () {
     /// The <v id="N"/> milestone should produce an inline superscript with
-    /// the verse number so readers can identify individual verses.
+    /// the verse number and a stable HTML anchor id so Step 1.12 can scroll
+    /// directly to any verse.
     test('verse start milestone renders as styled sup superscript', () {
       final html = _render(
         '<p style="p"><v id="1" bcv="GEN.1.1"/>In the beginning.<ve/></p>',
       );
-      // The verse number must appear inside a <sup> with inline colour style.
+      // The verse number must appear inside a <sup> with inline colour style
+      // and an id attribute for jump-to-verse anchor navigation.
+      expect(html, contains('id="v1"'));
       expect(html, contains('>1</sup>'));
       expect(html, contains('vertical-align:super'));
       expect(html, contains(_verseNumColor));
@@ -328,7 +332,8 @@ void main() {
   // ---------------------------------------------------------------------------
 
   group('words of Jesus', () {
-    /// <wj> must be wrapped in span.wj which CSS colours red.
+    /// <wj> must render with an inline `style="color:#e53935;"` span so the
+    /// text appears red. The colour is hardcoded — no CSS class is emitted.
     test('<wj> renders as red inline-styled span', () {
       final html = _render(
         '<p style="p"><v id="3" bcv="JHN.3.3"/>'

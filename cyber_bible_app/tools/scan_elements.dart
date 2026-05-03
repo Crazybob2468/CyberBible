@@ -2,6 +2,8 @@
 /// actually present, sorted by frequency.  This is a one-off diagnostic tool.
 ///
 /// Usage: dart run tools/scan_elements.dart
+// ignore_for_file: avoid_print
+// CLI tool — print() is the correct output mechanism for a terminal script.
 library;
 
 import 'package:sqlite3/sqlite3.dart';

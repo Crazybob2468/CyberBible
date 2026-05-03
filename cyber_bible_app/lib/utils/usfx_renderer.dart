@@ -369,7 +369,9 @@ class _UsfxRenderer {
         // room between the superscript and the verse text that follows.
         final id = el.getAttribute('id') ?? '';
         if (id.isEmpty) return '';
-        return '<sup style="'
+        // id="v{N}" provides a stable HTML anchor so Step 1.12 (jump-to-verse)
+        // can scroll directly to any verse without additional DOM queries.
+        return '<sup id="v${_escapeHtml(id)}" style="'
             'color:$verseNumColorCss;'
             'font-size:${_smallPx}px;'
             'font-weight:bold;'

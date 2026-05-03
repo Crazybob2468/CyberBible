@@ -3,14 +3,16 @@
 ///
 /// Usage: `dart run tools/peek_chapter.dart <book_code> <chapter_num> [max_chars]`
 /// Example: `dart run tools/peek_chapter.dart MAT 5 3000`
+// ignore_for_file: avoid_print
+// CLI tool — print() is the correct output mechanism for a terminal script.
 library;
 
 import 'dart:io';
 import 'package:sqlite3/sqlite3.dart';
 
 /// Entry point: opens `assets/bibles/eng-web.db`, looks up the USFX XML for
-/// the given [bookCode] and chapter [chapterNum], and prints the first
-/// [maxChars] characters so the raw markup can be inspected without writing
+/// the given `bookCode` and chapter `chapterNum`, and prints the first
+/// `maxChars` characters so the raw markup can be inspected without writing
 /// a full query.
 ///
 /// Run from the `cyber_bible_app/` directory:

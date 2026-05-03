@@ -3,14 +3,16 @@
 ///
 /// Usage: `dart run tools/find_element.dart <element_name> [max_per_chapter]`
 /// Example: `dart run tools/find_element.dart s 3`
+// ignore_for_file: avoid_print
+// CLI tool — print() is the correct output mechanism for a terminal script.
 library;
 
 import 'dart:io';
 import 'package:sqlite3/sqlite3.dart';
 
 /// Entry point: opens `assets/bibles/eng-web.db`, queries chapters that
-/// contain [tagName] as a complete USFX element name, and prints up to
-/// [maxPerChapter] USFX context snippets per chapter.
+/// contain `tagName` as a complete USFX element name, and prints up to
+/// `maxPerChapter` USFX context snippets per chapter.
 ///
 /// The SQL filter matches the tag followed by a space, `>`, or `/` so that
 /// searching for `q` does not accidentally match chapters that only contain
@@ -60,18 +62,29 @@ void main(List<String> args) {
   );
 
   print('Chapters containing <$tagName>: ${rows.length}');
-  // RegExp.escape is belt-and-suspenders: tagName is validated as alphanumeric
-  // above (no metacharacters possible), but escaping ensures correctness even
-  // if that validation is ever loosened.
-  final tagPattern = RegExp('<${RegExp.escape(tagName)}[\\s>/][^<]{0,200}');
+  // Match only the opening tag position. Using [^<]{0,200} would stop at the
+  // first nested tag (e.g. <p><v .../> shows nothing useful). Instead, we
+  // find the match position, extract a 300-char window, then strip inner tags
+  // for a readable plain-text excerpt that shows the surrounding content.
+  // RegExp.escape is belt-and-suspenders: tagName is validated alphanumeric
+  // above, but escaping keeps correctness if validation is ever loosened.
+  final openPattern = RegExp('<${RegExp.escape(tagName)}[\\s>/]');
   for (final row in rows) {
     final book = row['book_code'] as String;
     final num = row['number'] as int;
     final usfx = row['content_usfx'] as String;
-    final matches = tagPattern.allMatches(usfx).take(maxPerChapter).toList();
+    final matches = openPattern.allMatches(usfx).take(maxPerChapter).toList();
     print('\n$book $num:');
     for (final m in matches) {
-      print('  ${m.group(0)?.replaceAll('\n', ' ')}');
+      // Extract up to 300 chars from the match position and strip inner tags
+      // so nested markup does not hide the surrounding verse text.
+      final end = (m.start + 300).clamp(0, usfx.length);
+      final excerpt = usfx
+          .substring(m.start, end)
+          .replaceAll(RegExp(r'<[^>]+>'), ' ')
+          .replaceAll(RegExp(r'\s+'), ' ')
+          .trim();
+      print('  $excerpt');
     }
   }
   db.close();

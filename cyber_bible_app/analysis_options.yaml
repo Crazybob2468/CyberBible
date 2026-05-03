@@ -1,8 +1,1 @@
 include: package:flutter_lints/flutter.yaml
-
-analyzer:
-  exclude:
-    # CLI tools intentionally use print() for terminal output.
-    # Excluding the folder suppresses the avoid_print lint for scripts
-    # that are never compiled into the app.
-    - tools/**

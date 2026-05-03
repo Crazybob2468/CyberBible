@@ -98,9 +98,17 @@ Step 1.11 ✅ COMPLETE. Replaced plain-text verse rendering with a full USFX →
 **Analyzer warnings fixed (24 → 0):**
 - `dispose()` → `close()` in all four tool files (`build_bible_db.dart`, `find_element.dart`, `peek_chapter.dart`, `scan_elements.dart`) — `sqlite3` deprecated `dispose()` in favour of `close()`.
 - Angle-bracket doc comments in `find_element.dart` and `peek_chapter.dart` wrapped in backticks — prevents `unintended_html_in_doc_comment` lint.
-- `avoid_print` suppressed for `tools/` via `analysis_options.yaml` `analyzer.exclude` — CLI tools legitimately use `print()` for terminal output; per-line `// ignore` on 18 call sites would be noisy.
+- `avoid_print` suppressed with targeted `// ignore_for_file: avoid_print` directives at the top of each tool file that uses `print()` (`find_element.dart`, `peek_chapter.dart`, `scan_elements.dart`). `build_bible_db.dart` uses `stdout.writeln` and needs no suppression. This is more precise than an `analyzer.exclude` on the whole `tools/` folder, which would have hidden future type errors and deprecated-API warnings in the build scripts.
 
 **`flutter analyze lib/ test/ tools/` → No issues found.**
+
+**PR review round 5 changes:**
+- **Verse anchor IDs**: `<sup id="v{N}">` — each verse number now carries a stable HTML anchor so Step 1.12 (jump-to-verse) can scroll directly to any verse using `#v1`, `#v2`, etc. without additional DOM queries. Test updated to assert `id="v1"`.
+- **`find_element.dart` excerpt regex**: Changed from `[^<]{0,200}` (stopped at first nested tag, showing nothing useful for `<p>`, `<q>`, `<wj>`) to extracting a 300-char window from the match position and stripping inner tags — now shows surrounding verse text.
+- **Bracket dartdoc links → backticks**: `[tagName]`/`[maxPerChapter]` in `find_element.dart` and `[bookCode]`/`[chapterNum]`/`[maxChars]` in `peek_chapter.dart` changed to backtick references — they are local variables, not resolvable dartdoc symbols.
+- **`analysis_options.yaml`**: Removed broad `tools/**` analyzer exclude (was suppressing ALL diagnostics for tool scripts). Replaced with targeted `// ignore_for_file: avoid_print` in each tool that uses `print()`.
+- **Stale test comments fixed**: "provides CSS classes" → "provides global defaults; per-element styling is inline"; "wrapped in span.wj" → "inline `style=\"color:#e53935;\"`".
+- **Accessibility regression**: Same deferred comment — documented for Step 1.16 (see Known regression section).
 
 Step 1.11 implementation:
 - **New package**: `flutter_widget_from_html_core: ^0.17.2` added (renders HTML as native Flutter widgets — no WebView, no platform overhead, no transitive media plugins). The full `flutter_widget_from_html` package was considered but rejected: it pulls in video_player, just_audio, webview_flutter, and url_launcher as transitive dependencies, none of which the app uses.
