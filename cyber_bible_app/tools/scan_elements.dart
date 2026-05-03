@@ -40,5 +40,5 @@ void main() {
     print('${e.key.padRight(12)} ${e.value}');
   }
 
-  db.dispose();
+  db.close();
 }

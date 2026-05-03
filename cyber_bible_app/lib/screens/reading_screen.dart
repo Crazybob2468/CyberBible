@@ -64,24 +64,41 @@ class ReadingScreen extends StatefulWidget {
 class _ReadingScreenState extends State<ReadingScreen> {
   // ---- State ----
 
-  /// The pre-rendered HTML string produced from the chapter's USFX XML, or
-  /// null while loading is in progress.
+  /// The pre-rendered HTML string produced from [_contentUsfx], or null
+  /// while loading is in progress.
   ///
-  /// [renderChapterToHtml] is called inside [_loadChapter] (not during
-  /// `build()`) so that any XML parse exception is caught by
-  /// [_loadChapter]'s try/catch and surfaced as an error state with a
-  /// Retry button, rather than crashing the widget tree.
+  /// Rendered by [_rebuildHtml] inside [_loadChapter] (not during `build()`)
+  /// so XML parse exceptions are caught by [_loadChapter]'s try/catch.
+  /// Also re-rendered by [didChangeDependencies] on theme changes so the
+  /// colour palette stays in sync with the active light/dark theme.
   ///
-  /// A null value while [_errorMessage] is also null means loading is
-  /// still in progress.
+  /// Null while loading — indicated by all three of [_html], [_errorMessage],
+  /// and [_emptyMessage] being null simultaneously.
   String? _html;
 
-  /// Non-null when the chapter-load operation threw an error, or when
-  /// [BibleService.getChapter] returned null (chapter absent from this
-  /// translation).
+  /// The raw USFX XML most recently loaded from [BibleService.getChapter].
   ///
-  /// When set, the error card with a Retry button is shown instead of the
-  /// chapter HTML.
+  /// Stored so [_rebuildHtml] can re-render with fresh CSS colours when
+  /// [didChangeDependencies] detects a theme change (e.g., the device
+  /// switching between light and dark mode while the screen is open).
+  /// Null while loading is in progress or before any chapter has loaded.
+  String? _contentUsfx;
+
+  /// Non-null when this translation does not contain the requested chapter
+  /// (e.g., an OT chapter in an NT-only Bible). This is a permanent
+  /// condition — retrying can never produce a different result — so a
+  /// neutral info message is shown with no Retry button.
+  ///
+  /// Distinct from [_errorMessage], which covers transient failures where
+  /// retrying may succeed.
+  String? _emptyMessage;
+
+  /// Non-null when the chapter-load operation threw a technical error
+  /// (e.g., database failure or malformed USFX XML).
+  ///
+  /// When set, the red error card with a Retry button is shown. Distinct from
+  /// [_emptyMessage] because retrying may succeed for transient errors but
+  /// cannot succeed for a permanently absent chapter.
   String? _errorMessage;
 
   /// Scroll controller for the [CustomScrollView].
@@ -124,6 +141,19 @@ class _ReadingScreenState extends State<ReadingScreen> {
     super.dispose();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Re-render the HTML whenever an inherited dependency changes — in
+    // particular when the device switches between light and dark mode.
+    // Without this, the HTML retains the colours from the initial load
+    // until the user navigates away and back.
+    // Guards against re-rendering before any chapter has been loaded.
+    if (_contentUsfx != null) {
+      _rebuildHtml();
+    }
+  }
+
   // ---- Scroll tracking ----
 
   /// Listens to scroll events and flips [_isCollapsed] when the SliverAppBar
@@ -154,17 +184,21 @@ class _ReadingScreenState extends State<ReadingScreen> {
   /// absent), so `ensureOpen()` here is not a web deep-link fix — it guards
   /// in-app navigation only.
   ///
-  /// On failure — including when `getChapter()` returns null because this
-  /// translation lacks the requested chapter — [_errorMessage] is set so the
-  /// UI can show a Retry button.
+  /// On a technical error (database failure, malformed XML) [_errorMessage]
+  /// is set and the UI shows a red error card with a Retry button. When
+  /// [BibleService.getChapter] returns null (chapter permanently absent from
+  /// this translation), [_emptyMessage] is set instead and a neutral info
+  /// message is shown with no Retry button.
   Future<void> _loadChapter() async {
     // Capture the generation for this call. Results are applied only when
     // generation == _loadGeneration, discarding any stale concurrent loads.
     final generation = ++_loadGeneration;
 
-    // Reset state so a Retry press shows a fresh loading spinner.
+    // Reset all state so a Retry press shows a fresh loading spinner.
     setState(() {
       _errorMessage = null;
+      _emptyMessage = null;
+      _contentUsfx = null;
       _html = null;
     });
 
@@ -181,35 +215,19 @@ class _ReadingScreenState extends State<ReadingScreen> {
       if (!mounted || generation != _loadGeneration) return;
 
       if (chapter == null) {
-        // This translation does not have the requested chapter (common in
-        // partial or New-Testament-only translations).
-        setState(() => _errorMessage = 'No text available for this chapter.');
+        // Chapter is permanently absent from this translation (common in
+        // partial or NT-only Bibles). Use _emptyMessage — not _errorMessage —
+        // so the UI shows a neutral info message with no Retry button.
+        // Retrying can never make a missing chapter appear.
+        setState(() => _emptyMessage = 'No text available for this chapter.');
       } else {
-        // Render the USFX XML → HTML here, inside _loadChapter(), so that
-        // any XML parse exception is caught by the surrounding try/catch and
-        // surfaces the error state (error icon + message + Retry button).
-        // Doing this during build() instead would crash the widget tree.
-        //
-        // NOTE: Theme colours are captured at load time. If the user switches
-        // theme without reloading the chapter (not yet possible in Step 1.11),
-        // the HTML may use stale colours until a Retry is triggered. Step 1.16
-        // will address this by re-rendering when the theme changes.
-        final colorScheme = Theme.of(context).colorScheme;
-        final html = renderChapterToHtml(
-          chapter.contentUsfx,
-          bodyColorCss: _colorToCss(colorScheme.onSurface),
-          verseNumColorCss: _colorToCss(colorScheme.primary),
-          // Section and major-section headings slightly de-emphasised (60 %).
-          headingColorCss: _colorToCss(colorScheme.onSurface.withAlpha(153)),
-          // Psalm superscription headings further de-emphasised (50 %).
-          dHeadingColorCss: _colorToCss(colorScheme.onSurface.withAlpha(127)),
-          // Footnote superscript markers share the primary accent colour.
-          footnoteColorCss: _colorToCss(colorScheme.primary),
-          baseFontSizePx: 17.0,
-        );
-        setState(() {
-          _html = html;
-        });
+        // Store the raw USFX and render to HTML. Keeping the render call
+        // inside _loadChapter() (not build()) means any XML parse exception
+        // is caught by the surrounding try/catch and surfaces the error
+        // state with a Retry button instead of crashing the widget tree.
+        // Storing _contentUsfx lets _rebuildHtml() re-render on theme changes.
+        _contentUsfx = chapter.contentUsfx;
+        _rebuildHtml();
       }
     } catch (e) {
       // Log raw error details in debug builds only — internal paths and SQL
@@ -223,6 +241,37 @@ class _ReadingScreenState extends State<ReadingScreen> {
             _errorMessage = 'Could not load the chapter. Please try again.');
       }
     }
+  }
+
+  // ---- HTML rendering ----
+
+  /// Renders [_contentUsfx] → HTML using the current [ColorScheme] and
+  /// stores the result in [_html] via [setState].
+  ///
+  /// Called from [_loadChapter] on initial load and from
+  /// [didChangeDependencies] when the theme changes (e.g., the device
+  /// switching between light and dark mode), so the HTML colour palette
+  /// always reflects the active theme.
+  ///
+  /// Does not wrap in try/catch: [_contentUsfx] was already successfully
+  /// parsed during [_loadChapter] (a failed parse would have thrown and
+  /// set [_errorMessage] rather than storing the XML), so re-parsing the
+  /// same valid XML is safe.
+  void _rebuildHtml() {
+    final colorScheme = Theme.of(context).colorScheme;
+    final html = renderChapterToHtml(
+      _contentUsfx!,
+      bodyColorCss: _colorToCss(colorScheme.onSurface),
+      verseNumColorCss: _colorToCss(colorScheme.primary),
+      // Section and major-section headings slightly de-emphasised (60 %).
+      headingColorCss: _colorToCss(colorScheme.onSurface.withAlpha(153)),
+      // Psalm superscription headings further de-emphasised (50 %).
+      dHeadingColorCss: _colorToCss(colorScheme.onSurface.withAlpha(127)),
+      // Footnote superscript markers share the primary accent colour.
+      footnoteColorCss: _colorToCss(colorScheme.primary),
+      baseFontSizePx: 17.0,
+    );
+    setState(() => _html = html);
   }
 
   // ---- Build ----
@@ -336,19 +385,29 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
   /// Returns the appropriate body sliver based on the current loading state.
   ///
-  /// Three states:
-  ///   - Loading: [_html] is null and [_errorMessage] is null — spinner.
-  ///   - Error: [_errorMessage] is non-null — error card with Retry.
+  /// Four states:
+  ///   - Loading: [_html], [_errorMessage], and [_emptyMessage] are all null.
+  ///   - Empty: [_emptyMessage] is non-null — neutral info message, no Retry
+  ///     (chapter permanently absent from this translation).
+  ///   - Error: [_errorMessage] is non-null — red error card with Retry button
+  ///     (transient failure; retrying may succeed).
   ///   - Content: [_html] is non-null — pre-rendered HTML via [HtmlWidget].
   Widget _buildBody(ColorScheme colorScheme) {
     // ---- Loading ----
-    if (_html == null && _errorMessage == null) {
+    if (_html == null && _errorMessage == null && _emptyMessage == null) {
       return const SliverFillRemaining(
         child: Center(child: CircularProgressIndicator()),
       );
     }
 
-    // ---- Error ----
+    // ---- Empty (chapter absent — retry would never succeed) ----
+    if (_emptyMessage != null) {
+      return SliverFillRemaining(
+        child: _buildEmptyState(colorScheme),
+      );
+    }
+
+    // ---- Error (technical failure — retry may succeed) ----
     if (_errorMessage != null) {
       return SliverFillRemaining(
         child: _buildErrorState(colorScheme),
@@ -357,6 +416,38 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
     // ---- HTML content ----
     return _buildHtmlContent(_html!);
+  }
+
+  /// Builds a neutral info message for chapters absent from this translation
+  /// (e.g., an OT chapter in an NT-only Bible).
+  ///
+  /// No Retry button is shown because the chapter's absence is permanent —
+  /// re-loading the database cannot make a missing chapter appear.
+  Widget _buildEmptyState(ColorScheme colorScheme) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Book icon in a dimmed colour — neutral, not alarming.
+            Icon(
+              Icons.book_outlined,
+              size: 48,
+              color: colorScheme.onSurface.withAlpha(127),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _emptyMessage!,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: colorScheme.onSurface.withAlpha(178),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   /// Builds an error card with a friendly message and a Retry button.

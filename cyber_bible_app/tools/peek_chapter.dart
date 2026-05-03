@@ -1,8 +1,8 @@
 /// Quick diagnostic tool: print the first N characters of a chapter's
 /// content_usfx from the local SQLite database.
 ///
-/// Usage: dart run tools/peek_chapter.dart <book_code> <chapter_num> [max_chars]
-/// Example: dart run tools/peek_chapter.dart MAT 5 3000
+/// Usage: `dart run tools/peek_chapter.dart <book_code> <chapter_num> [max_chars]`
+/// Example: `dart run tools/peek_chapter.dart MAT 5 3000`
 library;
 
 import 'dart:io';
@@ -60,5 +60,5 @@ void main(List<String> args) {
     print(usfx.substring(0, usfx.length < maxChars ? usfx.length : maxChars));
   }
 
-  db.dispose();
+  db.close();
 }

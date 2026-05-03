@@ -82,9 +82,25 @@ cyber_bible_app/
 
 ## Current Status
 
-**Phase 1 — Step 1.11 Complete: Basic text formatting**
+**Phase 1 — Step 1.11 Complete: Basic text formatting (PR review round 4 addressed)**
 
-Step 1.11 ✅ COMPLETE. Replaced plain-text verse rendering with a full USFX → HTML pipeline using `flutter_widget_from_html_core`. Reading screen now shows formatted Bible text: paragraphs, poetry indentation, Psalm superscriptions, verse number superscripts, words of Jesus in red, footnote markers, Selah markers, and stanza spacing.
+Step 1.11 ✅ COMPLETE. Replaced plain-text verse rendering with a full USFX → HTML pipeline using `flutter_widget_from_html_core`.
+
+**PR review round 4 changes (applied on top of prior rounds):**
+- **Neutral empty state**: `getChapter()` returning null now sets `_emptyMessage` (not `_errorMessage`). A new `_buildEmptyState()` shows a neutral book icon + grey text with no Retry button. Retrying a permanently absent chapter would never succeed, so the red error UI was wrong.
+- **Theme re-render on system mode change**: Added `String? _contentUsfx` field to store the raw XML, extracted colour-to-HTML logic into `_rebuildHtml()`, and overrode `didChangeDependencies()` to call `_rebuildHtml()` whenever Flutter detects a theme change. The HTML now updates automatically when the device switches between light and dark mode without requiring navigation.
+- **`find_element.dart` tagName injection fix**: Added alphanumeric-only validation (`^[a-zA-Z][a-zA-Z0-9]*$`) before using `tagName` in SQL LIKE patterns and RegExp. Added `RegExp.escape()` to the pattern builder as belt-and-suspenders. Inputs like `[`, `_`, `+` now produce a friendly error instead of corrupted queries.
+- **PROJECT_STATUS doc fix**: Architecture note updated to point to `_rebuildHtml()` (not the old `_buildHtmlContent()`) as the site of `Color` → CSS conversion.
+
+**Still deferred to Step 1.16 (documented in Known regression section below):**
+- Accessibility regression — HtmlWidget drops per-verse Semantics labels.
+
+**Analyzer warnings fixed (24 → 0):**
+- `dispose()` → `close()` in all four tool files (`build_bible_db.dart`, `find_element.dart`, `peek_chapter.dart`, `scan_elements.dart`) — `sqlite3` deprecated `dispose()` in favour of `close()`.
+- Angle-bracket doc comments in `find_element.dart` and `peek_chapter.dart` wrapped in backticks — prevents `unintended_html_in_doc_comment` lint.
+- `avoid_print` suppressed for `tools/` via `analysis_options.yaml` `analyzer.exclude` — CLI tools legitimately use `print()` for terminal output; per-line `// ignore` on 18 call sites would be noisy.
+
+**`flutter analyze lib/ test/ tools/` → No issues found.**
 
 Step 1.11 implementation:
 - **New package**: `flutter_widget_from_html_core: ^0.17.2` added (renders HTML as native Flutter widgets — no WebView, no platform overhead, no transitive media plugins). The full `flutter_widget_from_html` package was considered but rejected: it pulls in video_player, just_audio, webview_flutter, and url_launcher as transitive dependencies, none of which the app uses.
@@ -125,7 +141,7 @@ Step 1.11 implementation:
   - **Acceptance criteria**: On Android TalkBack, swiping through a chapter should announce *"Verse 1: In the beginning…"*, *"Verse 2: The earth was…"* as complete units. No bare number or mid-sentence fragment swipe stops.
 
 **Architecture decision recorded — colour passthrough pattern:**
-`renderChapterToHtml` takes CSS color strings (not `Color` objects) so it has no dependency on `package:flutter`. The call site in `ReadingScreen._buildHtmlContent()` converts `Color` → CSS via `_colorToCss()`. This keeps the renderer a pure-Dart utility (usable in build tools or tests without Flutter).
+`renderChapterToHtml` takes CSS color strings (not `Color` objects) so it has no dependency on `package:flutter`. The call site in `ReadingScreen._rebuildHtml()` converts `Color` → CSS via `_colorToCss()`. This keeps the renderer a pure-Dart utility (usable in build tools or tests without Flutter).
 
 Next: Step 1.12 — Verse navigation. Add ability to jump to a specific verse within a chapter (scroll to verse). Add a quick-nav control (book > chapter > verse).
 
