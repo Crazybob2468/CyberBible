@@ -64,9 +64,9 @@ import 'package:xml/xml.dart';
 /// has `margin: 0; padding: 0` so that the caller can apply Flutter-level
 /// `Padding` around the widget instead.
 ///
-/// Returns an HTML document with an empty body if [usfxFragment] is blank or
-/// if XML parsing fails — the caller will display an empty area rather than
-/// crashing.
+/// Returns an HTML document with an empty body if [usfxFragment] is blank.
+/// Throws if the USFX content is malformed XML — callers must handle this
+/// exception and surface an appropriate error state.
 String renderChapterToHtml(
   String usfxFragment, {
   /// CSS color for normal verse body text (maps to `ColorScheme.onSurface`).

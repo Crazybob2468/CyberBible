@@ -13,7 +13,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
 
 import '../models/book.dart';
-import '../models/chapter.dart';
 import '../services/bible_service.dart';
 import '../utils/usfx_renderer.dart';
 
@@ -65,12 +64,17 @@ class ReadingScreen extends StatefulWidget {
 class _ReadingScreenState extends State<ReadingScreen> {
   // ---- State ----
 
-  /// The loaded chapter data, or null while the initial load is in progress.
+  /// The pre-rendered HTML string produced from the chapter's USFX XML, or
+  /// null while loading is in progress.
   ///
-  /// Contains the raw USFX XML in [Chapter.contentUsfx], which is converted
-  /// to HTML by [renderChapterToHtml] when the body is built. A null value
-  /// while [_errorMessage] is also null means loading is still in progress.
-  Chapter? _chapter;
+  /// [renderChapterToHtml] is called inside [_loadChapter] (not during
+  /// `build()`) so that any XML parse exception is caught by
+  /// [_loadChapter]'s try/catch and surfaced as an error state with a
+  /// Retry button, rather than crashing the widget tree.
+  ///
+  /// A null value while [_errorMessage] is also null means loading is
+  /// still in progress.
+  String? _html;
 
   /// Non-null when the chapter-load operation threw an error, or when
   /// [BibleService.getChapter] returned null (chapter absent from this
@@ -96,7 +100,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
   /// Generation counter used to discard results from stale in-flight loads.
   ///
-  /// Incremented at the start of every [_loadVerses] call. After the async
+  /// Incremented at the start of every [_loadChapter] call. After the async
   /// work completes, the result is applied only if the counter still matches
   /// the value captured at the start of that call. This prevents a slow
   /// earlier request (e.g. from a Retry tap) from overwriting the result of
@@ -161,7 +165,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
     // Reset state so a Retry press shows a fresh loading spinner.
     setState(() {
       _errorMessage = null;
-      _chapter = null;
+      _html = null;
     });
 
     try {
@@ -181,7 +185,31 @@ class _ReadingScreenState extends State<ReadingScreen> {
         // partial or New-Testament-only translations).
         setState(() => _errorMessage = 'No text available for this chapter.');
       } else {
-        setState(() => _chapter = chapter);
+        // Render the USFX XML → HTML here, inside _loadChapter(), so that
+        // any XML parse exception is caught by the surrounding try/catch and
+        // surfaces the error state (error icon + message + Retry button).
+        // Doing this during build() instead would crash the widget tree.
+        //
+        // NOTE: Theme colours are captured at load time. If the user switches
+        // theme without reloading the chapter (not yet possible in Step 1.11),
+        // the HTML may use stale colours until a Retry is triggered. Step 1.16
+        // will address this by re-rendering when the theme changes.
+        final colorScheme = Theme.of(context).colorScheme;
+        final html = renderChapterToHtml(
+          chapter.contentUsfx,
+          bodyColorCss: _colorToCss(colorScheme.onSurface),
+          verseNumColorCss: _colorToCss(colorScheme.primary),
+          // Section and major-section headings slightly de-emphasised (60 %).
+          headingColorCss: _colorToCss(colorScheme.onSurface.withAlpha(153)),
+          // Psalm superscription headings further de-emphasised (50 %).
+          dHeadingColorCss: _colorToCss(colorScheme.onSurface.withAlpha(127)),
+          // Footnote superscript markers share the primary accent colour.
+          footnoteColorCss: _colorToCss(colorScheme.primary),
+          baseFontSizePx: 17.0,
+        );
+        setState(() {
+          _html = html;
+        });
       }
     } catch (e) {
       // Log raw error details in debug builds only — internal paths and SQL
@@ -309,12 +337,12 @@ class _ReadingScreenState extends State<ReadingScreen> {
   /// Returns the appropriate body sliver based on the current loading state.
   ///
   /// Three states:
-  ///   - Loading: [_chapter] is null and [_errorMessage] is null — spinner.
+  ///   - Loading: [_html] is null and [_errorMessage] is null — spinner.
   ///   - Error: [_errorMessage] is non-null — error card with Retry.
-  ///   - Content: [_chapter] is non-null — USFX → HTML rendered widget.
+  ///   - Content: [_html] is non-null — pre-rendered HTML via [HtmlWidget].
   Widget _buildBody(ColorScheme colorScheme) {
     // ---- Loading ----
-    if (_chapter == null && _errorMessage == null) {
+    if (_html == null && _errorMessage == null) {
       return const SliverFillRemaining(
         child: Center(child: CircularProgressIndicator()),
       );
@@ -328,7 +356,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
     }
 
     // ---- HTML content ----
-    return _buildHtmlContent(colorScheme, _chapter!);
+    return _buildHtmlContent(_html!);
   }
 
   /// Builds an error card with a friendly message and a Retry button.
@@ -361,36 +389,17 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
   // ---- HTML content rendering ----
 
-  /// Converts the chapter's raw USFX XML to an HTML document and renders it
-  /// inside a [SliverToBoxAdapter] via [HtmlWidget].
+  /// Wraps the pre-rendered [html] string in a [SliverToBoxAdapter] and
+  /// passes it to [HtmlWidget] for display.
   ///
-  /// [renderChapterToHtml] takes CSS color strings, so Flutter [Color] values
-  /// are converted via [_colorToCss] before being passed in.  The conversion
-  /// produces `#rrggbb` for fully-opaque colours and `rgba(r,g,b,a)` for
-  /// partially-transparent ones (e.g. de-emphasised heading colours).
-  ///
-  /// Colours are sourced from the current [ColorScheme] so the HTML content
-  /// adapts automatically to light/dark mode and dynamic colour themes.
+  /// The HTML is produced by [renderChapterToHtml] inside [_loadChapter],
+  /// not here, so that XML parse exceptions are handled there and surface
+  /// as the error state with a Retry button rather than crashing the
+  /// widget tree.
   ///
   /// The 48 px bottom padding ensures the last line of text is never hidden
   /// behind a bottom navigation bar or gesture handle.
-  Widget _buildHtmlContent(ColorScheme colorScheme, Chapter chapter) {
-    // Convert the USFX XML fragment to a self-contained HTML document string.
-    // baseFontSizePx 17 matches the reading size used by the plain-text
-    // fallback removed in this step.
-    final html = renderChapterToHtml(
-      chapter.contentUsfx,
-      bodyColorCss: _colorToCss(colorScheme.onSurface),
-      verseNumColorCss: _colorToCss(colorScheme.primary),
-      // Section and major-section headings slightly de-emphasised (60 %).
-      headingColorCss: _colorToCss(colorScheme.onSurface.withAlpha(153)),
-      // Psalm superscription headings further de-emphasised (50 %).
-      dHeadingColorCss: _colorToCss(colorScheme.onSurface.withAlpha(127)),
-      // Footnote superscript markers share the primary accent colour.
-      footnoteColorCss: _colorToCss(colorScheme.primary),
-      baseFontSizePx: 17.0,
-    );
-
+  Widget _buildHtmlContent(String html) {
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 48),

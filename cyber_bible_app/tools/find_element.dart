@@ -26,7 +26,18 @@ void main(List<String> args) {
     exit(1);
   }
   final tagName = args[0];
-  final maxPerChapter = args.length > 1 ? int.parse(args[1]) : 2;
+  // Validate the optional max_per_chapter argument before use.
+  final int maxPerChapter;
+  if (args.length > 1) {
+    final parsed = int.tryParse(args[1]);
+    if (parsed == null || parsed < 1) {
+      print('Error: max_per_chapter must be a positive integer, got "${args[1]}"');
+      exit(1);
+    }
+    maxPerChapter = parsed;
+  } else {
+    maxPerChapter = 2;
+  }
 
   final db = sqlite3.open('assets/bibles/eng-web.db');
   // Use three LIKE patterns to match the tag followed by a space, close `>`,

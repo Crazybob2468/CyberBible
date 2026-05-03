@@ -23,8 +23,25 @@ void main(List<String> args) {
     exit(1);
   }
   final bookCode = args[0];
-  final chapterNum = int.parse(args[1]);
-  final maxChars = args.length > 2 ? int.parse(args[2]) : 3000;
+  // Validate chapter_num — must be a positive integer.
+  final parsedChapter = int.tryParse(args[1]);
+  if (parsedChapter == null || parsedChapter < 1) {
+    print('Error: chapter_num must be a positive integer, got "${args[1]}"');
+    exit(1);
+  }
+  final chapterNum = parsedChapter;
+  // Validate optional max_chars — must be a positive integer.
+  final int maxChars;
+  if (args.length > 2) {
+    final parsedMax = int.tryParse(args[2]);
+    if (parsedMax == null || parsedMax < 1) {
+      print('Error: max_chars must be a positive integer, got "${args[2]}"');
+      exit(1);
+    }
+    maxChars = parsedMax;
+  } else {
+    maxChars = 3000;
+  }
 
   final dbPath = 'assets/bibles/eng-web.db';
   final db = sqlite3.open(dbPath);
