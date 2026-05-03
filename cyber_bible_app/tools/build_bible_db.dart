@@ -284,7 +284,7 @@ void writeSqlite(ParseResult result, String outputPath) {
   // Track whether we completed successfully so we can clean up on failure.
   var success = false;
 
-  // db is declared nullable so the finally block can safely call db?.dispose()
+  // db is declared nullable so the finally block can safely call db?.close()
   // even if sqlite3.open() threw before db was assigned (e.g. missing DLL on
   // Windows). Opening inside the try block ensures partial-file cleanup runs.
   Database? db;
@@ -384,9 +384,9 @@ void writeSqlite(ParseResult result, String outputPath) {
         rethrow;
       }
     } finally {
-      // Dispose the prepared statement exactly once, regardless of whether
+      // Close the prepared statement exactly once, regardless of whether
       // the inserts or COMMIT succeeded or failed.
-      bookStmt.dispose();
+      bookStmt.close();
     }
     stdout.writeln(' done');
 
@@ -415,8 +415,8 @@ void writeSqlite(ParseResult result, String outputPath) {
         rethrow;
       }
     } finally {
-      // Dispose exactly once, whether inserts/COMMIT succeeded or failed.
-      chapterStmt.dispose();
+      // Close exactly once, whether inserts/COMMIT succeeded or failed.
+      chapterStmt.close();
     }
     stdout.writeln(' done');
 
@@ -446,8 +446,8 @@ void writeSqlite(ParseResult result, String outputPath) {
         rethrow;
       }
     } finally {
-      // Dispose exactly once, whether inserts/COMMIT succeeded or failed.
-      verseStmt.dispose();
+      // Close exactly once, whether inserts/COMMIT succeeded or failed.
+      verseStmt.close();
     }
     stdout.writeln(' done');
 
@@ -472,8 +472,8 @@ void writeSqlite(ParseResult result, String outputPath) {
     // Mark success only after all work — including size reporting — is done.
     success = true;
   } finally {
-    // db?.dispose() is safe whether or not open() succeeded.
-    db?.dispose();
+    // db?.close() is safe whether or not open() succeeded.
+    db?.close();
     // Remove any partial database on failure so the next run starts clean.
     if (!success && outputFile.existsSync()) {
       outputFile.deleteSync();

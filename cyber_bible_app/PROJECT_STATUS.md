@@ -82,7 +82,89 @@ cyber_bible_app/
 
 ## Current Status
 
-**Phase 1 — Step 1.10 Complete: Scripture reading screen**
+**Phase 1 — Step 1.11 Complete: Basic text formatting (PR review round 4 addressed)**
+
+Step 1.11 ✅ COMPLETE. Replaced plain-text verse rendering with a full USFX → HTML pipeline using `flutter_widget_from_html_core`.
+
+**PR review round 4 changes (applied on top of prior rounds):**
+- **Neutral empty state**: `getChapter()` returning null now sets `_emptyMessage` (not `_errorMessage`). A new `_buildEmptyState()` shows a neutral book icon + grey text with no Retry button. Retrying a permanently absent chapter would never succeed, so the red error UI was wrong.
+- **Theme re-render on system mode change**: Added `String? _contentUsfx` field to store the raw XML, extracted colour-to-HTML logic into `_rebuildHtml()`, and overrode `didChangeDependencies()` to call `_rebuildHtml()` whenever Flutter detects a theme change. The HTML now updates automatically when the device switches between light and dark mode without requiring navigation.
+- **`find_element.dart` tagName injection fix**: Added alphanumeric-only validation (`^[a-zA-Z][a-zA-Z0-9]*$`) before using `tagName` in SQL LIKE patterns and RegExp. Added `RegExp.escape()` to the pattern builder as belt-and-suspenders. Inputs like `[`, `_`, `+` now produce a friendly error instead of corrupted queries.
+- **PROJECT_STATUS doc fix**: Architecture note updated to point to `_rebuildHtml()` (not the old `_buildHtmlContent()`) as the site of `Color` → CSS conversion.
+
+**Still deferred to Step 1.16 (documented in Known regression section below):**
+- Accessibility regression — HtmlWidget drops per-verse Semantics labels.
+
+**Analyzer warnings fixed (24 → 0):**
+- `dispose()` → `close()` in all four tool files (`build_bible_db.dart`, `find_element.dart`, `peek_chapter.dart`, `scan_elements.dart`) — `sqlite3` deprecated `dispose()` in favour of `close()`.
+- Angle-bracket doc comments in `find_element.dart` and `peek_chapter.dart` wrapped in backticks — prevents `unintended_html_in_doc_comment` lint.
+- `avoid_print` suppressed with targeted `// ignore_for_file: avoid_print` directives at the top of each tool file that uses `print()` (`find_element.dart`, `peek_chapter.dart`, `scan_elements.dart`). `build_bible_db.dart` uses `stdout.writeln` and needs no suppression. This is more precise than an `analyzer.exclude` on the whole `tools/` folder, which would have hidden future type errors and deprecated-API warnings in the build scripts.
+
+**`flutter analyze lib/ test/ tools/` → No issues found.**
+
+**PR review round 5 changes:**
+- **Verse anchor IDs**: `<sup id="v{N}">` — each verse number now carries a stable HTML anchor so Step 1.12 (jump-to-verse) can scroll directly to any verse using `#v1`, `#v2`, etc. without additional DOM queries. Test updated to assert `id="v1"`.
+- **`find_element.dart` excerpt regex**: Changed from `[^<]{0,200}` (stopped at first nested tag, showing nothing useful for `<p>`, `<q>`, `<wj>`) to extracting a 300-char window from the match position and stripping inner tags — now shows surrounding verse text.
+- **Bracket dartdoc links → backticks**: `[tagName]`/`[maxPerChapter]` in `find_element.dart` and `[bookCode]`/`[chapterNum]`/`[maxChars]` in `peek_chapter.dart` changed to backtick references — they are local variables, not resolvable dartdoc symbols.
+- **`analysis_options.yaml`**: Removed broad `tools/**` analyzer exclude (was suppressing ALL diagnostics for tool scripts). Replaced with targeted `// ignore_for_file: avoid_print` in each tool that uses `print()`.
+- **Stale test comments fixed**: "provides CSS classes" → "provides global defaults; per-element styling is inline"; "wrapped in span.wj" → "inline `style=\"color:#e53935;\"`".
+- **Accessibility regression**: Same deferred comment — documented for Step 1.16 (see Known regression section).
+
+**PR review round 6 changes:**
+- **A11y overlay implemented**: Resolved the recurring per-verse semantics regression. `_loadChapter()` now calls `BibleService.getVerses()` alongside `getChapter()` and stores the result in `List<Verse>? _verses`. `_buildHtmlContent()` wraps `HtmlWidget` in `ExcludeSemantics` (removing its fragmented HTML nodes from the a11y tree) and adds a `Visibility(visible: false, maintainSize: true, maintainSemantics: true, child: Column([Semantics(label: 'Verse N: text')...]))` overlay. TalkBack/VoiceOver now navigate "Verse 1: In the beginning…" units instead of bare superscript numbers and mid-sentence fragments.
+- **`_contentUsfx` cleared on load failure**: If `_rebuildHtml()` throws a parse error, the catch block now sets `_contentUsfx = null` (and `_verses = null`) so that a subsequent `didChangeDependencies()` call does not try to re-render the same bad XML outside the try/catch — which would throw an unhandled framework exception.
+- **`renderChapterToHtml()` `langCode`/`scriptDirection` params**: Added two optional parameters (`String langCode = 'en'`, `String scriptDirection = 'ltr'`) so that non-English and RTL Bible translations can set the correct `<html lang="…" dir="…">` attributes. The existing call site in `reading_screen.dart` continues to use the defaults; future steps pass the `bible_info.language_code` and `bible_info.script_direction` values.
+- **`find_element.dart` tagName lowercased**: USFX tags in the database are always lowercase. The input is now normalised to lowercase before validation so that typing `Q` or `S` finds the same chapters as `q` or `s`. (SQLite LIKE was already case-insensitive; the Dart RegExp was not.)
+- **`sqlite3.open()` missing-file guard**: All three diagnostic tools (`find_element.dart`, `peek_chapter.dart`, `scan_elements.dart`) now check that `assets/bibles/eng-web.db` exists before calling `sqlite3.open()`. Without this check, SQLite silently creates an empty database when the file is absent, causing the tool to report zero results instead of an error. `dart:io` import added to `scan_elements.dart`.
+
+Step 1.11 implementation:
+- **New package**: `flutter_widget_from_html_core: ^0.17.2` added (renders HTML as native Flutter widgets — no WebView, no platform overhead, no transitive media plugins). The full `flutter_widget_from_html` package was considered but rejected: it pulls in video_player, just_audio, webview_flutter, and url_launcher as transitive dependencies, none of which the app uses.
+- **CRITICAL constraint**: `flutter_widget_from_html_core` does NOT apply `<style>` block CSS class selectors (e.g., `span.wj { color: red }`). All per-element styling must use inline `style=` attributes. The `<style>` block only works for `body{}` and `p{}` (universal defaults the package does honour).
+- **New utility**: `lib/utils/usfx_renderer.dart` — pure-Dart USFX XML → HTML converter using `_UsfxRenderer` class with inline `style=` attributes throughout. Entry point: `renderChapterToHtml(usfxFragment, {bodyColorCss, verseNumColorCss, headingColorCss, dHeadingColorCss, footnoteColorCss, baseFontSizePx})`. Handles all USFX elements encountered in the WEB database (confirmed by full DB scan):
+  - `<p style="p/m">` — normal / continuation paragraph
+  - `<p style="pi1/pi2">` — indented paragraphs (1.5/3.0em)
+  - `<p style="ms1">` — major section heading (bold, centered)
+  - `<q style="q1/q2/q3">` — poetry lines (1.5/3.0/4.5em indent)
+  - `<s style="s1">` — section headings (italic, centered) — NOTE: only 4 chapters in WEB have these (Deuterocanonical: Baruch 6, Daniel 3/13/14)
+  - `<d style="d">` — Psalm superscription (italic, de-emphasised) — 139 chapters
+  - `<b style="b"/>` — blank stanza separator (1,070 uses) → spacer paragraph
+  - `<qs>` — "Selah" / meditation marker (74 uses in Psalms) → right-aligned italic
+  - `<v id="N">` — verse number → inline `<sup>` with colour/size inline styles
+  - `<ve/>` — verse end milestone (no output)
+  - `<wj>` — words of Jesus → `<span style="color:#e53935;">` (red, always on)
+  - `<f>` — footnote → caller superscript only (not tappable — Step 2.1)
+  - `<w s="...">` — Strong's words → strip tag, keep text (linking in Phase 4)
+  - `<add>` — supplied text → `<em>` italic
+  - `<nd>` — divine names → `<span style="font-variant:small-caps;">`
+  - `<x>`, `<ref>` — cross-references → skipped (Phase 2)
+- **Updated `ReadingScreen`**: `_loadVerses()` + `getVerses()` replaced by `_loadChapter()` + `getChapter()`. `HtmlWidget` renders the output HTML. `_colorToCss()` helper converts `Color` → CSS hex/rgba.
+- **Section heading toggle**: always shown; toggle deferred to Step 1.16.
+- **Words of Jesus toggle**: always red; deferred to Step 1.16.
+- **Footnote interactivity**: marker only; tappable popups in Step 2.1.
+
+**Tests (Step 1.11):**
+- New `test/utils/usfx_renderer_test.dart` — 35 unit tests covering every USFX element type, HTML escaping, empty input, multi-block chapters, and colour/font passthrough (including `<b>` stanza separator and `<qs>` Selah marker added in inline-style fix pass).
+- All 107 tests pass (`flutter test`): 70 pre-existing + 35 renderer tests (Step 1.11) + 2 `langCode`/`scriptDirection` tests (round 6).
+- `flutter analyze lib/ test/` → No issues.
+
+**PR review round 7 changes:**
+- **`getVerses()` isolated from main load failure**: Wrapped `BibleService.getVerses()` in its own `try/catch` inside `_loadChapter()`. Previously, if the verses table query threw an exception, the outer catch block would replace the successfully-loaded chapter HTML with the red error state — an a11y-only failure becoming a complete reading failure. Now a `getVerses()` failure just sets `_verses = null`, which silently degrades to no a11y overlay while leaving the chapter text displayed normally.
+- **`peek_chapter.dart` book_code normalised to uppercase**: Database `book_code` values are stored uppercase (`GEN`, `MAT`, etc.). The CLI arg is now normalised with `.toUpperCase()` before the SQL query, so `dart run tools/peek_chapter.dart mat 5` works identically to `MAT 5`.
+
+**Deferred to Step 1.16 (a11y polish):**
+- **Focus rectangle position**: The `SizedBox.shrink()` children in the a11y overlay are 0×0, so TalkBack/VoiceOver's focus highlight sits at the top of the content area instead of at the visible verse. Swipe-through navigation and announcements are correct; only the highlight position is cosmetically wrong. Fixing it requires each semantic node to occupy the same screen area as its verse — requires Step 1.12 scroll anchors or a custom render-object approach. Deferred to Step 1.16.
+- **Non-verse content hidden from a11y tree**: `ExcludeSemantics` on the entire `HtmlWidget` also removes section headings, Psalm superscriptions (`<d>`), and any introductory prose before verse 1. The `_verses` overlay only covers numbered verses. Screen-reader users cannot reach those non-verse parts of the chapter at all. Fixing this requires extracting heading and superscription text from the USFX and injecting it into the overlay in the correct positions — deferred to Step 1.16 alongside the focus-rect fix.
+
+**A11y status after round 7 — overlay functional, two Step 1.16 polish items logged:**
+- **What works**: `ExcludeSemantics(HtmlWidget(...))` + `Visibility(maintainSemantics:true)` overlay of `Semantics(label:'Verse N: text')` widgets. TalkBack/VoiceOver navigate verse units correctly ("Verse 1: In the beginning…").
+- **Deferred (1) — focus highlight position**: Zero-height `SizedBox.shrink()` children cause the TalkBack focus rectangle to appear at (0,0) instead of at the verse. Deferred to Step 1.16.
+- **Deferred (2) — non-verse content absent from a11y tree**: Section headings and Psalm superscriptions are excluded along with `HtmlWidget`'s fragmented nodes. Deferred to Step 1.16.
+- **Step 1.16 acceptance criteria**: (a) TalkBack focus rectangle follows the verse being announced; (b) headings and superscriptions are reachable by screen readers.
+
+**Architecture decision recorded — colour passthrough pattern:**
+`renderChapterToHtml` takes CSS color strings (not `Color` objects) so it has no dependency on `package:flutter`. The call site in `ReadingScreen._rebuildHtml()` converts `Color` → CSS via `_colorToCss()`. This keeps the renderer a pure-Dart utility (usable in build tools or tests without Flutter).
+
+Next: Step 1.12 — Verse navigation. Add ability to jump to a specific verse within a chapter (scroll to verse). Add a quick-nav control (book > chapter > verse).
 
 Step 1.10 ✅ COMPLETE. Scripture reading screen — collapsible header + scrollable plain-text verse list with inline verse numbers.
 
@@ -224,12 +306,12 @@ The goal: open the app, pick a book and chapter, and read formatted Bible text.
 | 1.8 | **Book selection screen** | Build a screen that lists all books of the Bible (OT and NT sections). Tapping a book navigates to chapter selection. |
 | 1.9 ✅ | **Chapter selection screen** | Build a screen showing a grid of chapter numbers for the selected book. Tapping a chapter navigates to the reading screen. |
 | 1.10 ✅ | **Scripture reading screen** | Build the main reading screen. Display a full chapter of Bible text (plain-text verse list for Step 1.10; full formatting in Step 1.11). Include the book name and chapter number as a collapsible header. Support scrolling. |
-| 1.11 | **Basic text formatting** | Render Bible text with paragraph breaks, poetry indentation, section headers, and verse numbers. Use HTML rendering or rich text widgets. |
+| 1.11 ✅ | **Basic text formatting** | Render Bible text with paragraph breaks, poetry indentation, section headers, and verse numbers. Use HTML rendering or rich text widgets. |
 | 1.12 | **Verse navigation** | Add ability to jump to a specific verse within a chapter (scroll to verse). Add a quick-nav control (book > chapter > verse). |
 | 1.13 | **Chapter-to-chapter navigation** | Add previous/next chapter buttons or swipe gestures to move between chapters seamlessly. |
 | 1.14 | **Bookmarks — data layer** | Create a `Bookmark` model and SQLite table. Methods: `addBookmark(reference)`, `removeBookmark(id)`, `getBookmarks()`. |
 | 1.15 | **Bookmarks — UI** | Add a way to bookmark the current location (long-press or button). Build a bookmarks list screen accessible from the home screen or menu. |
-| 1.16 | **Settings screen (font & theme)** | Build a settings screen with: font size slider; light/dark/system theme toggle; accent color picker (let users choose from a curated palette of seed colors that drive the Material 3 `ColorScheme` — e.g. the default calm blue, forest green, crimson, gold, purple, etc.); words-of-Christ color toggle (red or black). Persist all settings with `shared_preferences`. The home screen branded gradient is fixed and unaffected by theme changes; all inner screens (book selection, chapter selection, reading) respond to the chosen theme. |
+| 1.16 | **Settings screen (font & theme)** | Build a settings screen with: font size slider; light/dark/system theme toggle; accent color picker (let users choose from a curated palette of seed colors that drive the Material 3 `ColorScheme` — e.g. the default calm blue, forest green, crimson, gold, purple, etc.); words-of-Christ color toggle (red or black); section headings toggle (show/hide `<s>` and `<d>` noncanonical text, per design doc); verse numbers toggle (show/hide inline verse number superscripts). Persist all settings with `shared_preferences`. The home screen branded gradient is fixed and unaffected by theme changes; all inner screens (book selection, chapter selection, reading) respond to the chosen theme. |
 | 1.17 | **Internationalization setup** | Set up Flutter l10n with ARB files. Extract all hard-coded UI strings into localizable constants. Start with English. Add structure for additional languages. |
 
 ### Phase 2 — Study Features
