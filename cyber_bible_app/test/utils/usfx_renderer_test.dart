@@ -183,6 +183,54 @@ void main() {
       );
       expect(html, contains('>1a</sup>'));
     });
+
+    /// Step 1.12 adds an internal marker tag before each verse number so the
+    /// reading screen can map every verse to an exact render offset.
+    test('verse start milestone emits internal cb-verse-marker tag', () {
+      final html = _render(
+        '<p style="p"><v id="3" bcv="GEN.1.3"/>Text.<ve/></p>',
+      );
+      expect(html, contains('<cb-verse-marker data-verse="3"></cb-verse-marker>'));
+      expect(html, contains('id="v3"'));
+    });
+
+    /// Optional highlighted verse styling is used after quick-nav jumps to
+    /// help users visually re-orient to the target verse.
+    test('highlightedVerseId adds inline highlight style to matching verse output', () {
+      final html = renderChapterToHtml(
+        '<p style="p"><v id="8" bcv="GEN.1.8"/>Text.<ve/></p>',
+        bodyColorCss: _bodyColor,
+        verseNumColorCss: _verseNumColor,
+        headingColorCss: _headingColor,
+        dHeadingColorCss: _dHeadingColor,
+        footnoteColorCss: _footnoteColor,
+        highlightedVerseId: '8',
+        highlightedVerseBackgroundCss: 'rgba(255, 235, 59, 0.45)',
+      );
+      expect(html, contains('background-color:rgba(255, 235, 59, 0.45)'));
+      expect(html, contains('id="v8"'));
+    });
+
+    /// When a highlighted verse spans multiple blocks, each block should emit
+    /// its own balanced highlight span (rather than crossing paragraph tags).
+    test('highlighted verse spanning blocks keeps block-local balanced spans', () {
+      final html = renderChapterToHtml(
+        '<p style="p"><v id="8" bcv="GEN.1.8"/>Line A.</p>'
+        '<p style="p">Line B.<ve/></p>',
+        bodyColorCss: _bodyColor,
+        verseNumColorCss: _verseNumColor,
+        headingColorCss: _headingColor,
+        dHeadingColorCss: _dHeadingColor,
+        footnoteColorCss: _footnoteColor,
+        highlightedVerseId: '8',
+        highlightedVerseBackgroundCss: 'rgba(255, 235, 59, 0.45)',
+      );
+
+      final highlightStylePattern =
+          RegExp(r'background-color:rgba\(255, 235, 59, 0\.45\);');
+      expect(highlightStylePattern.allMatches(html).length, 2);
+      expect(html, contains('</span></p><p><span style="'));
+    });
   });
 
   // ---------------------------------------------------------------------------

@@ -82,6 +82,54 @@ cyber_bible_app/
 
 ## Current Status
 
+**Phase 1 — Step 1.12 Complete: Verse navigation + sticky quick nav**
+
+Step 1.12 ✅ COMPLETE. Added exact verse navigation in `ReadingScreen` with always-visible sticky quick-nav controls.
+
+Step 1.12 implementation:
+- **Sticky dual quick-nav controls**: Added a persistent app-bar quick-nav row that stays visible in both expanded and collapsed header states:
+  - Book/chapter quick nav button (always available)
+  - Verse quick nav button showing the live current top verse (always available)
+- **Book/chapter quick nav flow (2-step)**: Added a modal bottom sheet flow that starts at book selection every time, with the current book auto-scrolled into view and highlighted. Tapping any book (including the current one) moves to chapter selection; selecting a chapter pushes a new `/read` route.
+- **Adaptive verse picker UI**:
+  - Mobile/touch-centric layouts: wheel picker (`ListWheelScrollView`)
+  - Web/desktop ergonomics: list picker with verse preview text
+- **Exact top-verse tracking (no approximation)**:
+  - `usfx_renderer.dart` now injects an internal marker tag before every verse number: `<cb-verse-marker data-verse="N"></cb-verse-marker>`
+  - `ReadingScreen` maps those markers to keyed zero-sized widgets via `HtmlWidget.customWidgetBuilder`
+  - After layout, marker render positions are converted to absolute scroll offsets
+  - On every scroll event, the header verse label updates to the exact verse at the top of the viewport using those offsets
+- **Smooth jump-to-verse animation**: Manual verse selections animate with a smooth curve/duration using `ScrollController.animateTo`.
+- **Nearest-verse fallback**: If a selected verse marker is unavailable, navigation resolves to the nearest available verse by canonical order.
+- **Temporary visual orientation highlight**: Added optional renderer support for a temporary inline highlight on the destination verse content (`highlightedVerseId` + `highlightedVerseBackgroundCss`) after jump. Highlighting applies at whole-verse level across all rendered blocks, not only the verse-number superscript.
+- **Explicit a11y announcement**: Verse jumps now trigger an explicit screen-reader announcement (`SemanticsService.sendAnnouncement`) like “Moved to John 3:16”.
+- **Browser history behavior**: Manual verse jumps write route information entries on web (`SystemNavigator.routeInformationUpdated(..., replace:false)`), preserving back/forward navigation history for reading trails.
+- **Post-QA polish fixes (pre-PR)**:
+  - Fixed expanded-header title overlap/cutoff by increasing expanded header height and reserving bottom space for the sticky quick-nav bar.
+  - Stabilized live top-verse tracking after manual verse jumps by merging partial marker snapshots during async HtmlWidget layout instead of replacing the entire marker-offset map.
+  - Restored book quick-nav tabs in the bottom sheet (`Traditional` / `Alphabetical`).
+  - Traditional quick-nav ordering is now explicit `Old Testament` → `New Testament` → `Deuterocanon / Apocrypha`, independent of DB row order.
+  - Replaced per-row testament subtitle text in quick-nav with section headers in the Traditional tab.
+- **Post-QA regression fixes (manual QA validation pass 1 & 2)**:
+  - Fixed verse tracker showing verse 1 after manual quick-nav selection: `_collectVerseMarkerOffsets()` now preserves and merges partial marker snapshots during async `HtmlWidget` layout, while `_syncTopVerseFromScroll()` continues to run on each pass with the best available offsets. `_syncTopVerseFromScroll()` also now prefers the first verse below viewport top (or current cached top verse) before falling back to verse 1, preventing transient snaps during highlight-triggered rebuilds.
+  - Fixed alphabetical quick-nav tab not auto-scrolling to current book: retained `_tabController.addListener(_onBookTabChanged)` and kept controller-based alphabetical scrolling with `ScrollController.animateTo(...)` for deterministic index/extent positioning and reliable first-open behavior.
+  - Refined top-verse header behavior to ignore barely peeking verses at the very top edge: verse selection now uses a small top-viewport threshold so the header better matches what users perceive as the current verse on screen.
+  - Expanded quick-nav destination highlighting from verse-number-only to whole-verse highlighting, including verses that continue across multiple rendered blocks.
+
+**Step 1.12 tests and validation:**
+- `flutter analyze lib/ test/ tools/` → No issues.
+- `flutter test` → 110 passed.
+- Added 3 renderer unit tests in `test/utils/usfx_renderer_test.dart`:
+  - internal `cb-verse-marker` output exists per verse
+  - highlighted verse styling is emitted when `highlightedVerseId` is supplied
+  - highlighted verses spanning multiple blocks produce balanced block-local HTML spans
+
+**Step boundary confirmations:**
+- Chapter-to-chapter gestures/buttons remain deferred to Step 1.13.
+- Step 1.16 accessibility polish items remain tracked (focus rectangle alignment and non-verse content semantics).
+
+Next: Step 1.13 — Chapter-to-chapter navigation. Add previous/next chapter buttons or swipe gestures for seamless chapter progression.
+
 **Phase 1 — Step 1.11 Complete: Basic text formatting (PR review round 4 addressed)**
 
 Step 1.11 ✅ COMPLETE. Replaced plain-text verse rendering with a full USFX → HTML pipeline using `flutter_widget_from_html_core`.
@@ -164,7 +212,7 @@ Step 1.11 implementation:
 **Architecture decision recorded — colour passthrough pattern:**
 `renderChapterToHtml` takes CSS color strings (not `Color` objects) so it has no dependency on `package:flutter`. The call site in `ReadingScreen._rebuildHtml()` converts `Color` → CSS via `_colorToCss()`. This keeps the renderer a pure-Dart utility (usable in build tools or tests without Flutter).
 
-Next: Step 1.12 — Verse navigation. Add ability to jump to a specific verse within a chapter (scroll to verse). Add a quick-nav control (book > chapter > verse).
+Next (historical): Step 1.12 — Verse navigation. Add ability to jump to a specific verse within a chapter (scroll to verse). Add a quick-nav control (book > chapter > verse).
 
 Step 1.10 ✅ COMPLETE. Scripture reading screen — collapsible header + scrollable plain-text verse list with inline verse numbers.
 
@@ -307,7 +355,7 @@ The goal: open the app, pick a book and chapter, and read formatted Bible text.
 | 1.9 ✅ | **Chapter selection screen** | Build a screen showing a grid of chapter numbers for the selected book. Tapping a chapter navigates to the reading screen. |
 | 1.10 ✅ | **Scripture reading screen** | Build the main reading screen. Display a full chapter of Bible text (plain-text verse list for Step 1.10; full formatting in Step 1.11). Include the book name and chapter number as a collapsible header. Support scrolling. |
 | 1.11 ✅ | **Basic text formatting** | Render Bible text with paragraph breaks, poetry indentation, section headers, and verse numbers. Use HTML rendering or rich text widgets. |
-| 1.12 | **Verse navigation** | Add ability to jump to a specific verse within a chapter (scroll to verse). Add a quick-nav control (book > chapter > verse). |
+| 1.12 ✅ | **Verse navigation** | Add ability to jump to a specific verse within a chapter (scroll to verse). Add a quick-nav control (book > chapter > verse). |
 | 1.13 | **Chapter-to-chapter navigation** | Add previous/next chapter buttons or swipe gestures to move between chapters seamlessly. |
 | 1.14 | **Bookmarks — data layer** | Create a `Bookmark` model and SQLite table. Methods: `addBookmark(reference)`, `removeBookmark(id)`, `getBookmarks()`. |
 | 1.15 | **Bookmarks — UI** | Add a way to bookmark the current location (long-press or button). Build a bookmarks list screen accessible from the home screen or menu. |
