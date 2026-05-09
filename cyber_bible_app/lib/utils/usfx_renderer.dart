@@ -92,12 +92,13 @@ String renderChapterToHtml(
 
   /// Optional verse ID to highlight (e.g. `'16'` or `'1a'`).
   ///
-  /// When provided, the matching verse-number superscript receives a subtle
-  /// inline highlight style so users can visually re-orient after a quick
-  /// navigation jump.
+  /// When provided, the matching verse output receives a subtle inline
+  /// highlight style so users can visually re-orient after a quick
+  /// navigation jump. Highlighting is applied at verse level (not only the
+  /// superscript number) and can continue across multiple rendered blocks.
   String? highlightedVerseId,
 
-  /// CSS color used as the temporary verse-number highlight background.
+  /// CSS color used as the temporary verse-level highlight background.
   /// Ignored when [highlightedVerseId] is null.
   String highlightedVerseBackgroundCss = 'rgba(255, 235, 59, 0.45)',
 

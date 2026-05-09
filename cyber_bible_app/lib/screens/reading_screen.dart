@@ -49,6 +49,10 @@ const Duration _verseHighlightDuration = Duration(milliseconds: 1400);
 /// building marker widgets for a large chapter.
 const int _maxMarkerCollectRetries = 12;
 
+/// Minimum visible distance from viewport top before a verse is treated as
+/// the active top verse in the sticky quick-nav header.
+const double _topVerseViewportThresholdPx = 60.0;
+
 // ---------------------------------------------------------------------------
 // Main screen widget
 // ---------------------------------------------------------------------------
@@ -347,7 +351,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
       if (verseOffset == null) continue;
       // Require verse to be at least 60px into the viewport to count as "top".
       // This prevents a barely-visible verse at the top from stealing focus.
-      if (verseOffset <= currentOffset + 60.0) {
+      if (verseOffset <= currentOffset + _topVerseViewportThresholdPx) {
         top = verse;
       } else {
         firstAfterTop ??= verse;
@@ -360,14 +364,14 @@ class _ReadingScreenState extends State<ReadingScreen> {
     top ??= _verseOrder.firstWhere(
       (v) => _verseTopOffsets.containsKey(v),
       orElse: () => _verseOrder.first,
-      );
+    );
 
-      if (top != _topVerse) {
-        setState(() => _topVerse = top);
-      }
+    if (top != _topVerse) {
+      setState(() => _topVerse = top);
     }
+  }
 
-    // ---- Quick navigation actions ----
+  // ---- Quick navigation actions ----
 
   /// Opens the two-step quick-nav sheet (book -> chapter) and pushes a new
   /// reading route when the user confirms a destination chapter.
