@@ -118,10 +118,11 @@ Step 1.12 implementation:
 
 **Step 1.12 tests and validation:**
 - `flutter analyze lib/ test/ tools/` → No issues.
-- `flutter test` → 109 passed.
-- Added 2 renderer unit tests in `test/utils/usfx_renderer_test.dart`:
+- `flutter test` → 110 passed.
+- Added 3 renderer unit tests in `test/utils/usfx_renderer_test.dart`:
   - internal `cb-verse-marker` output exists per verse
   - highlighted verse styling is emitted when `highlightedVerseId` is supplied
+  - highlighted verses spanning multiple blocks produce balanced block-local HTML spans
 
 **Step boundary confirmations:**
 - Chapter-to-chapter gestures/buttons remain deferred to Step 1.13.

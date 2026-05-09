@@ -196,7 +196,7 @@ void main() {
 
     /// Optional highlighted verse styling is used after quick-nav jumps to
     /// help users visually re-orient to the target verse.
-    test('highlightedVerseId adds inline highlight style to matching sup', () {
+    test('highlightedVerseId adds inline highlight style to matching verse output', () {
       final html = renderChapterToHtml(
         '<p style="p"><v id="8" bcv="GEN.1.8"/>Text.<ve/></p>',
         bodyColorCss: _bodyColor,
@@ -209,6 +209,27 @@ void main() {
       );
       expect(html, contains('background-color:rgba(255, 235, 59, 0.45)'));
       expect(html, contains('id="v8"'));
+    });
+
+    /// When a highlighted verse spans multiple blocks, each block should emit
+    /// its own balanced highlight span (rather than crossing paragraph tags).
+    test('highlighted verse spanning blocks keeps block-local balanced spans', () {
+      final html = renderChapterToHtml(
+        '<p style="p"><v id="8" bcv="GEN.1.8"/>Line A.</p>'
+        '<p style="p">Line B.<ve/></p>',
+        bodyColorCss: _bodyColor,
+        verseNumColorCss: _verseNumColor,
+        headingColorCss: _headingColor,
+        dHeadingColorCss: _dHeadingColor,
+        footnoteColorCss: _footnoteColor,
+        highlightedVerseId: '8',
+        highlightedVerseBackgroundCss: 'rgba(255, 235, 59, 0.45)',
+      );
+
+      final highlightStylePattern =
+          RegExp(r'background-color:rgba\(255, 235, 59, 0\.45\);');
+      expect(highlightStylePattern.allMatches(html).length, 2);
+      expect(html, contains('</span></p><p><span style="'));
     });
   });
 

@@ -395,21 +395,37 @@ class _UsfxRenderer {
   /// nodes (verse milestones, Strong's wrappers, `<wj>`, `<f>`, etc.).
   String _renderInlineChildren(XmlElement parent) {
     final buf = StringBuffer();
+    var isHighlightOpenInThisBlock = false;
+
+    // If the highlighted verse started in a previous block and has not ended
+    // yet, open a fresh wrapper for this block so markup remains balanced.
+    if (_openHighlightVerseId != null) {
+      buf.write('<span style="'
+          'background-color:$highlightedVerseBackgroundCss;'
+          'border-radius:3px;'
+          'padding:0 2px;'
+          '">');
+      isHighlightOpenInThisBlock = true;
+    }
     
     for (final node in parent.children) {
       if (node is XmlText) {
         // Escape all four HTML special characters to prevent markup injection.
         buf.write(_escapeHtml(node.value));
       } else if (node is XmlElement) {
-        // Manage highlight spans that may persist across multiple blocks.
-        // This allows verses that wrap across paragraphs to be fully highlighted.
+        // Manage verse-level highlight state while keeping block-local markup
+        // balanced. Highlight state can persist across blocks, but HTML spans
+        // must not cross paragraph boundaries.
         if (node.name.local == 'v' && highlightedVerseId != null) {
           final id = node.getAttribute('id') ?? '';
           final isHighlighted = id.isNotEmpty && highlightedVerseId == id;
           
           // Close previous highlight if we're starting a different verse.
           if (_openHighlightVerseId != null && _openHighlightVerseId != id) {
-            buf.write('</span>');
+            if (isHighlightOpenInThisBlock) {
+              buf.write('</span>');
+              isHighlightOpenInThisBlock = false;
+            }
             _openHighlightVerseId = null;
           }
           
@@ -420,16 +436,26 @@ class _UsfxRenderer {
                 'border-radius:3px;'
                 'padding:0 2px;'
                 '">');
+            isHighlightOpenInThisBlock = true;
             _openHighlightVerseId = id;
           }
         } else if (node.name.local == 've' && _openHighlightVerseId != null) {
           // Close highlight at verse-end marker.
-          buf.write('</span>');
+          if (isHighlightOpenInThisBlock) {
+            buf.write('</span>');
+            isHighlightOpenInThisBlock = false;
+          }
           _openHighlightVerseId = null;
         }
         
         buf.write(_renderInline(node));
       }
+    }
+
+    // If the highlighted verse continues beyond this block, close only the
+    // block-local wrapper and keep verse state open for the next block.
+    if (isHighlightOpenInThisBlock) {
+      buf.write('</span>');
     }
     
     return buf.toString();

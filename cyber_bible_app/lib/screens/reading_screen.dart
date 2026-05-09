@@ -117,6 +117,9 @@ class _ReadingScreenState extends State<ReadingScreen> {
   /// Verse IDs in canonical DB order for nearest/fallback calculations.
   List<String> _verseOrder = const <String>[];
 
+  /// Verse index lookup table derived from [_verseOrder] for O(1) access.
+  Map<String, int> _verseIndexById = const <String, int>{};
+
   /// Verse ID currently at top of viewport (used in sticky header label).
   String? _topVerse;
 
@@ -216,6 +219,9 @@ class _ReadingScreenState extends State<ReadingScreen> {
       if (!mounted || generation != _loadGeneration) return;
 
       _verseOrder = _verses?.map((v) => v.verse).toList() ?? const <String>[];
+      _verseIndexById = <String, int>{
+        for (var i = 0; i < _verseOrder.length; i++) _verseOrder[i]: i,
+      };
       if (_verseOrder.isNotEmpty) {
         _topVerse = _verseOrder.first;
       }
@@ -363,6 +369,8 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
     // ---- Quick navigation actions ----
 
+  /// Opens the two-step quick-nav sheet (book -> chapter) and pushes a new
+  /// reading route when the user confirms a destination chapter.
   Future<void> _openBookChapterQuickNav() async {
     final result = await showModalBottomSheet<_BookChapterSelectionResult>(
       context: context,
@@ -492,14 +500,14 @@ class _ReadingScreenState extends State<ReadingScreen> {
         _verseOrder.where((verse) => _verseTopOffsets.containsKey(verse)).toList();
     if (availableVerses.isEmpty) return null;
 
-    final requestedIndex = _verseOrder.indexOf(requestedVerse);
+    final requestedIndex = _verseIndexById[requestedVerse] ?? -1;
     final targetIndex = requestedIndex >= 0 ? requestedIndex : 0;
 
     String bestVerse = availableVerses.first;
-    int bestDistance = (_verseOrder.indexOf(bestVerse) - targetIndex).abs();
+    int bestDistance = ((_verseIndexById[bestVerse] ?? 0) - targetIndex).abs();
 
     for (final verse in availableVerses.skip(1)) {
-      final distance = (_verseOrder.indexOf(verse) - targetIndex).abs();
+      final distance = ((_verseIndexById[verse] ?? 0) - targetIndex).abs();
       if (distance < bestDistance) {
         bestDistance = distance;
         bestVerse = verse;
