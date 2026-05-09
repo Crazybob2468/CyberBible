@@ -101,7 +101,7 @@ Step 1.12 implementation:
   - On every scroll event, the header verse label updates to the exact verse at the top of the viewport using those offsets
 - **Smooth jump-to-verse animation**: Manual verse selections animate with a smooth curve/duration using `ScrollController.animateTo`.
 - **Nearest-verse fallback**: If a selected verse marker is unavailable, navigation resolves to the nearest available verse by canonical order.
-- **Temporary visual orientation highlight**: Added optional renderer support for a temporary inline highlight on the destination verse number (`highlightedVerseId` + `highlightedVerseBackgroundCss`) after jump.
+- **Temporary visual orientation highlight**: Added optional renderer support for a temporary inline highlight on the destination verse content (`highlightedVerseId` + `highlightedVerseBackgroundCss`) after jump. Highlighting applies at whole-verse level across all rendered blocks, not only the verse-number superscript.
 - **Explicit a11y announcement**: Verse jumps now trigger an explicit screen-reader announcement (`SemanticsService.sendAnnouncement`) like “Moved to John 3:16”.
 - **Browser history behavior**: Manual verse jumps write route information entries on web (`SystemNavigator.routeInformationUpdated(..., replace:false)`), preserving back/forward navigation history for reading trails.
 - **Post-QA polish fixes (pre-PR)**:
