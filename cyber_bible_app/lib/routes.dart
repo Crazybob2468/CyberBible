@@ -36,7 +36,11 @@ import 'screens/reading_screen.dart';
 /// If an unknown route is requested, returns a simple error screen rather
 /// than crashing — easier to diagnose during development.
 Route<dynamic> onGenerateRoute(RouteSettings settings) {
-  switch (settings.name) {
+  // Web history entries may include query strings (e.g. '/read?book=GEN').
+  // Normalize to the path segment so route matching remains stable.
+  final normalizedName = _normalizedRouteName(settings.name);
+
+  switch (normalizedName) {
     // ---- Home ----
     case AppRoutes.home:
       return MaterialPageRoute<void>(
@@ -106,4 +110,16 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
         ),
       );
   }
+}
+
+/// Normalizes route names so paths with query strings still match known routes.
+///
+/// Example: '/read?book=GEN&chapter=1&verse=3' -> '/read'.
+/// If parsing fails, returns [rawName] unchanged to preserve fallback behavior.
+String? _normalizedRouteName(String? rawName) {
+  if (rawName == null || rawName.isEmpty) return rawName;
+  final uri = Uri.tryParse(rawName);
+  if (uri == null) return rawName;
+  if (uri.path.isEmpty) return rawName;
+  return uri.path;
 }

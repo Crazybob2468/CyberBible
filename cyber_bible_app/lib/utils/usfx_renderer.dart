@@ -90,6 +90,17 @@ String renderChapterToHtml(
   /// Base font size in logical pixels for verse body text.
   double baseFontSizePx = 17.0,
 
+  /// Optional verse ID to highlight (e.g. `'16'` or `'1a'`).
+  ///
+  /// When provided, the matching verse-number superscript receives a subtle
+  /// inline highlight style so users can visually re-orient after a quick
+  /// navigation jump.
+  String? highlightedVerseId,
+
+  /// CSS color used as the temporary verse-number highlight background.
+  /// Ignored when [highlightedVerseId] is null.
+  String highlightedVerseBackgroundCss = 'rgba(255, 235, 59, 0.45)',
+
   /// BCP 47 language code for the `lang` attribute of the HTML document root
   /// (e.g. `'en'`, `'es'`, `'ar'`). Defaults to `'en'`.
   ///
@@ -116,6 +127,8 @@ String renderChapterToHtml(
     dHeadingColorCss: dHeadingColorCss,
     footnoteColorCss: footnoteColorCss,
     baseFontSizePx: baseFontSizePx,
+    highlightedVerseId: highlightedVerseId,
+    highlightedVerseBackgroundCss: highlightedVerseBackgroundCss,
     langCode: langCode,
     scriptDirection: scriptDirection,
   ).render(usfxFragment);
@@ -144,6 +157,8 @@ class _UsfxRenderer {
   final String dHeadingColorCss;
   final String footnoteColorCss;
   final double baseFontSizePx;
+  final String? highlightedVerseId;
+  final String highlightedVerseBackgroundCss;
 
   /// BCP 47 language code for the HTML `lang` attribute (e.g. `'en'`).
   final String langCode;
@@ -160,6 +175,11 @@ class _UsfxRenderer {
   /// Major-section-heading font size — 95 % of [baseFontSizePx].
   late final String _ms1Px;
 
+  /// Tracks which verse has an open highlight span across multiple block renders.
+  /// Set when opening a highlight for a verse, cleared when closing it.
+  /// Allows highlights to persist across multiple paragraphs/blocks.
+  String? _openHighlightVerseId;
+
   _UsfxRenderer({
     required this.bodyColorCss,
     required this.verseNumColorCss,
@@ -167,6 +187,8 @@ class _UsfxRenderer {
     required this.dHeadingColorCss,
     required this.footnoteColorCss,
     required this.baseFontSizePx,
+    this.highlightedVerseId,
+    this.highlightedVerseBackgroundCss = 'rgba(255, 235, 59, 0.45)',
     this.langCode = 'en',
     this.scriptDirection = 'ltr',
   }) {
@@ -373,14 +395,43 @@ class _UsfxRenderer {
   /// nodes (verse milestones, Strong's wrappers, `<wj>`, `<f>`, etc.).
   String _renderInlineChildren(XmlElement parent) {
     final buf = StringBuffer();
+    
     for (final node in parent.children) {
       if (node is XmlText) {
         // Escape all four HTML special characters to prevent markup injection.
         buf.write(_escapeHtml(node.value));
       } else if (node is XmlElement) {
+        // Manage highlight spans that may persist across multiple blocks.
+        // This allows verses that wrap across paragraphs to be fully highlighted.
+        if (node.name.local == 'v' && highlightedVerseId != null) {
+          final id = node.getAttribute('id') ?? '';
+          final isHighlighted = id.isNotEmpty && highlightedVerseId == id;
+          
+          // Close previous highlight if we're starting a different verse.
+          if (_openHighlightVerseId != null && _openHighlightVerseId != id) {
+            buf.write('</span>');
+            _openHighlightVerseId = null;
+          }
+          
+          // Open highlight for this verse if it's the target and not already open.
+          if (isHighlighted && _openHighlightVerseId == null) {
+            buf.write('<span style="'
+                'background-color:$highlightedVerseBackgroundCss;'
+                'border-radius:3px;'
+                'padding:0 2px;'
+                '">');
+            _openHighlightVerseId = id;
+          }
+        } else if (node.name.local == 've' && _openHighlightVerseId != null) {
+          // Close highlight at verse-end marker.
+          buf.write('</span>');
+          _openHighlightVerseId = null;
+        }
+        
         buf.write(_renderInline(node));
       }
     }
+    
     return buf.toString();
   }
 
@@ -395,9 +446,18 @@ class _UsfxRenderer {
         // room between the superscript and the verse text that follows.
         final id = el.getAttribute('id') ?? '';
         if (id.isEmpty) return '';
+        // Add a custom zero-sized marker tag before the superscript so the
+        // reading screen can attach a keyed Flutter widget at each verse
+        // boundary and compute exact on-screen verse positions.
+        final markerTag =
+          '<cb-verse-marker data-verse="${_escapeHtml(id)}"></cb-verse-marker>';
+        // Note: Highlight background is now applied by _renderInlineChildren()
+        // to the entire verse (marker + content through all following blocks),
+        // not just the superscript. This allows verses that wrap across multiple
+        // paragraphs to be fully highlighted.
         // id="v{N}" provides a stable HTML anchor so Step 1.12 (jump-to-verse)
         // can scroll directly to any verse without additional DOM queries.
-        return '<sup id="v${_escapeHtml(id)}" style="'
+        return '$markerTag<sup id="v${_escapeHtml(id)}" style="'
             'color:$verseNumColorCss;'
             'font-size:${_smallPx}px;'
             'font-weight:bold;'
