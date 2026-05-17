@@ -49,6 +49,9 @@ const Duration _verseHighlightDuration = Duration(milliseconds: 1400);
 /// building marker widgets for a large chapter.
 const int _maxMarkerCollectRetries = 12;
 
+/// Frame retries used to re-apply scroll offset while async HTML layout settles.
+const int _maxScrollRestoreRetries = 8;
+
 /// Minimum visible distance from viewport top before a verse is treated as
 /// the active top verse in the sticky quick-nav header.
 const double _topVerseViewportThresholdPx = 60.0;
@@ -260,6 +263,43 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
     setState(() => _html = html);
     _scheduleMarkerCollection(resetRetryCounter: true);
+  }
+
+  /// Rebuilds HTML while preserving the current chapter scroll offset.
+  ///
+  /// Highlight-driven HTML updates can briefly shrink/expand content during
+  /// async widget construction, which may clamp the scroll position to top on
+  /// some Android launches. This helper keeps the reader anchored.
+  void _rebuildHtmlPreservingScrollOffset() {
+    final targetOffset = _scrollController.hasClients ? _scrollController.offset : 0.0;
+    _rebuildHtml();
+    _restoreScrollOffsetAfterHtmlRebuild(targetOffset);
+  }
+
+  /// Re-applies [targetOffset] across a few frames while HtmlWidget layout
+  /// continues settling, preventing intermittent jump-to-top behavior.
+  void _restoreScrollOffsetAfterHtmlRebuild(
+    double targetOffset, {
+    int attempt = 0,
+  }) {
+    if (attempt > _maxScrollRestoreRetries) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+
+      final maxOffset = _scrollController.position.maxScrollExtent;
+      final clampedTarget = targetOffset.clamp(0.0, maxOffset);
+      final currentOffset = _scrollController.offset;
+
+      if ((currentOffset - clampedTarget).abs() > 1.0) {
+        _scrollController.jumpTo(clampedTarget);
+      }
+
+      _restoreScrollOffsetAfterHtmlRebuild(
+        clampedTarget,
+        attempt: attempt + 1,
+      );
+    });
   }
 
   /// Clears all marker keys/cached offsets for a fresh chapter/render cycle.
@@ -519,12 +559,12 @@ class _ReadingScreenState extends State<ReadingScreen> {
   void _applyTemporaryVerseHighlight(String verseId) {
     _highlightClearTimer?.cancel();
     _highlightedVerseId = verseId;
-    _rebuildHtml();
+    _rebuildHtmlPreservingScrollOffset();
 
     _highlightClearTimer = Timer(_verseHighlightDuration, () {
       if (!mounted || _highlightedVerseId != verseId) return;
       _highlightedVerseId = null;
-      _rebuildHtml();
+      _rebuildHtmlPreservingScrollOffset();
     });
   }
 
@@ -543,12 +583,21 @@ class _ReadingScreenState extends State<ReadingScreen> {
   void _recordManualVerseJumpInBrowserHistory(String verseId) {
     if (!kIsWeb) return;
 
+    // Route-information updates can trigger route churn on some web launches.
+    // Only touch route info when this screen is the current reading route.
+    final route = ModalRoute.of(context);
+    if (route == null || !route.isCurrent || route.settings.name != AppRoutes.reading) {
+      return;
+    }
+
     final location =
         '/read?book=${Uri.encodeQueryComponent(widget.book.code)}&chapter=${widget.chapter}&verse=${Uri.encodeQueryComponent(verseId)}';
 
     SystemNavigator.routeInformationUpdated(
       uri: Uri.parse(location),
-      replace: false,
+      // Replace instead of push to avoid intermittent full-screen reloads
+      // observed on some web launch/history states.
+      replace: true,
     );
   }
 
