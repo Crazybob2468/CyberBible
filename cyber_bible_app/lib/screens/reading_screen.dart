@@ -13,7 +13,7 @@
 
 import 'dart:async';
 
-import 'package:flutter/foundation.dart'; // kDebugMode, defaultTargetPlatform
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart'; // RenderAbstractViewport
 import 'package:flutter/services.dart'; // SemanticsService, SystemNavigator
@@ -214,9 +214,6 @@ class _ReadingScreenState extends State<ReadingScreen> {
       try {
         _verses = await BibleService.getVerses(widget.book.code, widget.chapter);
       } catch (e) {
-        if (kDebugMode) {
-          debugPrint('ReadingScreen._loadChapter() getVerses() failed: $e');
-        }
         _verses = null;
       }
 
@@ -232,9 +229,6 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
       _rebuildHtml();
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('ReadingScreen._loadChapter() failed: $e');
-      }
       if (mounted && generation == _loadGeneration) {
         setState(() {
           _contentUsfx = null;
@@ -907,6 +901,11 @@ class _BookChapterQuickNavSheet extends StatefulWidget {
 class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
     with SingleTickerProviderStateMixin {
   static const double _alphabeticalBookRowExtent = 56.0;
+  static const Duration _quickNavScrollDuration = Duration(milliseconds: 700);
+
+  /// Max frame retries while waiting for the scroll controller to attach
+  /// before attempting the Traditional-tab auto-scroll.
+  static const int _maxTraditionalScrollEnsureRetries = 6;
 
   final ScrollController _traditionalScrollController = ScrollController();
   final ScrollController _alphabeticalScrollController = ScrollController();
@@ -963,9 +962,6 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
       setState(() => _books = books);
       _scrollCurrentBookIntoView(books);
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('Book/chapter quick nav: failed to load books: $e');
-      }
       if (!mounted) return;
       setState(() => _error = 'Could not load books. Please try again.');
     }
@@ -987,9 +983,6 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
         _loadingChapters = false;
       });
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('Book/chapter quick nav: failed to load chapters: $e');
-      }
       if (!mounted) return;
       setState(() {
         _loadingChapters = false;
@@ -998,36 +991,56 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
     }
   }
 
+  /// Scrolls both the Traditional and Alphabetical book pickers to the
+  /// current book when the quick-nav sheet opens or the active tab changes.
+  ///
+  /// The Traditional list uses a pre-computed pixel offset derived from the
+  /// known widget heights of section headers and list tiles. This is fully
+  /// deterministic and avoids the GlobalKey / RenderObject context lookup
+  /// that previously failed because [TabBarView] lazily defers building
+  /// off-screen tab content (rowContext was always null).
   void _scrollCurrentBookIntoView(List<Book> books) {
     if (books.isEmpty) return;
 
-    final traditionalIndex = books.indexWhere((b) => b.code == widget.currentBookCode);
-    final alphabeticalBooks = [...books]..sort((a, b) => a.nameShort.compareTo(b.nameShort));
+    // Pre-sort the alphabetical list and find the current book's index.
+    final alphabeticalBooks = [...books]
+      ..sort((a, b) => a.nameShort.compareTo(b.nameShort));
     final alphabeticalIndex =
         alphabeticalBooks.indexWhere((b) => b.code == widget.currentBookCode);
 
-    void animateToIndex(ScrollController controller, int index) {
-      if (index < 0) return;
-      if (!controller.hasClients) return;
+    // Scrolls the Traditional list using a calculated pixel offset.
+    // Retries a few frames if the scroll controller has no clients yet.
+    void animateTraditionalToCurrent({int attempt = 0}) {
+      if (!_traditionalScrollController.hasClients) {
+        if (attempt >= _maxTraditionalScrollEnsureRetries) return;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          animateTraditionalToCurrent(attempt: attempt + 1);
+        });
+        return;
+      }
 
-      // Scroll to place the selected/current book near the top (not centered).
-      // This keeps the book visible without scrolling too far.
-      const rowExtent = 72.0;
-      final target = (index * rowExtent) - 100; // Top margin offset for padding
-      final clamped = target.clamp(0.0, controller.position.maxScrollExtent);
+      final itemOffset = _computeTraditionalScrollOffset(books);
+      // Centre the highlighted row with 72 dp of breathing room at the top.
+      const desiredTopPadding = 72.0;
+      final target = (itemOffset - desiredTopPadding).clamp(
+        0.0,
+        _traditionalScrollController.position.maxScrollExtent,
+      );
 
-      controller.animateTo(
-        clamped,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutCubic,
+      _traditionalScrollController.animateTo(
+        target,
+        duration: _quickNavScrollDuration,
+        curve: Curves.easeInOutCubic,
       );
     }
 
+    // Scrolls the Alphabetical list using the fixed row extent — unchanged.
     void animateAlphabeticalToIndex(int index) {
       if (index < 0) return;
       if (!_alphabeticalScrollController.hasClients) return;
 
-      // Alphabetical list uses fixed itemExtent, so index->offset is exact.
+      // Alphabetical list uses fixed itemExtent, so index→offset is exact.
       final target = (index * _alphabeticalBookRowExtent) -
           (_alphabeticalBookRowExtent * 1.5);
       final clamped = target.clamp(
@@ -1037,16 +1050,62 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
 
       _alphabeticalScrollController.animateTo(
         clamped,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutCubic,
+        duration: _quickNavScrollDuration,
+        curve: Curves.easeInOutCubic,
       );
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      animateToIndex(_traditionalScrollController, traditionalIndex);
+      animateTraditionalToCurrent();
       animateAlphabeticalToIndex(alphabeticalIndex);
     });
+  }
+
+  /// Computes the Y pixel offset of the current book's row within the
+  /// Traditional tab [ListView] by summing the known heights of all preceding
+  /// items (section headers and list tiles).
+  ///
+  /// Heights used:
+  /// - [_QuickNavSectionHeader]: 8 dp top-margin + 10 dp top-pad + ~16 dp
+  ///   text + 8 dp bottom-pad ≈ 42 dp total.
+  /// - One-line [ListTile]: 56 dp (Material spec, unaffected by font scale).
+  double _computeTraditionalScrollOffset(List<Book> books) {
+    // Fixed heights matching the Traditional-tab layout.
+    const double tileH = 56.0; // Material one-line ListTile
+    const double headerH = 42.0; // _QuickNavSectionHeader (8 top-margin + 34 content)
+
+    final otBooks = books.where((b) => b.testament == Testament.ot).toList();
+    final ntBooks = books.where((b) => b.testament == Testament.nt).toList();
+    final dcBooks = books.where((b) => b.testament == Testament.dc).toList();
+
+    double y = 0;
+
+    // Scan OT section.
+    y += headerH;
+    for (final b in otBooks) {
+      if (b.code == widget.currentBookCode) return y;
+      y += tileH;
+    }
+
+    // Scan NT section.
+    y += headerH;
+    for (final b in ntBooks) {
+      if (b.code == widget.currentBookCode) return y;
+      y += tileH;
+    }
+
+    // Scan optional Deuterocanonical section.
+    if (dcBooks.isNotEmpty) {
+      y += headerH;
+      for (final b in dcBooks) {
+        if (b.code == widget.currentBookCode) return y;
+        y += tileH;
+      }
+    }
+
+    // Book not found — scroll to top.
+    return 0.0;
   }
 
   @override

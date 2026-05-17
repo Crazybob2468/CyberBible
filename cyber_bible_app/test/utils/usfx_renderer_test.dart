@@ -273,6 +273,38 @@ void main() {
       // pi2 uses 3.0em left margin as an inline style.
       expect(html, contains('margin:0 0 0.5em 3.0em'));
     });
+
+    /// List-item paragraph styles (li1/li2/li3...) are USFM-derived and can
+    /// appear in USFX style attributes. They should map to progressive indents.
+    test('p style="li3" renders as level-3 indented paragraph', () {
+      final html = _render(
+        '<p style="li3"><v id="5" bcv="EXO.20.5"/>Item text.<ve/></p>',
+      );
+      expect(html, contains('margin:0 0 0.5em 4.5em'));
+    });
+
+    /// mtN/mteN are title-family paragraph styles from USFM.
+    test('p style="mt2" renders as centered bold title line', () {
+      final html = _render('<p style="mt2">THE GOSPEL ACCORDING TO JOHN</p>');
+      expect(html, contains('font-weight:bold'));
+      expect(html, contains('text-align:center'));
+      expect(html, contains('THE GOSPEL ACCORDING TO JOHN'));
+    });
+
+    /// Chapter-label lines should render as centered heading text.
+    test('p style="cl" renders as centered chapter label', () {
+      final html = _render('<p style="cl">CHAPTER 3</p>');
+      expect(html, contains('text-align:center'));
+      expect(html, contains('CHAPTER 3'));
+    });
+
+    /// Chapter-description lines should render as centered italic text.
+    test('p style="cd" renders as centered italic chapter description', () {
+      final html = _render('<p style="cd">A Psalm of David.</p>');
+      expect(html, contains('text-align:center'));
+      expect(html, contains('font-style:italic'));
+      expect(html, contains('A Psalm of David.'));
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -304,6 +336,15 @@ void main() {
         '<q level="3" style="q3">Deep indentation.<ve/></q>',
       );
       expect(html, contains('margin:0 0 0 4.5em'));
+    });
+
+    /// Some translations use deeper poetic levels (q4+). Indentation should
+    /// continue scaling by level rather than capping at q3.
+    test('q style="q4" renders with 6.0em left indent', () {
+      final html = _render(
+        '<q style="q4"><v id="4" bcv="PSA.119.4"/>Deep line.<ve/></q>',
+      );
+      expect(html, contains('margin:0 0 0 6.0em'));
     });
 
     /// A typical Psalm will mix q1 and q2 lines for the same verse — both must
@@ -498,6 +539,50 @@ void main() {
       expect(html, contains('font-variant:small-caps'));
       expect(html, contains('LORD'));
     });
+
+    /// Generic italic inline style should map to <em>.
+    test('<it> renders as italic <em> span', () {
+      final html = _render(
+        '<p style="p"><v id="1" bcv="JAS.1.1"/>'
+        'This is <it>emphasized</it> text.<ve/></p>',
+      );
+      expect(html, contains('<em>emphasized</em>'));
+    });
+
+    /// Generic bold inline style should map to <strong>.
+    test('<bd> renders as bold <strong> span', () {
+      final html = _render(
+        '<p style="p"><v id="1" bcv="ROM.1.1"/>'
+        'This is <bd>bold</bd> text.<ve/></p>',
+      );
+      expect(html, contains('<strong>bold</strong>'));
+    });
+
+    /// Combined bold+italic inline style should preserve both semantics.
+    test('<bdit> renders as nested bold+italic markup', () {
+      final html = _render(
+        '<p style="p"><v id="1" bcv="ROM.1.1"/>This is '
+        '<bdit>both</bdit> styles.<ve/></p>',
+      );
+      expect(html, contains('<strong><em>both</em></strong>'));
+    });
+
+    /// Generic small-caps style should map to inline small-caps CSS.
+    test('<sc> renders as small-caps span', () {
+      final html = _render(
+        '<p style="p"><v id="1" bcv="GEN.1.1"/><sc>LORD</sc> text.<ve/></p>',
+      );
+      expect(html, contains('font-variant:small-caps'));
+      expect(html, contains('LORD'));
+    });
+
+    /// Explicit superscript style should render as HTML <sup>.
+    test('<sup> renders as superscript span', () {
+      final html = _render(
+        '<p style="p"><v id="1" bcv="GEN.1.1"/>Text<sup>a</sup>.<ve/></p>',
+      );
+      expect(html, contains('<sup>a</sup>'));
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -630,6 +715,286 @@ void main() {
 
       // Verse number rendered
       expect(html, contains('>3</sup>'));
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // New USFM styles: poetry variants
+  // ---------------------------------------------------------------------------
+
+  group('poetry variants (qc / qr / qa / qm)', () {
+    /// Centred poetry line — used for refrains and some Psalm doxologies.
+    test('qc produces centred paragraph', () {
+      final html = _render('<q style="qc">Praise the Lord.</q>');
+      expect(html, contains('text-align:center'));
+      expect(html, contains('Praise the Lord.'));
+    });
+
+    /// Right-aligned poetry line — used in some liturgical texts.
+    test('qr produces right-aligned paragraph', () {
+      final html = _render('<q style="qr">Amen.</q>');
+      expect(html, contains('text-align:right'));
+      expect(html, contains('Amen.'));
+    });
+
+    /// Acrostic heading — the Hebrew-letter labels in Psalm 119, etc.
+    test('qa produces italic centred heading with heading colour', () {
+      final html = _render('<q style="qa">Aleph</q>');
+      expect(html, contains('text-align:center'));
+      expect(html, contains('font-style:italic'));
+      expect(html, contains(_headingColor));
+      expect(html, contains('Aleph'));
+    });
+
+    /// qm1/qm2 (margin poetry) should fall through to the level-based indent
+    /// path — same output as q1/q2.
+    test('qm1 produces level-1 indent (same as q1)', () {
+      final html = _render('<q style="qm1">Margined line.</q>');
+      expect(html, contains('margin:0 0 0 1.5em'));
+      expect(html, contains('Margined line.'));
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // New USFM styles: block / section elements
+  // ---------------------------------------------------------------------------
+
+  group('table rows (tr / th / tc / thr / tcr)', () {
+    /// A <tr> with header and data cells must render as a paragraph containing
+    /// both cells. The header cell must be wrapped in <strong>.
+    test('tr renders as paragraph; th is bold', () {
+      final html = _render('<tr><th>Name</th><tc>Value</tc></tr>');
+      expect(html, contains('<strong>Name</strong>'));
+      expect(html, contains('Value'));
+      expect(html, contains('<p '));
+    });
+
+    /// Right-aligned cells must receive a float:right span.
+    test('tcr content gets float:right span', () {
+      final html = _render('<tr><tc>Label</tc><tcr>42</tcr></tr>');
+      expect(html, contains('float:right'));
+      expect(html, contains('42'));
+    });
+
+    /// An empty <tr> (no recognised cell children) must return nothing.
+    test('tr with no cells returns empty', () {
+      final html = _render('<tr></tr>');
+      // Should produce only the surrounding HTML document — no <p> for the row.
+      final body = html.split('<body>').last.split('</body>').first.trim();
+      expect(body, isEmpty);
+    });
+  });
+
+  group('block elements: ms / mr / sr', () {
+    /// <ms> as a standalone element (belt-and-suspenders for converters that
+    /// emit it as its own element rather than <p style="ms1">).
+    test('ms standalone element produces centred bold heading', () {
+      final html = _render('<ms>Book One</ms>');
+      expect(html, contains('font-weight:bold'));
+      expect(html, contains('text-align:center'));
+      expect(html, contains(_headingColor));
+      expect(html, contains('Book One'));
+    });
+
+    /// Major section range reference — italic, centred, heading colour.
+    test('mr produces italic centred heading-colour line', () {
+      final html = _render('<mr>Psalms 1–41</mr>');
+      expect(html, contains('font-style:italic'));
+      expect(html, contains('text-align:center'));
+      expect(html, contains(_headingColor));
+      expect(html, contains('Psalms 1'));
+    });
+
+    /// Section cross-reference range — italic, centred, de-emphasised colour.
+    test('sr produces italic centred dHeadingColor line', () {
+      final html = _render('<sr>(Matthew 5:1–7:29)</sr>');
+      expect(html, contains('font-style:italic'));
+      expect(html, contains('text-align:center'));
+      expect(html, contains(_dHeadingColor));
+      expect(html, contains('Matthew 5'));
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // New USFM styles: paragraph variants
+  // ---------------------------------------------------------------------------
+
+  group('paragraph variants: pr / ph / sig / lit', () {
+    /// Right-aligned paragraph — used in some liturgical/poetic layouts.
+    test('pr paragraph is right-aligned', () {
+      final html = _render(
+          '<p style="pr"><v id="1" bcv="X.1.1"/>Right text.<ve/></p>');
+      expect(html, contains('text-align:right'));
+      expect(html, contains('Right text.'));
+    });
+
+    /// Hanging-indent paragraph — positive left margin + negative text-indent.
+    test('ph1 paragraph has hanging indent', () {
+      final html = _render(
+          '<p style="ph1"><v id="1" bcv="X.1.1"/>Hanging.<ve/></p>');
+      expect(html, contains('margin:0 0 0.5em 1.5em'));
+      expect(html, contains('text-indent:-1.5em'));
+      expect(html, contains('Hanging.'));
+    });
+
+    /// Epistle signature line — italic, body colour.
+    test('sig paragraph is italic', () {
+      final html =
+          _render('<p style="sig"><v id="23" bcv="GAL.6.18"/>Grace.<ve/></p>');
+      expect(html, contains('font-style:italic'));
+      expect(html, contains('Grace.'));
+    });
+
+    /// Liturgical note — italic, right-aligned, de-emphasised colour.
+    /// Uses text-only extraction so verse numbers are excluded from the label.
+    test('lit paragraph is right-aligned italic with dHeadingColor', () {
+      final html = _render('<p style="lit">This is the word of the Lord.</p>');
+      expect(html, contains('font-style:italic'));
+      expect(html, contains('text-align:right'));
+      expect(html, contains(_dHeadingColor));
+      expect(html, contains('This is the word'));
+    });
+  });
+
+  group('introduction paragraphs: ib / is1 / imt1 / ip', () {
+    /// Introduction blank line — spacer paragraph with no content.
+    test('ib produces a non-breaking-space spacer paragraph', () {
+      final html = _render('<p style="ib"/>');
+      expect(html, contains('&nbsp;'));
+    });
+
+    /// Introduction section heading — italic centred, heading colour.
+    test('is1 produces italic centred heading', () {
+      final html = _render('<p style="is1">Introduction</p>');
+      expect(html, contains('font-style:italic'));
+      expect(html, contains('text-align:center'));
+      expect(html, contains(_headingColor));
+      expect(html, contains('Introduction'));
+    });
+
+    /// Introduction main title — bold centred, heading colour.
+    test('imt1 produces bold centred title', () {
+      final html = _render('<p style="imt1">The Gospel of Matthew</p>');
+      expect(html, contains('font-weight:bold'));
+      expect(html, contains('text-align:center'));
+      expect(html, contains(_headingColor));
+      expect(html, contains('The Gospel'));
+    });
+
+    /// Introduction paragraph — regular plain paragraph.
+    test('ip renders as plain paragraph', () {
+      final html = _render(
+          '<p style="ip"><v id="1" bcv="MAT.1.1"/>Intro text.<ve/></p>');
+      expect(html, contains('<p>'));
+      expect(html, contains('Intro text.'));
+    });
+  });
+
+  group('semantic division marker (sd)', () {
+    /// sd1 must produce a spacer paragraph with extra top margin.
+    test('sd1 produces a spacer with top margin', () {
+      final html = _render('<p style="sd1"/>');
+      expect(html, contains('margin:1.5em 0 0 0'));
+      expect(html, contains('&nbsp;'));
+    });
+
+    /// sd2 must produce larger spacing than sd1.
+    test('sd2 produces larger top margin than sd1', () {
+      final sd1 = _render('<p style="sd1"/>');
+      final sd2 = _render('<p style="sd2"/>');
+      // sd1 → 1.5em, sd2 → 2.0em
+      expect(sd2, contains('margin:2.0em 0 0 0'));
+      expect(sd1, isNot(equals(sd2)));
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // New USFM styles: inline character styles
+  // ---------------------------------------------------------------------------
+
+  group('inline character styles: qt / tl / sls / ord', () {
+    /// OT quotation in NT context — italic.
+    test('qt renders as italic em', () {
+      final html = _render(
+          '<p style="p"><v id="1" bcv="X.1.1"/><qt>It is written.</qt><ve/></p>');
+      expect(html, contains('<em>It is written.</em>'));
+    });
+
+    /// Transliteration — italic.
+    test('tl renders as italic em', () {
+      final html = _render(
+          '<p style="p"><v id="1" bcv="X.1.1"/><tl>Maranatha</tl><ve/></p>');
+      expect(html, contains('<em>Maranatha</em>'));
+    });
+
+    /// Secondary-language source — italic.
+    test('sls renders as italic em', () {
+      final html = _render(
+          '<p style="p"><v id="1" bcv="X.1.1"/><sls>shalom</sls><ve/></p>');
+      expect(html, contains('<em>shalom</em>'));
+    });
+
+    /// Ordinal suffix — superscript.
+    test('ord renders as superscript', () {
+      final html = _render(
+          '<p style="p"><v id="1" bcv="X.1.1"/>21<ord>st</ord><ve/></p>');
+      expect(html, contains('<sup>st</sup>'));
+    });
+  });
+
+  group('inline transparent pass-throughs: wh / wg / wa / bk / pn / png', () {
+    /// Language-specific wrappers must pass text through unchanged.
+    test('wh renders text transparently', () {
+      final html = _render(
+          '<p style="p"><v id="1" bcv="X.1.1"/><wh>YHWH</wh><ve/></p>');
+      expect(html, contains('YHWH'));
+      expect(html, isNot(contains('<wh>')));
+    });
+
+    test('wg renders text transparently', () {
+      final html = _render(
+          '<p style="p"><v id="1" bcv="X.1.1"/><wg>logos</wg><ve/></p>');
+      expect(html, contains('logos'));
+      expect(html, isNot(contains('<wg>')));
+    });
+
+    test('wa renders text transparently', () {
+      final html = _render(
+          '<p style="p"><v id="1" bcv="X.1.1"/><wa>abba</wa><ve/></p>');
+      expect(html, contains('abba'));
+    });
+
+    /// Book title reference — transparent.
+    test('bk renders text transparently', () {
+      final html = _render(
+          '<p style="p"><v id="1" bcv="X.1.1"/><bk>Genesis</bk><ve/></p>');
+      expect(html, contains('Genesis'));
+      expect(html, isNot(contains('<bk>')));
+    });
+
+    /// Proper name — transparent.
+    test('pn renders text transparently', () {
+      final html = _render(
+          '<p style="p"><v id="1" bcv="X.1.1"/><pn>David</pn><ve/></p>');
+      expect(html, contains('David'));
+    });
+
+    /// Geographic proper name — transparent.
+    test('png renders text transparently', () {
+      final html = _render(
+          '<p style="p"><v id="1" bcv="X.1.1"/><png>Jerusalem</png><ve/></p>');
+      expect(html, contains('Jerusalem'));
+    });
+  });
+
+  group('cp — published chapter marker', () {
+    /// <cp> is a structural marker that must produce no visible output.
+    test('cp is suppressed from output', () {
+      final html = _render(
+          '<p style="p"><v id="1" bcv="X.1.1"/><cp>A</cp>Text.<ve/></p>');
+      // The letter "A" inside <cp> must not appear in the body.
+      expect(html, isNot(contains('>A<')));
+      expect(html, contains('Text.'));
     });
   });
 }

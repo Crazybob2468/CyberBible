@@ -17,7 +17,6 @@
 //   always the same, like a splash page. All inner screens (book selection,
 //   chapter selection, reading) continue to follow the system theme normally.
 
-import 'package:flutter/foundation.dart'; // kDebugMode, debugPrint
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // SystemUiOverlayStyle
 
@@ -97,11 +96,6 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() => _loading = false);
       }
     } catch (e) {
-      // Log the raw exception in debug builds only — paths and SQL details
-      // should not be surfaced to end users in production.
-      if (kDebugMode) {
-        debugPrint('HomeScreen._openDatabase() failed: $e');
-      }
       if (mounted) {
         setState(() {
           _loading = false;
@@ -270,26 +264,16 @@ class _HomeScreenState extends State<HomeScreen> {
         // 1. Branded gradient fills the entire screen.
         _gradientBackground(),
 
-        // 2. Decorative circles placed at the edges — they extend partially
-        //    off-screen (negative position values) for a depth effect.
-        //    All sizes/positions are purely aesthetic.
-        const Positioned(
-          top: -100,
-          right: -100,
-          child: _DecorativeCircle(size: 320),
-        ),
-        const Positioned(
-          bottom: -80,
-          left: -80,
-          child: _DecorativeCircle(size: 260),
-        ),
-        const Positioned(
-          top: 60,
-          left: 20,
-          child: _DecorativeCircle(size: 80),
+        // 2. Subtle gold-leaf style overlay: soft corner glow, center sheen,
+        //    and fine frame lines to feel traditional and elegant.
+        const Positioned.fill(child: IgnorePointer(child: _GoldLeafOverlay())),
+        
+        // 3. Side filigree swirls for a classic, ornate visual language.
+        const Positioned.fill(
+          child: IgnorePointer(child: _SideFiligreeOverlay()),
         ),
 
-        // 3. Main scrollable content column.
+        // 4. Main scrollable content column.
         //    SingleChildScrollView prevents overflow on very small screens.
         SafeArea(
           child: SingleChildScrollView(
@@ -297,10 +281,14 @@ class _HomeScreenState extends State<HomeScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 28),
               child: Column(
                 children: [
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 34),
 
-                  // Glowing icon badge.
+                  // Ornamental icon presentation.
                   _buildIconBadge(),
+                  const SizedBox(height: 28),
+
+                  // Elegant gold-leaf horizontal divider between icon and title.
+                  const _GoldHorizontalOrnament(),
                   const SizedBox(height: 28),
 
                   // Large "Cyber Bible" title.
@@ -312,9 +300,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     'A free and open source Bible study app',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 15,
-                      color: Colors.white60,
-                      letterSpacing: 0.3,
+                      fontSize: 15.5,
+                      color: Color(0xD8F3E6C8),
+                      letterSpacing: 0.35,
                     ),
                   ),
                   const SizedBox(height: 40),
@@ -359,35 +347,48 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // ---- Ready state sub-builders ----
 
-  /// The large book icon centered inside a glowing gold-bordered circle.
+  /// The branded app icon centered inside a traditional gilded frame.
+  ///
+  /// Uses the same icon artwork as launcher icons so the landing experience
+  /// visually matches the installed app identity.
   Widget _buildIconBadge() {
-    return Container(
-      width: 128,
-      height: 128,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        // Very subtle gold fill inside the circle.
-        color: const Color(0x1AD4AF37), // gold 10%
-        border: Border.all(color: _gold, width: 2.5),
-        boxShadow: const [
-          // Outer glow — diffuse.
-          BoxShadow(
-            color: Color(0x66D4AF37), // gold 40%
-            blurRadius: 36,
-            spreadRadius: 6,
+    return SizedBox(
+      width: 214,
+      height: 214,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Diffuse gold aura behind the icon.
+          Container(
+            width: 190,
+            height: 190,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [Color(0x55D4AF37), Color(0x00D4AF37)],
+              ),
+            ),
           ),
-          // Inner soft ring.
-          BoxShadow(
-            color: Color(0x33D4AF37), // gold 20%
-            blurRadius: 12,
-            spreadRadius: 2,
+
+          // Branded icon artwork itself.
+          Container(
+            width: 156,
+            height: 156,
+            decoration: const BoxDecoration(
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0x66000000),
+                  blurRadius: 18,
+                  offset: Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Image.asset(
+              'assets/branding/cyber_bible_icon.png',
+              fit: BoxFit.contain,
+            ),
           ),
         ],
-      ),
-      child: const Icon(
-        Icons.menu_book_rounded,
-        size: 60,
-        color: _gold,
       ),
     );
   }
@@ -429,42 +430,275 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       decoration: BoxDecoration(
-        // Frosted glass: white at 10% opacity, baked into ARGB hex (const-safe).
-        color: const Color(0x1AFFFFFF),
-        borderRadius: BorderRadius.circular(14),
+        // Deep translucent green panel with warm gold edge.
+        color: const Color(0x26433722),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: const Color(0x4DD4AF37), // gold 30%
+          color: const Color(0x88D4AF37), // gold 53%
+          width: 1.4,
         ),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x2A000000),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
       ),
-      child: const Column(
+      child: Stack(
         children: [
-          Text(
-            '"In the beginning God created the heavens\n'
-            'and the earth."',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              // white at ~90%
-              color: Color(0xE6FFFFFF),
-              fontSize: 15,
-              fontStyle: FontStyle.italic,
-              height: 1.65,
-              letterSpacing: 0.2,
+          // Gentle top highlight band for a gilded card feel.
+          Positioned(
+            left: 10,
+            right: 10,
+            top: 8,
+            child: Container(
+              height: 16,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0x33D4AF37), Color(0x00D4AF37)],
+                ),
+              ),
             ),
           ),
-          SizedBox(height: 12),
-          Text(
-            '— Genesis 1:1',
-            style: TextStyle(
-              color: _gold,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.8,
-            ),
+          const Column(
+            children: [
+              Text(
+                '"In the beginning God created the heavens\n'
+                'and the earth."',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  // white at ~90%
+                  color: Color(0xE6FFFFFF),
+                  fontSize: 15,
+                  fontStyle: FontStyle.italic,
+                  height: 1.65,
+                  letterSpacing: 0.2,
+                ),
+              ),
+              SizedBox(height: 12),
+              Text(
+                '— Genesis 1:1',
+                style: TextStyle(
+                  color: _gold,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
+}
+
+/// Elegant gold-leaf horizontal divider shown between the app icon and the
+/// "Cyber Bible" title on the landing page. Draws a faded hairline on both
+/// sides of a small central diamond, with short curved tendrils and dot
+/// accents flanking the diamond — evoking classic illuminated-manuscript
+/// ornament rules.
+class _GoldHorizontalOrnament extends StatelessWidget {
+  const _GoldHorizontalOrnament();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      width: 220,
+      height: 24,
+      child: CustomPaint(
+        painter: _GoldHorizontalOrnamentPainter(),
+      ),
+    );
+  }
+}
+
+/// Paints the gold-leaf ornament rule:
+/// - Two faded hairlines extending outward from the centre.
+/// - A solid gold diamond at the centre.
+/// - Small dot accents flanking the diamond.
+/// - Short upward-curving tendrils beyond the dots, ending in tiny fade dots.
+class _GoldHorizontalOrnamentPainter extends CustomPainter {
+  const _GoldHorizontalOrnamentPainter();
+
+  // Gold palette shared with the rest of the landing page.
+  static const Color _goldMid = Color(0xCCD4AF37);
+  static const Color _goldDim = Color(0x99D4AF37);
+  static const Color _goldFade = Color(0x00D4AF37);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double cx = size.width / 2;
+    final double cy = size.height / 2;
+
+    // ---- Faded hairlines left and right of the central ornament ----
+    final hairPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0
+      ..strokeCap = StrokeCap.round;
+
+    // Left hairline fades from transparent (far left) to gold (near centre).
+    hairPaint.shader = LinearGradient(
+      colors: const [_goldFade, _goldMid],
+    ).createShader(Rect.fromLTWH(4, cy - 0.5, cx - 22, 1));
+    canvas.drawLine(Offset(4, cy), Offset(cx - 22, cy), hairPaint);
+
+    // Right hairline fades from gold (near centre) to transparent (far right).
+    hairPaint.shader = LinearGradient(
+      colors: const [_goldMid, _goldFade],
+    ).createShader(Rect.fromLTWH(cx + 22, cy - 0.5, size.width - cx - 26, 1));
+    canvas.drawLine(Offset(cx + 22, cy), Offset(size.width - 4, cy), hairPaint);
+
+    hairPaint.shader = null;
+
+    // ---- Central diamond ----
+    final diamond = Path()
+      ..moveTo(cx, cy - 7) // top vertex
+      ..lineTo(cx + 6, cy) // right vertex
+      ..lineTo(cx, cy + 7) // bottom vertex
+      ..lineTo(cx - 6, cy) // left vertex
+      ..close();
+
+    canvas.drawPath(
+      diamond,
+      Paint()
+        ..style = PaintingStyle.fill
+        ..color = _goldMid,
+    );
+
+    // ---- Flanking dot accents ----
+    final dotPaint = Paint()
+      ..style = PaintingStyle.fill
+      ..color = _goldDim;
+    canvas.drawCircle(Offset(cx - 12, cy), 2.2, dotPaint);
+    canvas.drawCircle(Offset(cx + 12, cy), 2.2, dotPaint);
+
+    // ---- Short curved tendrils beyond the dots ----
+    final tendrilPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2
+      ..strokeCap = StrokeCap.round
+      ..color = _goldDim;
+
+    // Left tendril curves gently upward.
+    final leftTendril = Path()
+      ..moveTo(cx - 16, cy)
+      ..cubicTo(cx - 22, cy - 1, cx - 30, cy - 8, cx - 38, cy - 4);
+    canvas.drawPath(leftTendril, tendrilPaint);
+
+    // Right tendril mirrors the left.
+    final rightTendril = Path()
+      ..moveTo(cx + 16, cy)
+      ..cubicTo(cx + 22, cy - 1, cx + 30, cy - 8, cx + 38, cy - 4);
+    canvas.drawPath(rightTendril, tendrilPaint);
+
+    // Tiny faded terminal dots at the ends of the tendrils.
+    final terminalPaint = Paint()
+      ..style = PaintingStyle.fill
+      ..color = const Color(0x55D4AF37);
+    canvas.drawCircle(Offset(cx - 38, cy - 4), 1.5, terminalPaint);
+    canvas.drawCircle(Offset(cx + 38, cy - 4), 1.5, terminalPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+/// Full-height decorative side swirls for a grand, traditional appearance.
+class _SideFiligreeOverlay extends StatelessWidget {
+  const _SideFiligreeOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _SideFiligreePainter(),
+    );
+  }
+}
+
+/// Paints mirrored gold-leaf-style side flourishes.
+class _SideFiligreePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..strokeWidth = 2.2
+      ..color = const Color(0x55D4AF37);
+
+    final softPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..strokeWidth = 1.2
+      ..color = const Color(0x3FD4AF37);
+
+    void drawSide({required bool left}) {
+      final xBase = left ? 20.0 : size.width - 20.0;
+      final dir = left ? 1.0 : -1.0;
+
+      final main = Path()
+        ..moveTo(xBase, size.height * 0.14)
+        ..cubicTo(
+          xBase + (32 * dir),
+          size.height * 0.20,
+          xBase + (38 * dir),
+          size.height * 0.30,
+          xBase,
+          size.height * 0.36,
+        )
+        ..cubicTo(
+          xBase - (26 * dir),
+          size.height * 0.43,
+          xBase - (26 * dir),
+          size.height * 0.52,
+          xBase,
+          size.height * 0.58,
+        )
+        ..cubicTo(
+          xBase + (36 * dir),
+          size.height * 0.65,
+          xBase + (36 * dir),
+          size.height * 0.74,
+          xBase,
+          size.height * 0.82,
+        );
+
+      final leaf1 = Path()
+        ..moveTo(xBase, size.height * 0.36)
+        ..quadraticBezierTo(
+          xBase + (44 * dir),
+          size.height * 0.34,
+          xBase + (14 * dir),
+          size.height * 0.39,
+        );
+
+      final leaf2 = Path()
+        ..moveTo(xBase, size.height * 0.58)
+        ..quadraticBezierTo(
+          xBase + (44 * dir),
+          size.height * 0.56,
+          xBase + (12 * dir),
+          size.height * 0.61,
+        );
+
+      canvas.drawPath(main, paint);
+      canvas.drawPath(leaf1, softPaint);
+      canvas.drawPath(leaf2, softPaint);
+
+      final dotPaint = Paint()..color = const Color(0x73D4AF37);
+      canvas.drawCircle(Offset(xBase, size.height * 0.14), 2.5, dotPaint);
+      canvas.drawCircle(Offset(xBase, size.height * 0.82), 2.5, dotPaint);
+    }
+
+    drawSide(left: true);
+    drawSide(left: false);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 // ---------------------------------------------------------------------------
@@ -557,20 +791,64 @@ class _GoldButton extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Reusable: decorative background circle
+// Reusable: gold-leaf style landing overlay
 // ---------------------------------------------------------------------------
 
-/// A translucent gold-outlined circle placed in the background of the
-/// home screen to add visual depth to the gradient.
+/// Decorative overlay for the landing screen.
 ///
-/// These are purely decorative — they carry no semantic meaning and are
-/// intentionally placed partially off-screen via [Positioned] so they
-/// act as a subtle framing device rather than a foreground element.
-class _DecorativeCircle extends StatelessWidget {
-  /// The diameter of the circle in logical pixels.
-  final double size;
+/// Uses soft radial/linear highlights and fine border lines to create a
+/// traditional "gold leaf" atmosphere without changing the app's green/gold
+/// palette or reducing readability of foreground text.
+class _GoldLeafOverlay extends StatelessWidget {
+  const _GoldLeafOverlay();
 
-  const _DecorativeCircle({required this.size});
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: const [
+        // Top-right warm glow.
+        Positioned(
+          top: -140,
+          right: -120,
+          child: _OverlayGlow(size: 420, opacity: 0.20),
+        ),
+
+        // Bottom-left warm glow.
+        Positioned(
+          bottom: -170,
+          left: -130,
+          child: _OverlayGlow(size: 460, opacity: 0.16),
+        ),
+
+        // Center vertical sheen.
+        _OverlaySheen(),
+
+        // Fine inner frame line.
+        Positioned.fill(
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                border: Border.fromBorderSide(
+                  BorderSide(color: Color(0x26D4AF37), width: 1.2),
+                ),
+                borderRadius: BorderRadius.all(Radius.circular(14)),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Soft circular gold glow used by [_GoldLeafOverlay].
+class _OverlayGlow extends StatelessWidget {
+  final double size;
+  final double opacity;
+
+  const _OverlayGlow({required this.size, required this.opacity});
 
   @override
   Widget build(BuildContext context) {
@@ -579,10 +857,36 @@ class _DecorativeCircle extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(
-          // gold at 10% — barely visible, just adds texture.
-          color: const Color(0x1AD4AF37),
-          width: 1.5,
+        gradient: RadialGradient(
+          colors: [
+            Color.fromRGBO(212, 175, 55, opacity),
+            const Color(0x00D4AF37),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Subtle center sheen to emulate metallic leaf catch-light.
+class _OverlaySheen extends StatelessWidget {
+  const _OverlaySheen();
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0x00D4AF37),
+              Color(0x1AD4AF37),
+              Color(0x00D4AF37),
+            ],
+            stops: [0.1, 0.5, 0.9],
+          ),
         ),
       ),
     );

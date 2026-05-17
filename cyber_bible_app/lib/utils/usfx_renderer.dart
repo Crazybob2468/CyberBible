@@ -13,36 +13,75 @@
 /// An HTML+CSS approach delegates that work to a proven package while still
 /// rendering as native Flutter widgets (not a WebView).
 ///
-/// ## Element coverage (Step 1.11)
+/// ## Element coverage
 ///
-/// | USFX element                      | Rendered as                                  |
-/// |-----------------------------------|----------------------------------------------|
-/// | `<p style="p">`                   | Regular prose paragraph `<p>`                |
-/// | `<p style="m">`                   | Continuation paragraph (no indent) `<p>`     |
-/// | `<p style="pi1|pi2">`             | Indented paragraph (inline left-margin style) |
-/// | `<p style="ms1">` (major sec hd)  | Major section heading block                  |
-/// | `<q style="q1|q2|q3">`           | Poetry line with increasing left indent      |
-/// | `<s style="s1">` (section hd)    | Section heading (italic, centred)            |
-/// | `<d>` (Psalm descriptive heading) | Psalm superscription (italic, de-emphasised) |
-/// | `<b style="b"/>`                  | Blank stanza separator — spacer paragraph    |
-/// | `<qs>` (Selah)                    | Right-aligned italic meditation marker       |
-/// | `<v id="N" .../>`                | Inline verse number `<sup>` marker           |
-/// | `<ve/>`                          | Verse end milestone — no output              |
-/// | `<wj>...</wj>`                   | Words of Jesus — red (Step 1.16 toggle)      |
-/// | `<f caller="...">...</f>`        | Footnote — `caller` symbol as superscript    |
-/// | `<x>...</x>`                     | Cross-reference — skipped (Phase 2)          |
-/// | `<add>...</add>`                 | Supplied text — `<em>` italic                |
-/// | `<nd>...</nd>`                   | Divine name — small caps `<span>`            |
-/// | `<w s="...">...</w>`             | Strong's wrapper — transparent pass-through  |
+/// ### Block / paragraph elements
 ///
-/// ## Known deferred items
+/// | USFX element / style                          | Rendered as                                        |
+/// |-----------------------------------------------|-----------------------------------------------------|
+/// | `<p style="p|m|nb|po|pmo|pm|pmi">`            | Regular prose paragraph                            |
+/// | `<p style="pi1|pi2">` / `li1|li2`             | Indented paragraph                                 |
+/// | `<p style="pr">`                              | Right-aligned paragraph                            |
+/// | `<p style="ph1|ph2">`                         | Hanging-indent paragraph                           |
+/// | `<p style="ms1">` / `<ms>`                    | Major section heading (bold, centred)              |
+/// | `<p style="mt1|mt2">` / `mte`                 | Book main title (bold, centred)                    |
+/// | `<p style="r">`                               | Parallel reference line (italic, right)            |
+/// | `<p style="sp">`                              | Speaker identification line (bold)                 |
+/// | `<p style="sig">`                             | Epistle signature line (italic)                    |
+/// | `<p style="lit">`                             | Liturgical note / congregational response          |
+/// | `<p style="cl|cd">`                           | Chapter label / description                        |
+/// | `<p style="pc|pmc">`                          | Centred paragraph                                  |
+/// | `<p style="pmr">`                             | Right-aligned embedded paragraph                   |
+/// | `<p style="sd1–sd4">`                         | Semantic division spacer                           |
+/// | `<p style="is1|is2">`                         | Introduction section heading                       |
+/// | `<p style="imt1|imt2">`                       | Introduction main title                            |
+/// | `<p style="ib">`                              | Introduction blank line                            |
+/// | `<p style="ip|im|io|…">` (any `i`-prefix)    | Introduction paragraph (plain)                     |
+/// | `<q style="q1|q2|q3">` / `qm1|qm2`           | Poetry line with increasing left indent            |
+/// | `<q style="qc">`                              | Centred poetry line                                |
+/// | `<q style="qr">`                              | Right-aligned poetry line                          |
+/// | `<q style="qa">`                              | Acrostic heading (italic, centred)                 |
+/// | `<s style="s1">`                              | Section heading (italic, centred)                  |
+/// | `<d>`                                         | Psalm superscription (italic, de-emphasised)       |
+/// | `<b/>`                                        | Blank stanza separator                             |
+/// | `<qs>`                                        | Selah / right-aligned meditation marker            |
+/// | `<tr>` + `<th>` / `<tc>` / `<thr>` / `<tcr>` | Table row as paragraph (cells spaced)             |
+/// | `<ms>` (own element)                          | Major section heading                              |
+/// | `<mr>`                                        | Major section range reference heading              |
+/// | `<sr>`                                        | Section range reference heading                    |
 ///
-/// - Section-heading toggle (show/hide `<s>` and `<d>`) — deferred to the
-///   settings/preferences step (aligns with the design doc's display options).
-/// - Red-letter toggle for `<wj>` — deferred to Step 1.16.
-/// - Footnote pop-up/tap interaction for `<f>` — deferred to Step 2.1.
-/// - Cross-reference links for `<x>` — deferred to Phase 2.
-/// - Strong's number interactivity for `<w>` — deferred to Phase 4.
+/// ### Inline elements
+///
+/// | USFX element                                             | Rendered as                    |
+/// |----------------------------------------------------------|--------------------------------|
+/// | `<v id="N"/>`                                           | Superscript verse number       |
+/// | `<ve/>`                                                 | Verse-end — no output          |
+/// | `<wj>`                                                  | Words of Jesus — red           |
+/// | `<f caller="…">`                                        | Footnote caller only           |
+/// | `<x>`                                                   | Cross-reference — skipped      |
+/// | `<add>`                                                 | Supplied text — italic         |
+/// | `<nd>`                                                  | Divine name — small caps       |
+/// | `<it>` / `<em>`                                         | Italic                         |
+/// | `<bd>`                                                  | Bold                           |
+/// | `<bdit>`                                                | Bold-italic                    |
+/// | `<sc>`                                                  | Small caps                     |
+/// | `<sup>`                                                 | Superscript                    |
+/// | `<qt>`                                                  | OT quotation in NT — italic    |
+/// | `<tl>`                                                  | Transliteration — italic       |
+/// | `<sls>`                                                 | Secondary-language — italic    |
+/// | `<ord>`                                                 | Ordinal suffix — superscript   |
+/// | `<w>` / `<wh>` / `<wg>` / `<wa>` / `<bk>` / `<pn>` / `<png>` | Transparent pass-through |
+/// | `<cp>`                                                  | Published chapter — suppressed |
+///
+/// ## Deferred items
+///
+/// - Section-heading show/hide toggle (`<s>`, `<d>`) — settings step.
+/// - Red-letter toggle for `<wj>` — Step 1.16.
+/// - Footnote pop-up/tap interaction for `<f>` — Step 2.1.
+/// - Cross-reference links for `<x>` — Phase 2.
+/// - Strong's number interactivity for `<w>` — Phase 4.
+/// - Full HTML `<table>` layout (currently linear para-per-row) — Phase 2.
+/// - `<fig>` image references — Phase 3.
 library;
 
 import 'package:xml/xml.dart';
@@ -173,9 +212,6 @@ class _UsfxRenderer {
   /// Section-heading font size — 85 % of [baseFontSizePx].
   late final String _s1Px;
 
-  /// Major-section-heading font size — 95 % of [baseFontSizePx].
-  late final String _ms1Px;
-
   /// Tracks which verse has an open highlight span across multiple block renders.
   /// Set when opening a highlight for a verse, cleared when closing it.
   /// Allows highlights to persist across multiple paragraphs/blocks.
@@ -195,7 +231,6 @@ class _UsfxRenderer {
   }) {
     _smallPx = (baseFontSizePx * 0.65).toStringAsFixed(1);
     _s1Px = (baseFontSizePx * 0.85).toStringAsFixed(1);
-    _ms1Px = (baseFontSizePx * 0.95).toStringAsFixed(1);
   }
 
   // ---- Entry point ----
@@ -258,6 +293,50 @@ class _UsfxRenderer {
   /// to a plain `<p>` so that verse text is never silently swallowed.
   String _renderBlock(XmlElement el) {
     switch (el.name.local) {
+      case 'tr':
+        // USFM table row — rendered as a compact paragraph with cells
+        // separated by en-spaces. Full <table> layout is deferred to Phase 2;
+        // this ensures genealogy/census content is never silently lost.
+        return _renderTableRow(el);
+
+      case 'ms':
+        // Major section heading as a standalone <ms> element. Some USFX
+        // converters use this form instead of <p style="ms1">.
+        final msText = _extractTextOnly(el);
+        if (msText.isEmpty) return '';
+        final msPx = (baseFontSizePx * 0.95).toStringAsFixed(1);
+        return '<p style="'
+            'color:$headingColorCss;'
+            'font-size:${msPx}px;'
+            'font-weight:bold;'
+            'text-align:center;'
+            'margin:1.5em 0 0.6em 0;'
+            '">$msText</p>';
+
+      case 'mr':
+        // Major section range reference (e.g. "Psalms 1–41").
+        final mrText = _extractTextOnly(el);
+        if (mrText.isEmpty) return '';
+        return '<p style="'
+            'color:$headingColorCss;'
+            'font-size:${_s1Px}px;'
+            'font-style:italic;'
+            'text-align:center;'
+            'margin:0 0 0.5em 0;'
+            '">$mrText</p>';
+
+      case 'sr':
+        // Section cross-reference range (e.g. "(Matthew 5:1–7:29)").
+        final srText = _extractTextOnly(el);
+        if (srText.isEmpty) return '';
+        return '<p style="'
+            'color:$dHeadingColorCss;'
+            'font-size:${_smallPx}px;'
+            'font-style:italic;'
+            'text-align:center;'
+            'margin:0 0 0.3em 0;'
+            '">$srText</p>';
+
       case 'p':
         return _renderParagraph(el);
       case 'q':
@@ -294,14 +373,25 @@ class _UsfxRenderer {
   ///
   /// The `style` attribute (or `sfm` fallback) determines the presentation:
   ///   - `p` or `m`  → plain paragraph (no extra inline style)
-  ///   - `pi1|pi2`   → indented paragraph (inline left-margin)
-  ///   - `ms1|ms2`   → major section heading (inline bold + centred)
+  ///   - `piN` / `liN`   → indented paragraph/list item (inline left-margin)
+  ///   - `msN`           → major section heading (inline bold + centred)
+  ///   - `mtN|mteN`      → title heading (inline bold + centred)
+  ///   - `r`             → right-aligned reference line (italic)
+  ///   - `sp`            → speaker label line (bold)
+  ///   - `cl` / `cd`     → chapter labels (centred; cd italic)
+  ///
+  /// These style families come from USFM and can appear in USFX `style`/`sfm`
+  /// attributes depending on source conversion.
   String _renderParagraph(XmlElement el) {
     // USFX sometimes uses `sfm` instead of `style` to carry the paragraph type.
     // Prefer `style`; fall back to `sfm`; default to `p` (regular paragraph).
     final style = el.getAttribute('style') ?? el.getAttribute('sfm') ?? 'p';
 
     if (style.startsWith('ms')) {
+      final level = _styleLevel(style);
+      final sizeScale = level <= 1 ? 0.95 : (level == 2 ? 0.90 : 0.86);
+      final msPx = (baseFontSizePx * sizeScale).toStringAsFixed(1);
+
       // Major section heading — centred bold block.
       // Text-only extraction is used so that accidental verse-number markers
       // inside the heading element are excluded from the heading text.
@@ -309,24 +399,223 @@ class _UsfxRenderer {
       if (text.isEmpty) return '';
       return '<p style="'
           'color:$headingColorCss;'
-          'font-size:${_ms1Px}px;'
+          'font-size:${msPx}px;'
           'font-weight:bold;'
           'text-align:center;'
           'margin:1.5em 0 0.6em 0;'
           '">$text</p>';
     }
 
+    if (style.startsWith('mt') || style.startsWith('mte')) {
+      // Main-title family (e.g. mt1/mt2/mte1) used by many USFM exports for
+      // book titles and title extensions.
+      final level = _styleLevel(style);
+      final sizeScale = level <= 1 ? 1.05 : (level == 2 ? 1.00 : 0.95);
+      final mtPx = (baseFontSizePx * sizeScale).toStringAsFixed(1);
+      final text = _extractTextOnly(el);
+      if (text.isEmpty) return '';
+      return '<p style="'
+          'color:$headingColorCss;'
+          'font-size:${mtPx}px;'
+          'font-weight:bold;'
+          'text-align:center;'
+          'margin:1.2em 0 0.5em 0;'
+          '">$text</p>';
+    }
+
+    if (style == 'r') {
+      // Parallel-reference / right-side reference line.
+      final text = _extractTextOnly(el);
+      if (text.isEmpty) return '';
+      return '<p style="'
+          'color:$dHeadingColorCss;'
+          'font-size:${_smallPx}px;'
+          'font-style:italic;'
+          'text-align:right;'
+          'margin:0 0 0.35em 0;'
+          '">$text</p>';
+    }
+
+    if (style == 'sp') {
+      // Speaker identification line in poetic/dialogue material.
+      final text = _extractTextOnly(el);
+      if (text.isEmpty) return '';
+      return '<p style="'
+          'color:$bodyColorCss;'
+          'font-weight:600;'
+          'margin:0 0 0.35em 0;'
+          '">$text</p>';
+    }
+
+    if (style == 'cl' || style == 'cd') {
+      // Chapter labels and chapter-descriptive labels.
+      final text = _extractTextOnly(el);
+      if (text.isEmpty) return '';
+      final italic = style == 'cd' ? 'font-style:italic;' : '';
+      return '<p style="'
+          'color:$headingColorCss;'
+          '$italic'
+          'font-size:${_s1Px}px;'
+          'text-align:center;'
+          'margin:0.6em 0 0.4em 0;'
+          '">$text</p>';
+    }
+
+    if (style == 'pc' || style == 'pmc') {
+      final inner = _renderInlineChildren(el);
+      if (inner.isEmpty) return '';
+      return '<p style="text-align:center;">$inner</p>';
+    }
+
+    if (style == 'pmr') {
+      final inner = _renderInlineChildren(el);
+      if (inner.isEmpty) return '';
+      return '<p style="text-align:right;">$inner</p>';
+    }
+
+    // Spacer styles produce &nbsp; output regardless of child content — they
+    // must be checked before computing inner so the isEmpty guard can't eat them.
+    if (style == 'ib') {
+      // Introduction blank line — same visual gap as a stanza break.
+      return '<p style="margin:0 0 0.5em 0;">&nbsp;</p>';
+    }
+
+    if (style.startsWith('sd')) {
+      // Semantic division marker (sd1–sd4) — extra vertical space between
+      // major narrative sections in some modern translations.
+      final level = _styleLevel(style);
+      final em = (level * 0.5 + 1.0).toStringAsFixed(1);
+      return '<p style="margin:${em}em 0 0 0;">&nbsp;</p>';
+    }
+
     final inner = _renderInlineChildren(el);
     if (inner.isEmpty) return '';
 
-    if (style.startsWith('pi')) {
-      // Indented prose paragraph — pi1 is one indent level, pi2 is two.
-      final indent = style == 'pi2' ? '3.0em' : '1.5em';
+    if (style == 'lit') {
+      // Liturgical note / congregational response. Checked BEFORE startsWith('li')
+      // to prevent it from being caught by the 'li' indented-paragraph branch.
+      // Uses text-only extraction so verse numbers are excluded.
+      final litText = _extractTextOnly(el);
+      if (litText.isEmpty) return '';
+      return '<p style="'
+          'color:$dHeadingColorCss;'
+          'font-style:italic;'
+          'text-align:right;'
+          'margin:0 0 0.3em 0;'
+          '">$litText</p>';
+    }
+
+    if (style.startsWith('pi') || style.startsWith('li')) {
+      // Indented prose/list paragraph — support arbitrary level suffixes.
+      final level = _styleLevel(style);
+      final indent = '${(level * 1.5).toStringAsFixed(1)}em';
       return '<p style="margin:0 0 0.5em $indent;">$inner</p>';
     }
 
-    // `p`, `m`, and any other prose style map to a regular paragraph.
+    if (style == 'pr') {
+      // Right-aligned prose paragraph.
+      return '<p style="text-align:right;">$inner</p>';
+    }
+
+    if (style.startsWith('ph')) {
+      // Hanging-indent paragraph (common in Acts and the epistles).
+      // A positive left-margin with a matching negative text-indent pulls
+      // only the first line back to the left margin.
+      final level = _styleLevel(style);
+      final leftEm = (level * 1.5).toStringAsFixed(1);
+      final hangEm = (level * 1.5).toStringAsFixed(1);
+      return '<p style="margin:0 0 0.5em ${leftEm}em;'
+          'text-indent:-${hangEm}em;">$inner</p>';
+    }
+
+    if (style == 'sig') {
+      // Epistle signature line (e.g. closing greetings in Paul's letters).
+      return '<p style="color:$bodyColorCss;'
+          'font-style:italic;margin:0.5em 0 0.5em 0;">$inner</p>';
+    }
+
+    if (style.startsWith('is')) {
+      // Introduction section heading (is1, is2).
+      final isText = _extractTextOnly(el);
+      if (isText.isEmpty) return '';
+      return '<p style="'
+          'color:$headingColorCss;'
+          'font-size:${_s1Px}px;'
+          'font-style:italic;'
+          'text-align:center;'
+          'margin:1.2em 0 0.3em 0;'
+          '">$isText</p>';
+    }
+
+    if (style.startsWith('imt')) {
+      // Introduction main title (imt1, imt2) — styled like book title (mt).
+      final level = _styleLevel(style);
+      final imtPx =
+          (baseFontSizePx * (level <= 1 ? 1.05 : 1.00)).toStringAsFixed(1);
+      final imtText = _extractTextOnly(el);
+      if (imtText.isEmpty) return '';
+      return '<p style="'
+          'color:$headingColorCss;'
+          'font-size:${imtPx}px;'
+          'font-weight:bold;'
+          'text-align:center;'
+          'margin:1.2em 0 0.5em 0;'
+          '">$imtText</p>';
+    }
+
+    if (style.startsWith('i')) {
+      // Remaining introduction paragraph styles (ip, im, ipi, io, io1, io2,
+      // iex, imi, imq, ipq, ipr) — render as plain prose paragraphs.
+      return '<p>$inner</p>';
+    }
+
+    // `p`, `m`, `nb`, `po`, `pmo`, `pm`, `pmi`, and any other prose style
+    // all map to a regular paragraph.
     return '<p>$inner</p>';
+  }
+
+  /// Renders a `<tr>` (USFM table row) element.
+  ///
+  /// Each child cell (`<th>`, `<thr>`, `<tc>`, `<tcr>`) is rendered inline,
+  /// separated by en-spaces. Header cells are bolded; right-aligned cells
+  /// (`<thr>`, `<tcr>`) receive a float:right span. Full HTML `<table>`
+  /// generation would require multi-element lookahead across sibling `<tr>`
+  /// nodes; this approach ensures content is never lost while remaining simple.
+  String _renderTableRow(XmlElement el) {
+    final cellBuf = StringBuffer();
+    var first = true;
+
+    for (final child in el.children) {
+      if (child is! XmlElement) continue;
+      final tag = child.name.local;
+      if (tag != 'th' && tag != 'thr' && tag != 'tc' && tag != 'tcr') continue;
+
+      final cellContent = _renderInlineChildren(child);
+      if (cellContent.isEmpty) continue;
+
+      if (!first) cellBuf.write('\u2002'); // en-space between cells
+      final isHeader = tag == 'th' || tag == 'thr';
+      final isRight = tag == 'thr' || tag == 'tcr';
+
+      if (isHeader && isRight) {
+        cellBuf.write(
+            '<strong><span style="float:right;">$cellContent</span></strong>');
+      } else if (isHeader) {
+        cellBuf.write('<strong>$cellContent</strong>');
+      } else if (isRight) {
+        cellBuf.write('<span style="float:right;">$cellContent</span>');
+      } else {
+        cellBuf.write(cellContent);
+      }
+      first = false;
+    }
+
+    if (cellBuf.isEmpty) {
+      // No recognised cells — fall back to inline children (e.g. bare text).
+      final inner = _renderInlineChildren(el);
+      return inner.isNotEmpty ? '<p style="margin:0 0 0.2em 0;">$inner</p>' : '';
+    }
+    return '<p style="margin:0 0 0.2em 0;">$cellBuf</p>';
   }
 
   /// Renders a `<q>` (poetry stanza line) element.
@@ -341,14 +630,33 @@ class _UsfxRenderer {
     final levelAttr = el.getAttribute('level');
     final styleAttr = el.getAttribute('style') ?? 'q1';
 
-    final String indent;
-    if (levelAttr == '3' || styleAttr == 'q3') {
-      indent = '4.5em';
-    } else if (levelAttr == '2' || styleAttr == 'q2') {
-      indent = '3.0em';
-    } else {
-      indent = '1.5em';
+    // Named poetry variants override the default indent layout.
+    if (styleAttr == 'qc') {
+      // Centred poetry line (e.g. refrains, some Psalm doxologies).
+      return '<p style="margin:0;text-align:center;">$inner</p>';
     }
+    if (styleAttr == 'qr') {
+      // Right-aligned poetry line.
+      return '<p style="margin:0;text-align:right;">$inner</p>';
+    }
+    if (styleAttr == 'qa') {
+      // Acrostic heading — the Hebrew alphabet letter labels in Psalm 119,
+      // Lamentations, Proverbs 31, etc.
+      return '<p style="'
+          'color:$headingColorCss;'
+          'font-size:${_s1Px}px;'
+          'font-style:italic;'
+          'text-align:center;'
+          'margin:0.8em 0 0.1em 0;'
+          '">$inner</p>';
+    }
+    // qm1/qm2 (margin poetry lines) and all other q-style variants use the
+    // same level-based indent as q1/q2 — the default path below handles them.
+
+    // Prefer explicit level=...; otherwise infer from style suffix (q1/q2...).
+    final parsedLevel = int.tryParse(levelAttr ?? '') ?? _styleLevel(styleAttr);
+    final level = parsedLevel < 1 ? 1 : parsedLevel;
+    final indent = '${(level * 1.5).toStringAsFixed(1)}em';
 
     return '<p style="margin:0 0 0 $indent;">$inner</p>';
   }
@@ -547,6 +855,29 @@ class _UsfxRenderer {
             '${_renderInlineChildren(el)}'
             '</span>';
 
+      case 'it':
+      case 'em':
+        // Generic italic character styles.
+        return '<em>${_renderInlineChildren(el)}</em>';
+
+      case 'bd':
+        // Generic bold character style.
+        return '<strong>${_renderInlineChildren(el)}</strong>';
+
+      case 'bdit':
+        // Combined bold+italic character style.
+        return '<strong><em>${_renderInlineChildren(el)}</em></strong>';
+
+      case 'sc':
+        // Small-caps character style.
+        return '<span style="font-variant:small-caps;">'
+            '${_renderInlineChildren(el)}'
+            '</span>';
+
+      case 'sup':
+        // Explicit superscript character style.
+        return '<sup>${_renderInlineChildren(el)}</sup>';
+
       // ---- Strong's number wrappers ----------------------------------------
 
       case 'w':
@@ -554,6 +885,42 @@ class _UsfxRenderer {
         // Only the word text is rendered in Step 1.11; the lexicon reference
         // is dropped. Phase 4 will add dictionary-lookup interactivity.
         return _renderInlineChildren(el);
+
+      case 'qt':
+        // OT quotation in NT context — italic to distinguish from prose.
+        return '<em>${_renderInlineChildren(el)}</em>';
+
+      case 'tl':
+        // Transliterated word from another script (e.g. Aramaic in English).
+        return '<em>${_renderInlineChildren(el)}</em>';
+
+      case 'sls':
+        // Secondary-language source (e.g. Hebrew alongside a translation).
+        return '<em>${_renderInlineChildren(el)}</em>';
+
+      case 'ord':
+        // Ordinal number suffix ("st", "nd", "rd", "th").
+        return '<sup>${_renderInlineChildren(el)}</sup>';
+
+      case 'wh':
+      case 'wg':
+      case 'wa':
+        // Language-specific word wrappers (Hebrew / Greek / Aramaic).
+        // Render text transparently like the <w> Strong's wrapper.
+        return _renderInlineChildren(el);
+
+      case 'bk':
+        // Book title reference — transparent pass-through.
+        return _renderInlineChildren(el);
+
+      case 'pn':
+      case 'png':
+        // Proper name / geographic proper name — transparent pass-through.
+        return _renderInlineChildren(el);
+
+      case 'cp':
+        // Published chapter marker — structural only, no visible output.
+        return '';
 
       // ---- Fallthrough -------------------------------------------------------
 
@@ -594,6 +961,19 @@ String _escapeHtml(String text) {
       .replaceAll('<', '&lt;')
       .replaceAll('>', '&gt;')
       .replaceAll('"', '&quot;');
+}
+
+/// Extracts a trailing numeric level from a USFM-derived style token.
+///
+/// Examples:
+/// - `q1` -> 1
+/// - `q3` -> 3
+/// - `ms2` -> 2
+/// - `mt` -> 1 (no explicit suffix)
+int _styleLevel(String style) {
+  final match = RegExp(r'(\d+)$').firstMatch(style);
+  final parsed = int.tryParse(match?.group(1) ?? '1') ?? 1;
+  return parsed < 1 ? 1 : parsed;
 }
 
 // ---------------------------------------------------------------------------

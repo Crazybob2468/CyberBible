@@ -17,7 +17,6 @@
 //   Chapter tiles are rounded-square cards in a fixed 4-column grid.
 //   Each tile shows only the chapter number — clean and scannable.
 
-import 'package:flutter/foundation.dart'; // kDebugMode, debugPrint
 import 'package:flutter/material.dart';
 
 import '../models/book.dart';
@@ -141,11 +140,6 @@ class _ChapterSelectionScreenState extends State<ChapterSelectionScreen> {
         setState(() => _chapters = chapters);
       }
     } catch (e) {
-      // Log the raw exception in debug builds only — internal paths and SQL
-      // errors should not be surfaced to end users in production.
-      if (kDebugMode) {
-        debugPrint('ChapterSelectionScreen._loadChapters() failed: $e');
-      }
       if (mounted) {
         setState(() =>
             _errorMessage = 'Could not load chapters. Please try again.');
