@@ -126,20 +126,27 @@ Validation after PR review follow-up fixes:
 - `flutter test` → **151 passed**.
 
 Second PR review follow-up (PR #15, Copilot comments):
-- **Traditional quick-nav auto-scroll made layout-driven again** (`lib/screens/reading_screen.dart`):
-  - Removed fixed-height Traditional-tab offset math and restored render-object targeting with per-book row keys.
-  - Auto-scroll now computes the real row reveal offset from the mounted render tree, preventing drift under accessibility text scaling and variable row heights.
-- **Android adaptive icon foreground reference fixed** (`android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml`):
-  - Replaced missing `@drawable/ic_launcher_foreground` reference with existing `@mipmap/ic_launcher` so API 26+ adaptive icon resource resolution does not fail.
+- **Traditional quick-nav auto-scroll stabilized for off-screen books** (`lib/screens/reading_screen.dart`):
+  - Final behavior now uses fixed Traditional-tab row/header extents plus deterministic offset targeting, ensuring current-book auto-scroll works even when destination rows are not mounted yet.
+  - Section headers and rows are height-constrained to keep index-to-offset math consistent under normal device scaling.
+- **Android adaptive icon foreground reference finalized** (`android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml`):
+  - `@drawable/ic_launcher_foreground` reference retained (foreground assets exist in density-specific `drawable-*` folders); local `flutter build apk --debug` validates resource resolution.
 - **Renderer docs/perf polish** (`lib/utils/usfx_renderer.dart`):
   - Updated poetry coverage wording from `q1|q2|q3` to generalized `qN`/`qmN` families.
   - Replaced per-call `_styleLevel` regex construction with a cached top-level `RegExp` to avoid repeated allocations in hot render paths.
+- **Additional renderer perf cleanup** (`lib/utils/usfx_renderer.dart`):
+  - `_renderParagraph()` now computes `_renderInlineChildren(el)` lazily to avoid redundant inline rendering for text-only style branches.
 - **iOS AppIcon asset catalog JSON reformatted** (`ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json`):
   - Restored standard multi-line formatting for review/merge readability.
+- **Verse quick-nav intermittent Android reset mitigation** (`lib/screens/reading_screen.dart`):
+  - Highlight-triggered HTML rebuilds now preserve current scroll offset across async layout-settle frames, reducing sporadic jump-to-top behavior after manual verse jumps.
+- **Home screen cleanup** (`lib/screens/home_screen.dart`):
+  - Removed trailing whitespace noted in PR review.
 
 Validation after second PR review follow-up fixes:
 - `flutter analyze` → No issues.
 - `flutter test` → **151 passed**.
+- `flutter build apk --debug` → Build succeeded.
 
 ---
 

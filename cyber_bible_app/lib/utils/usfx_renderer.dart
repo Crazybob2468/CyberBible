@@ -383,6 +383,12 @@ class _UsfxRenderer {
   /// These style families come from USFM and can appear in USFX `style`/`sfm`
   /// attributes depending on source conversion.
   String _renderParagraph(XmlElement el) {
+        String? cachedInner;
+
+        String getInner() {
+          return cachedInner ??= _renderInlineChildren(el);
+        }
+
     // USFX sometimes uses `sfm` instead of `style` to carry the paragraph type.
     // Prefer `style`; fall back to `sfm`; default to `p` (regular paragraph).
     final style = el.getAttribute('style') ?? el.getAttribute('sfm') ?? 'p';
@@ -462,13 +468,13 @@ class _UsfxRenderer {
     }
 
     if (style == 'pc' || style == 'pmc') {
-      final inner = _renderInlineChildren(el);
+      final inner = getInner();
       if (inner.isEmpty) return '';
       return '<p style="text-align:center;">$inner</p>';
     }
 
     if (style == 'pmr') {
-      final inner = _renderInlineChildren(el);
+      final inner = getInner();
       if (inner.isEmpty) return '';
       return '<p style="text-align:right;">$inner</p>';
     }
@@ -488,9 +494,6 @@ class _UsfxRenderer {
       return '<p style="margin:${em}em 0 0 0;">&nbsp;</p>';
     }
 
-    final inner = _renderInlineChildren(el);
-    if (inner.isEmpty) return '';
-
     if (style == 'lit') {
       // Liturgical note / congregational response. Checked BEFORE startsWith('li')
       // to prevent it from being caught by the 'li' indented-paragraph branch.
@@ -504,6 +507,9 @@ class _UsfxRenderer {
           'margin:0 0 0.3em 0;'
           '">$litText</p>';
     }
+
+    final inner = getInner();
+    if (inner.isEmpty) return '';
 
     if (style.startsWith('pi') || style.startsWith('li')) {
       // Indented prose/list paragraph — support arbitrary level suffixes.

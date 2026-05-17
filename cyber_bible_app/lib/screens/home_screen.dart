@@ -267,7 +267,7 @@ class _HomeScreenState extends State<HomeScreen> {
         // 2. Subtle gold-leaf style overlay: soft corner glow, center sheen,
         //    and fine frame lines to feel traditional and elegant.
         const Positioned.fill(child: IgnorePointer(child: _GoldLeafOverlay())),
-        
+
         // 3. Side filigree swirls for a classic, ornate visual language.
         const Positioned.fill(
           child: IgnorePointer(child: _SideFiligreeOverlay()),
