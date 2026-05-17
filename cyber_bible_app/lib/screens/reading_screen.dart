@@ -901,11 +901,13 @@ class _BookChapterQuickNavSheet extends StatefulWidget {
 class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
     with SingleTickerProviderStateMixin {
   static const double _alphabeticalBookRowExtent = 56.0;
+  static const double _traditionalBookRowExtent = 56.0;
+  static const double _traditionalHeaderExtent = 42.0;
   static const Duration _quickNavScrollDuration = Duration(milliseconds: 700);
 
   /// Max frame retries while waiting for the scroll controller to attach
   /// before attempting the Traditional-tab auto-scroll.
-  static const int _maxTraditionalScrollEnsureRetries = 6;
+  static const int _maxTraditionalScrollEnsureRetries = 8;
 
   final ScrollController _traditionalScrollController = ScrollController();
   final ScrollController _alphabeticalScrollController = ScrollController();
@@ -994,11 +996,9 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
   /// Scrolls both the Traditional and Alphabetical book pickers to the
   /// current book when the quick-nav sheet opens or the active tab changes.
   ///
-  /// The Traditional list uses a pre-computed pixel offset derived from the
-  /// known widget heights of section headers and list tiles. This is fully
-  /// deterministic and avoids the GlobalKey / RenderObject context lookup
-  /// that previously failed because [TabBarView] lazily defers building
-  /// off-screen tab content (rowContext was always null).
+  /// The Traditional list now uses fixed row/header extents plus canonical
+  /// section ordering, so index-to-offset math is deterministic even when the
+  /// destination row is not mounted yet.
   void _scrollCurrentBookIntoView(List<Book> books) {
     if (books.isEmpty) return;
 
@@ -1008,8 +1008,9 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
     final alphabeticalIndex =
         alphabeticalBooks.indexWhere((b) => b.code == widget.currentBookCode);
 
-    // Scrolls the Traditional list using a calculated pixel offset.
-    // Retries a few frames if the scroll controller has no clients yet.
+    // Scrolls the Traditional list using computed offset math from fixed
+    // extents, so off-screen rows can be reached without mounted row contexts.
+    // Retries a few frames if the controller has not attached yet.
     void animateTraditionalToCurrent({int attempt = 0}) {
       if (!_traditionalScrollController.hasClients) {
         if (attempt >= _maxTraditionalScrollEnsureRetries) return;
@@ -1021,7 +1022,6 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
       }
 
       final itemOffset = _computeTraditionalScrollOffset(books);
-      // Centre the highlighted row with 72 dp of breathing room at the top.
       const desiredTopPadding = 72.0;
       final target = (itemOffset - desiredTopPadding).clamp(
         0.0,
@@ -1062,49 +1062,37 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
     });
   }
 
-  /// Computes the Y pixel offset of the current book's row within the
-  /// Traditional tab [ListView] by summing the known heights of all preceding
-  /// items (section headers and list tiles).
+  /// Computes the pixel offset of the current book row in the Traditional tab.
   ///
-  /// Heights used:
-  /// - [_QuickNavSectionHeader]: 8 dp top-margin + 10 dp top-pad + ~16 dp
-  ///   text + 8 dp bottom-pad ≈ 42 dp total.
-  /// - One-line [ListTile]: 56 dp (Material spec, unaffected by font scale).
+  /// This math is reliable because the Traditional list enforces fixed extents
+  /// for section headers and rows.
   double _computeTraditionalScrollOffset(List<Book> books) {
-    // Fixed heights matching the Traditional-tab layout.
-    const double tileH = 56.0; // Material one-line ListTile
-    const double headerH = 42.0; // _QuickNavSectionHeader (8 top-margin + 34 content)
-
     final otBooks = books.where((b) => b.testament == Testament.ot).toList();
     final ntBooks = books.where((b) => b.testament == Testament.nt).toList();
     final dcBooks = books.where((b) => b.testament == Testament.dc).toList();
 
     double y = 0;
 
-    // Scan OT section.
-    y += headerH;
+    y += _traditionalHeaderExtent;
     for (final b in otBooks) {
       if (b.code == widget.currentBookCode) return y;
-      y += tileH;
+      y += _traditionalBookRowExtent;
     }
 
-    // Scan NT section.
-    y += headerH;
+    y += _traditionalHeaderExtent;
     for (final b in ntBooks) {
       if (b.code == widget.currentBookCode) return y;
-      y += tileH;
+      y += _traditionalBookRowExtent;
     }
 
-    // Scan optional Deuterocanonical section.
     if (dcBooks.isNotEmpty) {
-      y += headerH;
+      y += _traditionalHeaderExtent;
       for (final b in dcBooks) {
         if (b.code == widget.currentBookCode) return y;
-        y += tileH;
+        y += _traditionalBookRowExtent;
       }
     }
 
-    // Book not found — scroll to top.
     return 0.0;
   }
 
@@ -1236,12 +1224,12 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
 
     final items = <Widget>[
       _QuickNavSectionHeader(label: Testament.ot.label),
-      ...otBooks.map((b) => _buildBookRow(theme, b)),
+      ...otBooks.map((b) => _buildBookRow(theme, b, forceFixedHeight: true)),
       _QuickNavSectionHeader(label: Testament.nt.label),
-      ...ntBooks.map((b) => _buildBookRow(theme, b)),
+      ...ntBooks.map((b) => _buildBookRow(theme, b, forceFixedHeight: true)),
       if (dcBooks.isNotEmpty) ...[
         _QuickNavSectionHeader(label: Testament.dc.label),
-        ...dcBooks.map((b) => _buildBookRow(theme, b)),
+        ...dcBooks.map((b) => _buildBookRow(theme, b, forceFixedHeight: true)),
       ],
       const SizedBox(height: 16),
     ];
@@ -1263,11 +1251,18 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
     );
   }
 
-  Widget _buildBookRow(ThemeData theme, Book book) {
+  Widget _buildBookRow(
+    ThemeData theme,
+    Book book, {
+    bool forceFixedHeight = false,
+  }) {
     final isCurrent = book.code == widget.currentBookCode;
-
-    return ListTile(
-      title: Text(book.nameShort),
+    final tile = ListTile(
+      title: Text(
+        book.nameShort,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
       trailing: Icon(
         Icons.chevron_right_rounded,
         color: theme.colorScheme.onSurfaceVariant,
@@ -1277,6 +1272,15 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
           ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
           : null,
       onTap: () => _selectBook(book),
+    );
+
+    if (!forceFixedHeight) {
+      return tile;
+    }
+
+    return SizedBox(
+      height: _traditionalBookRowExtent,
+      child: tile,
     );
   }
 
@@ -1330,7 +1334,7 @@ class _QuickNavSectionHeader extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
-      margin: const EdgeInsets.only(top: 8),
+      height: _BookChapterQuickNavSheetState._traditionalHeaderExtent,
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
       color: colorScheme.primaryContainer.withAlpha(100),
       child: Text(

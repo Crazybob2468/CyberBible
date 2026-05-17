@@ -37,7 +37,7 @@
 /// | `<p style="imt1|imt2">`                       | Introduction main title                            |
 /// | `<p style="ib">`                              | Introduction blank line                            |
 /// | `<p style="ip|im|io|…">` (any `i`-prefix)    | Introduction paragraph (plain)                     |
-/// | `<q style="q1|q2|q3">` / `qm1|qm2`           | Poetry line with increasing left indent            |
+/// | `<q style="qN">` / `qmN`                     | Poetry line with increasing left indent            |
 /// | `<q style="qc">`                              | Centred poetry line                                |
 /// | `<q style="qr">`                              | Right-aligned poetry line                          |
 /// | `<q style="qa">`                              | Acrostic heading (italic, centred)                 |
@@ -974,8 +974,10 @@ String _escapeHtml(String text) {
 /// - `q3` -> 3
 /// - `ms2` -> 2
 /// - `mt` -> 1 (no explicit suffix)
+final RegExp _styleLevelSuffixPattern = RegExp(r'(\d+)$');
+
 int _styleLevel(String style) {
-  final match = RegExp(r'(\d+)$').firstMatch(style);
+  final match = _styleLevelSuffixPattern.firstMatch(style);
   final parsed = int.tryParse(match?.group(1) ?? '1') ?? 1;
   return parsed < 1 ? 1 : parsed;
 }
