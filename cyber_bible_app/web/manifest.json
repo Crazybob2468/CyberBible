@@ -1,11 +1,11 @@
 {
-    "name": "cyber_bible_app",
-    "short_name": "cyber_bible_app",
+    "name": "Cyber Bible",
+    "short_name": "Cyber Bible",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#1F4D3A",
+    "theme_color": "#1F4D3A",
+    "description": "A free/libre and open source software (FLOSS) Bible study app.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -82,6 +82,125 @@ cyber_bible_app/
 
 ## Current Status
 
+**Maintenance update (post-Step 1.12 QA polish round 4): USFM style coverage hardened for all eBible.org translations**
+
+A comprehensive USFM style audit confirmed the WEB Bible's element set is fully covered. To support the full eBible.org catalogue (1,535+ translations) without silent content loss, the renderer has been expanded with all remaining USFM/USFX styles documented in the USFM specification.
+
+Changes in this pass:
+- **`lib/utils/usfx_renderer.dart` — 30+ new style cases added**:
+  - *Block elements*: `<tr>` table rows (new `_renderTableRow()` helper renders cells as inline spans with en-space separators; full `<table>` layout deferred to Phase 2); `<ms>` major section heading as a standalone element; `<mr>` major section range reference; `<sr>` section cross-reference range.
+  - *Poetry variants*: `qc` centred line; `qr` right-aligned line; `qa` acrostic heading (italic, centred, heading colour); `qm1`/`qm2` margin poetry lines (already handled via level-based indent default path).
+  - *Paragraph variants*: `pr` right-aligned; `ph1`/`ph2` hanging-indent (CSS `margin` + `text-indent`); `sig` italic epistle signature; `lit` right-aligned italic liturgical note (text-only extraction).
+  - *Introduction paragraph styles*: `ib` blank-line spacer; `is1`/`is2` section heading; `imt1`/`imt2` main title; all other `i`-prefixed styles (`ip`, `im`, `ipi`, `io`, etc.) fall through to plain paragraph.
+  - *Semantic division*: `sd1`–`sd4` produce increasing-size top-margin spacers.
+  - *Inline styles*: `qt` OT quotation (italic); `tl` transliteration (italic); `sls` secondary-language source (italic); `ord` ordinal suffix (superscript); `wh`/`wg`/`wa` language-specific word wrappers (transparent); `bk` book title reference (transparent); `pn`/`png` proper name wrappers (transparent); `cp` published chapter marker (suppressed).
+  - Updated doc-comment coverage table to document every style.
+- **`test/utils/usfx_renderer_test.dart` — 31 new tests added** (81 renderer-specific tests, 151 total):
+  - `qc`, `qr`, `qa`, `qm1` poetry variants.
+  - `tr`/`th`/`tc`/`tcr` table rows, including empty row edge-case.
+  - `ms`, `mr`, `sr` block headings.
+  - `pr`, `ph1`, `sig`, `lit` paragraph variants.
+  - `ib`, `is1`, `imt1`, `ip` introduction styles.
+  - `sd1`, `sd2` semantic division spacers.
+  - `qt`, `tl`, `sls`, `ord` inline character styles.
+  - `wh`, `wg`, `wa`, `bk`, `pn`, `png` transparent pass-throughs.
+  - `cp` suppression.
+
+Validation:
+- `dart analyze lib/utils/usfx_renderer.dart` → No issues.
+- `flutter test` → **151 passed** (up from 120 before this session).
+
+PR review follow-up (PR #15, Copilot comments):
+- **iOS project build settings corrected** (`ios/Runner.xcodeproj/project.pbxproj`):
+  - Fixed `ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS` values in Debug and Release from `AppIcon` to `YES` (boolean expected by Xcode).
+- **USFX table-row rendering hardened** (`lib/utils/usfx_renderer.dart`):
+  - Kept existing right-cell float behavior for `<thr>`/`<tcr>` but added `overflow:auto` to row paragraph wrappers to establish a block formatting context and prevent float leakage into subsequent paragraphs.
+- **Renderer doc-comment coverage table synced to implementation** (`lib/utils/usfx_renderer.dart`):
+  - Updated style-family wording from narrow examples (`pi1|pi2`, `li1|li2`, `ms1`) to generalized families (`piN`, `liN`, `msN`) and normalized the standalone `<ms>` entry.
+- **Windows metadata placeholders replaced** (`windows/runner/Runner.rc`):
+  - Updated `CompanyName` to `Cyber Bible Contributors`.
+  - Updated `LegalCopyright` to `Copyright (C) 2026 Cyber Bible Contributors. Licensed under GPL-3.0.`
+
+Validation after PR review follow-up fixes:
+- `flutter analyze` → No issues.
+- `flutter test` → **151 passed**.
+
+Second PR review follow-up (PR #15, Copilot comments):
+- **Traditional quick-nav auto-scroll stabilized for off-screen books** (`lib/screens/reading_screen.dart`):
+  - Final behavior now uses fixed Traditional-tab row/header extents plus deterministic offset targeting, ensuring current-book auto-scroll works even when destination rows are not mounted yet.
+  - Section headers and rows are height-constrained to keep index-to-offset math consistent under normal device scaling.
+- **Android adaptive icon foreground reference finalized** (`android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml`):
+  - `@drawable/ic_launcher_foreground` reference retained (foreground assets exist in density-specific `drawable-*` folders); local `flutter build apk --debug` validates resource resolution.
+- **Renderer docs/perf polish** (`lib/utils/usfx_renderer.dart`):
+  - Updated poetry coverage wording from `q1|q2|q3` to generalized `qN`/`qmN` families.
+  - Replaced per-call `_styleLevel` regex construction with a cached top-level `RegExp` to avoid repeated allocations in hot render paths.
+- **Additional renderer perf cleanup** (`lib/utils/usfx_renderer.dart`):
+  - `_renderParagraph()` now computes `_renderInlineChildren(el)` lazily to avoid redundant inline rendering for text-only style branches.
+- **iOS AppIcon asset catalog JSON reformatted** (`ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json`):
+  - Restored standard multi-line formatting for review/merge readability.
+- **Verse quick-nav intermittent Android reset mitigation** (`lib/screens/reading_screen.dart`):
+  - Highlight-triggered HTML rebuilds now preserve current scroll offset across async layout-settle frames, reducing sporadic jump-to-top behavior after manual verse jumps.
+- **Home screen cleanup** (`lib/screens/home_screen.dart`):
+  - Removed trailing whitespace noted in PR review.
+
+Validation after second PR review follow-up fixes:
+- `flutter analyze` → No issues.
+- `flutter test` → **151 passed**.
+- `flutter build apk --debug` → Build succeeded.
+
+---
+
+**Previous maintenance update (post-Step 1.12): quick-nav scroll fix + renderer hardening + app branding polish**
+
+Completed a cross-cutting maintenance pass before Step 1.13 to address real-device QA findings and reduce future translation-onboarding risk.
+
+Maintenance changes completed:
+- **Quick-nav traditional tab overscroll fixed** (`lib/screens/reading_screen.dart`):
+  - Replaced estimated fixed-row scroll math with key-based `Scrollable.ensureVisible(...)` for the current highlighted book in the Traditional tab.
+  - Root cause: Traditional tab rows are variable height (section headers + `ListTile` metrics), so index × constant row-height could overshoot on tablets/phones.
+  - Alphabetical tab logic unchanged (it uses fixed `itemExtent`, so index-to-offset remains deterministic).
+- **USFX renderer support expanded now (not deferred)** (`lib/utils/usfx_renderer.dart`):
+  - Added broader USFM-derived paragraph style handling: `liN`, `mtN/mteN`, `cl`, `cd`, `r`, `sp`, `pc`, `pmc`, `pmr`.
+  - Generalised poetry indentation to support deeper levels (`q4+`) via parsed style/level rather than hard-capping at `q3`.
+  - Added additional inline character-style support: `<it>`, `<em>`, `<bd>`, `<bdit>`, `<sc>`, `<sup>`.
+  - Kept existing behavior for already-supported WEB styles/tags unchanged.
+- **Renderer tests expanded** (`test/utils/usfx_renderer_test.dart`):
+  - Added 10 focused tests for new paragraph/title/label/reference styles, deeper poetry levels, and newly supported inline character styles.
+- **App naming and icon branding updated**:
+  - Visible app name changed to **Cyber Bible** on key platform metadata surfaces (Android launcher label, iOS display name/name, web title/manifest, Windows/Linux window/product strings).
+  - Added single-source launcher icon pipeline using `flutter_launcher_icons` and generated new green/gold Bible-themed icons from `assets/branding/cyber_bible_icon.png`.
+- **Follow-up QA polish (physical-device feedback):**
+  - Traditional quick-nav current-book auto-scroll now retries `Scrollable.ensureVisible(...)` across multiple frames when row contexts are not mounted on the first callback, fixing first-open cases that stayed at Old Testament start.
+  - Home landing screen now uses the branded app icon asset (`assets/branding/cyber_bible_icon.png`) instead of a generic Material book glyph.
+  - Icon artwork revised to reduce perspective ambiguity and use a clearer Christian-cross treatment on the right/front cover.
+
+**Follow-up QA polish round 2 (physical-device + branding feedback):**
+- **Traditional quick-nav scroll path hardened further** (`lib/screens/reading_screen.dart`):
+  - Replaced nested-scrollable `ensureVisible` targeting with explicit offset calculation against the Traditional list viewport + its own `ScrollController`, avoiding no-op behavior in the bottom-sheet/tab hierarchy.
+  - Added frame retries while waiting for row/list render objects to mount before computing offsets.
+- **Alphabetical quick-nav animation softened** (`lib/screens/reading_screen.dart`):
+  - Increased animation duration and switched to a smoother easing curve to reduce jarring perceived speed.
+- **Landing screen visual rework** (`lib/screens/home_screen.dart`):
+  - Replaced the circular badge treatment with a framed icon presentation and added a subtle gold-leaf style decorative overlay for a more traditional/elegant feel in the existing green/gold palette.
+- **Icon revision round 2** (`assets/branding/cyber_bible_icon.png` + generated launcher assets):
+  - Removed left-cover internal lines.
+  - Removed the inner rectangular cross frame to preserve open-book perspective.
+  - Strengthened cross silhouette and thickened outer gold frame to remain visually present on rounded icon masks.
+
+**Follow-up QA polish round 3 (ongoing physical-device validation):**
+- **Traditional quick-nav debug instrumentation + reveal-path update** (`lib/screens/reading_screen.dart`):
+  - Added debug-only quick-nav scroll logs to surface attempts, current offset, reveal offset, and target offset during physical-device testing.
+  - Switched Traditional current-book scrolling to viewport-based `getOffsetToReveal(...)` targeting to avoid nested-scrollable ambiguity.
+- **Landing page redesign pass** (`lib/screens/home_screen.dart`):
+  - Replaced the rounded-square icon container with an unframed icon presentation and ornamental flourishes.
+  - Increased vertical spacing between icon and title/content for a calmer hero composition.
+  - Added side filigree swirl decorations via custom painter while retaining the green/gold palette.
+
+Maintenance validation:
+- `flutter analyze lib/ test/ tools/` → No issues.
+- `flutter test` → 120 passed.
+- `test/utils/usfx_renderer_test.dart` (focused run) → 50 passed.
+
 **Phase 1 — Step 1.12 Complete: Verse navigation + sticky quick nav**
 
 Step 1.12 ✅ COMPLETE. Added exact verse navigation in `ReadingScreen` with always-visible sticky quick-nav controls.

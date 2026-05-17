@@ -45,6 +45,9 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  # flutter_launcher_icons: generates platform launcher icons from a single
+  # source image so Android/iOS/web/desktop stay visually consistent.
+  flutter_launcher_icons: ^0.14.4
   # sqlite3: used by tools/build_bible_db.dart (CLI build tool only, never
   # ships in the app). On Windows: also requires sqlite3.dll on PATH when
   # running the build tool — download sqlite-dll-win-x64 from
@@ -59,3 +62,31 @@ flutter:
 
   assets:
     - assets/bibles/
+    - assets/branding/
+
+# Launcher icon generation config.
+#
+# Run with:
+#   dart run flutter_launcher_icons
+#
+# This updates Android/iOS/web/Windows/macOS launcher icons from one source
+# image while preserving each platform's native icon size requirements.
+flutter_launcher_icons:
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  image_path: assets/branding/cyber_bible_icon.png
+  adaptive_icon_background: '#1F4D3A'
+  adaptive_icon_foreground: assets/branding/cyber_bible_icon.png
+  web:
+    generate: true
+    image_path: assets/branding/cyber_bible_icon.png
+    background_color: '#1F4D3A'
+    theme_color: '#1F4D3A'
+  windows:
+    generate: true
+    image_path: assets/branding/cyber_bible_icon.png
+    icon_size: 256
+  macos:
+    generate: true
+    image_path: assets/branding/cyber_bible_icon.png

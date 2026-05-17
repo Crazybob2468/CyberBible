@@ -13,7 +13,7 @@
 
 import 'dart:async';
 
-import 'package:flutter/foundation.dart'; // kDebugMode, defaultTargetPlatform
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart'; // RenderAbstractViewport
 import 'package:flutter/services.dart'; // SemanticsService, SystemNavigator
@@ -48,6 +48,9 @@ const Duration _verseHighlightDuration = Duration(milliseconds: 1400);
 /// Maximum post-frame retries while waiting for HtmlWidget to finish async
 /// building marker widgets for a large chapter.
 const int _maxMarkerCollectRetries = 12;
+
+/// Frame retries used to re-apply scroll offset while async HTML layout settles.
+const int _maxScrollRestoreRetries = 8;
 
 /// Minimum visible distance from viewport top before a verse is treated as
 /// the active top verse in the sticky quick-nav header.
@@ -214,9 +217,6 @@ class _ReadingScreenState extends State<ReadingScreen> {
       try {
         _verses = await BibleService.getVerses(widget.book.code, widget.chapter);
       } catch (e) {
-        if (kDebugMode) {
-          debugPrint('ReadingScreen._loadChapter() getVerses() failed: $e');
-        }
         _verses = null;
       }
 
@@ -232,9 +232,6 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
       _rebuildHtml();
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('ReadingScreen._loadChapter() failed: $e');
-      }
       if (mounted && generation == _loadGeneration) {
         setState(() {
           _contentUsfx = null;
@@ -266,6 +263,43 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
     setState(() => _html = html);
     _scheduleMarkerCollection(resetRetryCounter: true);
+  }
+
+  /// Rebuilds HTML while preserving the current chapter scroll offset.
+  ///
+  /// Highlight-driven HTML updates can briefly shrink/expand content during
+  /// async widget construction, which may clamp the scroll position to top on
+  /// some Android launches. This helper keeps the reader anchored.
+  void _rebuildHtmlPreservingScrollOffset() {
+    final targetOffset = _scrollController.hasClients ? _scrollController.offset : 0.0;
+    _rebuildHtml();
+    _restoreScrollOffsetAfterHtmlRebuild(targetOffset);
+  }
+
+  /// Re-applies [targetOffset] across a few frames while HtmlWidget layout
+  /// continues settling, preventing intermittent jump-to-top behavior.
+  void _restoreScrollOffsetAfterHtmlRebuild(
+    double targetOffset, {
+    int attempt = 0,
+  }) {
+    if (attempt > _maxScrollRestoreRetries) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+
+      final maxOffset = _scrollController.position.maxScrollExtent;
+      final clampedTarget = targetOffset.clamp(0.0, maxOffset);
+      final currentOffset = _scrollController.offset;
+
+      if ((currentOffset - clampedTarget).abs() > 1.0) {
+        _scrollController.jumpTo(clampedTarget);
+      }
+
+      _restoreScrollOffsetAfterHtmlRebuild(
+        clampedTarget,
+        attempt: attempt + 1,
+      );
+    });
   }
 
   /// Clears all marker keys/cached offsets for a fresh chapter/render cycle.
@@ -525,12 +559,12 @@ class _ReadingScreenState extends State<ReadingScreen> {
   void _applyTemporaryVerseHighlight(String verseId) {
     _highlightClearTimer?.cancel();
     _highlightedVerseId = verseId;
-    _rebuildHtml();
+    _rebuildHtmlPreservingScrollOffset();
 
     _highlightClearTimer = Timer(_verseHighlightDuration, () {
       if (!mounted || _highlightedVerseId != verseId) return;
       _highlightedVerseId = null;
-      _rebuildHtml();
+      _rebuildHtmlPreservingScrollOffset();
     });
   }
 
@@ -549,12 +583,21 @@ class _ReadingScreenState extends State<ReadingScreen> {
   void _recordManualVerseJumpInBrowserHistory(String verseId) {
     if (!kIsWeb) return;
 
+    // Route-information updates can trigger route churn on some web launches.
+    // Only touch route info when this screen is the current reading route.
+    final route = ModalRoute.of(context);
+    if (route == null || !route.isCurrent || route.settings.name != AppRoutes.reading) {
+      return;
+    }
+
     final location =
         '/read?book=${Uri.encodeQueryComponent(widget.book.code)}&chapter=${widget.chapter}&verse=${Uri.encodeQueryComponent(verseId)}';
 
     SystemNavigator.routeInformationUpdated(
       uri: Uri.parse(location),
-      replace: false,
+      // Replace instead of push to avoid intermittent full-screen reloads
+      // observed on some web launch/history states.
+      replace: true,
     );
   }
 
@@ -907,6 +950,13 @@ class _BookChapterQuickNavSheet extends StatefulWidget {
 class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
     with SingleTickerProviderStateMixin {
   static const double _alphabeticalBookRowExtent = 56.0;
+  static const double _traditionalBookRowExtent = 56.0;
+  static const double _traditionalHeaderExtent = 42.0;
+  static const Duration _quickNavScrollDuration = Duration(milliseconds: 700);
+
+  /// Max frame retries while waiting for the scroll controller to attach
+  /// before attempting the Traditional-tab auto-scroll.
+  static const int _maxTraditionalScrollEnsureRetries = 8;
 
   final ScrollController _traditionalScrollController = ScrollController();
   final ScrollController _alphabeticalScrollController = ScrollController();
@@ -963,9 +1013,6 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
       setState(() => _books = books);
       _scrollCurrentBookIntoView(books);
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('Book/chapter quick nav: failed to load books: $e');
-      }
       if (!mounted) return;
       setState(() => _error = 'Could not load books. Please try again.');
     }
@@ -987,9 +1034,6 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
         _loadingChapters = false;
       });
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('Book/chapter quick nav: failed to load chapters: $e');
-      }
       if (!mounted) return;
       setState(() {
         _loadingChapters = false;
@@ -998,36 +1042,54 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
     }
   }
 
+  /// Scrolls both the Traditional and Alphabetical book pickers to the
+  /// current book when the quick-nav sheet opens or the active tab changes.
+  ///
+  /// The Traditional list now uses fixed row/header extents plus canonical
+  /// section ordering, so index-to-offset math is deterministic even when the
+  /// destination row is not mounted yet.
   void _scrollCurrentBookIntoView(List<Book> books) {
     if (books.isEmpty) return;
 
-    final traditionalIndex = books.indexWhere((b) => b.code == widget.currentBookCode);
-    final alphabeticalBooks = [...books]..sort((a, b) => a.nameShort.compareTo(b.nameShort));
+    // Pre-sort the alphabetical list and find the current book's index.
+    final alphabeticalBooks = [...books]
+      ..sort((a, b) => a.nameShort.compareTo(b.nameShort));
     final alphabeticalIndex =
         alphabeticalBooks.indexWhere((b) => b.code == widget.currentBookCode);
 
-    void animateToIndex(ScrollController controller, int index) {
-      if (index < 0) return;
-      if (!controller.hasClients) return;
+    // Scrolls the Traditional list using computed offset math from fixed
+    // extents, so off-screen rows can be reached without mounted row contexts.
+    // Retries a few frames if the controller has not attached yet.
+    void animateTraditionalToCurrent({int attempt = 0}) {
+      if (!_traditionalScrollController.hasClients) {
+        if (attempt >= _maxTraditionalScrollEnsureRetries) return;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          animateTraditionalToCurrent(attempt: attempt + 1);
+        });
+        return;
+      }
 
-      // Scroll to place the selected/current book near the top (not centered).
-      // This keeps the book visible without scrolling too far.
-      const rowExtent = 72.0;
-      final target = (index * rowExtent) - 100; // Top margin offset for padding
-      final clamped = target.clamp(0.0, controller.position.maxScrollExtent);
+      final itemOffset = _computeTraditionalScrollOffset(books);
+      const desiredTopPadding = 72.0;
+      final target = (itemOffset - desiredTopPadding).clamp(
+        0.0,
+        _traditionalScrollController.position.maxScrollExtent,
+      );
 
-      controller.animateTo(
-        clamped,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutCubic,
+      _traditionalScrollController.animateTo(
+        target,
+        duration: _quickNavScrollDuration,
+        curve: Curves.easeInOutCubic,
       );
     }
 
+    // Scrolls the Alphabetical list using the fixed row extent — unchanged.
     void animateAlphabeticalToIndex(int index) {
       if (index < 0) return;
       if (!_alphabeticalScrollController.hasClients) return;
 
-      // Alphabetical list uses fixed itemExtent, so index->offset is exact.
+      // Alphabetical list uses fixed itemExtent, so index→offset is exact.
       final target = (index * _alphabeticalBookRowExtent) -
           (_alphabeticalBookRowExtent * 1.5);
       final clamped = target.clamp(
@@ -1037,16 +1099,50 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
 
       _alphabeticalScrollController.animateTo(
         clamped,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutCubic,
+        duration: _quickNavScrollDuration,
+        curve: Curves.easeInOutCubic,
       );
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      animateToIndex(_traditionalScrollController, traditionalIndex);
+      animateTraditionalToCurrent();
       animateAlphabeticalToIndex(alphabeticalIndex);
     });
+  }
+
+  /// Computes the pixel offset of the current book row in the Traditional tab.
+  ///
+  /// This math is reliable because the Traditional list enforces fixed extents
+  /// for section headers and rows.
+  double _computeTraditionalScrollOffset(List<Book> books) {
+    final otBooks = books.where((b) => b.testament == Testament.ot).toList();
+    final ntBooks = books.where((b) => b.testament == Testament.nt).toList();
+    final dcBooks = books.where((b) => b.testament == Testament.dc).toList();
+
+    double y = 0;
+
+    y += _traditionalHeaderExtent;
+    for (final b in otBooks) {
+      if (b.code == widget.currentBookCode) return y;
+      y += _traditionalBookRowExtent;
+    }
+
+    y += _traditionalHeaderExtent;
+    for (final b in ntBooks) {
+      if (b.code == widget.currentBookCode) return y;
+      y += _traditionalBookRowExtent;
+    }
+
+    if (dcBooks.isNotEmpty) {
+      y += _traditionalHeaderExtent;
+      for (final b in dcBooks) {
+        if (b.code == widget.currentBookCode) return y;
+        y += _traditionalBookRowExtent;
+      }
+    }
+
+    return 0.0;
   }
 
   @override
@@ -1177,12 +1273,12 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
 
     final items = <Widget>[
       _QuickNavSectionHeader(label: Testament.ot.label),
-      ...otBooks.map((b) => _buildBookRow(theme, b)),
+      ...otBooks.map((b) => _buildBookRow(theme, b, forceFixedHeight: true)),
       _QuickNavSectionHeader(label: Testament.nt.label),
-      ...ntBooks.map((b) => _buildBookRow(theme, b)),
+      ...ntBooks.map((b) => _buildBookRow(theme, b, forceFixedHeight: true)),
       if (dcBooks.isNotEmpty) ...[
         _QuickNavSectionHeader(label: Testament.dc.label),
-        ...dcBooks.map((b) => _buildBookRow(theme, b)),
+        ...dcBooks.map((b) => _buildBookRow(theme, b, forceFixedHeight: true)),
       ],
       const SizedBox(height: 16),
     ];
@@ -1204,11 +1300,18 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
     );
   }
 
-  Widget _buildBookRow(ThemeData theme, Book book) {
+  Widget _buildBookRow(
+    ThemeData theme,
+    Book book, {
+    bool forceFixedHeight = false,
+  }) {
     final isCurrent = book.code == widget.currentBookCode;
-
-    return ListTile(
-      title: Text(book.nameShort),
+    final tile = ListTile(
+      title: Text(
+        book.nameShort,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
       trailing: Icon(
         Icons.chevron_right_rounded,
         color: theme.colorScheme.onSurfaceVariant,
@@ -1218,6 +1321,15 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
           ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
           : null,
       onTap: () => _selectBook(book),
+    );
+
+    if (!forceFixedHeight) {
+      return tile;
+    }
+
+    return SizedBox(
+      height: _traditionalBookRowExtent,
+      child: tile,
     );
   }
 
@@ -1271,7 +1383,7 @@ class _QuickNavSectionHeader extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Container(
-      margin: const EdgeInsets.only(top: 8),
+      height: _BookChapterQuickNavSheetState._traditionalHeaderExtent,
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
       color: colorScheme.primaryContainer.withAlpha(100),
       child: Text(
