@@ -20,10 +20,10 @@
 /// | USFX element / style                          | Rendered as                                        |
 /// |-----------------------------------------------|-----------------------------------------------------|
 /// | `<p style="p|m|nb|po|pmo|pm|pmi">`            | Regular prose paragraph                            |
-/// | `<p style="pi1|pi2">` / `li1|li2`             | Indented paragraph                                 |
+/// | `<p style="piN">` / `liN`                     | Indented paragraph                                 |
 /// | `<p style="pr">`                              | Right-aligned paragraph                            |
 /// | `<p style="ph1|ph2">`                         | Hanging-indent paragraph                           |
-/// | `<p style="ms1">` / `<ms>`                    | Major section heading (bold, centred)              |
+/// | `<p style="msN">`                             | Major section heading (bold, centred)              |
 /// | `<p style="mt1|mt2">` / `mte`                 | Book main title (bold, centred)                    |
 /// | `<p style="r">`                               | Parallel reference line (italic, right)            |
 /// | `<p style="sp">`                              | Speaker identification line (bold)                 |
@@ -46,7 +46,7 @@
 /// | `<b/>`                                        | Blank stanza separator                             |
 /// | `<qs>`                                        | Selah / right-aligned meditation marker            |
 /// | `<tr>` + `<th>` / `<tc>` / `<thr>` / `<tcr>` | Table row as paragraph (cells spaced)             |
-/// | `<ms>` (own element)                          | Major section heading                              |
+/// | `<ms>`                                        | Major section heading                              |
 /// | `<mr>`                                        | Major section range reference heading              |
 /// | `<sr>`                                        | Section range reference heading                    |
 ///
@@ -578,7 +578,9 @@ class _UsfxRenderer {
   ///
   /// Each child cell (`<th>`, `<thr>`, `<tc>`, `<tcr>`) is rendered inline,
   /// separated by en-spaces. Header cells are bolded; right-aligned cells
-  /// (`<thr>`, `<tcr>`) receive a float:right span. Full HTML `<table>`
+  /// (`<thr>`, `<tcr>`) receive a float:right span. The row container uses
+  /// `overflow:auto` to establish a block formatting context so floated cells
+  /// do not affect following paragraphs. Full HTML `<table>`
   /// generation would require multi-element lookahead across sibling `<tr>`
   /// nodes; this approach ensures content is never lost while remaining simple.
   String _renderTableRow(XmlElement el) {
@@ -613,9 +615,11 @@ class _UsfxRenderer {
     if (cellBuf.isEmpty) {
       // No recognised cells — fall back to inline children (e.g. bare text).
       final inner = _renderInlineChildren(el);
-      return inner.isNotEmpty ? '<p style="margin:0 0 0.2em 0;">$inner</p>' : '';
+      return inner.isNotEmpty
+          ? '<p style="margin:0 0 0.2em 0;overflow:auto;">$inner</p>'
+          : '';
     }
-    return '<p style="margin:0 0 0.2em 0;">$cellBuf</p>';
+    return '<p style="margin:0 0 0.2em 0;overflow:auto;">$cellBuf</p>';
   }
 
   /// Renders a `<q>` (poetry stanza line) element.

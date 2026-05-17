@@ -89,11 +89,11 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.example" "\0"
+            VALUE "CompanyName", "Cyber Bible Contributors" "\0"
             VALUE "FileDescription", "Cyber Bible" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "cyber_bible_app" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 Cyber Bible Contributors. Licensed under GPL-3.0." "\0"
             VALUE "OriginalFilename", "cyber_bible_app.exe" "\0"
             VALUE "ProductName", "Cyber Bible" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"

@@ -110,6 +110,24 @@ Validation:
 - `dart analyze lib/utils/usfx_renderer.dart` → No issues.
 - `flutter test` → **151 passed** (up from 120 before this session).
 
+PR review follow-up (PR #15, Copilot comments):
+- **iOS project build settings corrected** (`ios/Runner.xcodeproj/project.pbxproj`):
+  - Fixed `ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS` values in Debug and Release from `AppIcon` to `YES` (boolean expected by Xcode).
+- **USFX table-row rendering hardened** (`lib/utils/usfx_renderer.dart`):
+  - Kept existing right-cell float behavior for `<thr>`/`<tcr>` but added `overflow:auto` to row paragraph wrappers to establish a block formatting context and prevent float leakage into subsequent paragraphs.
+- **Renderer doc-comment coverage table synced to implementation** (`lib/utils/usfx_renderer.dart`):
+  - Updated style-family wording from narrow examples (`pi1|pi2`, `li1|li2`, `ms1`) to generalized families (`piN`, `liN`, `msN`) and normalized the standalone `<ms>` entry.
+- **Windows metadata placeholders replaced** (`windows/runner/Runner.rc`):
+  - Updated `CompanyName` to `Cyber Bible Contributors`.
+  - Updated `LegalCopyright` to `Copyright (C) 2026 Cyber Bible Contributors. Licensed under GPL-3.0.`
+
+Validation after PR review follow-up fixes:
+- `flutter analyze` → No issues.
+- `flutter test` → **151 passed**.
+
+Deferred from PR #15 (tracked):
+- Traditional quick-nav fixed-height offset assumptions under accessibility text scaling remain a known follow-up item and are deferred to the next navigation/a11y-focused step rather than widening this maintenance PR scope.
+
 ---
 
 **Previous maintenance update (post-Step 1.12): quick-nav scroll fix + renderer hardening + app branding polish**
