@@ -84,7 +84,7 @@ cyber_bible_app/
 
 **Phase 1 — Step 1.14 Complete: Bookmarks data layer**
 
-Step 1.14 ✅ COMPLETE. Added seamless chapter-to-chapter navigation with a sliding bottom bar, horizontal swipe gestures, and keyboard shortcuts.
+Step 1.14 ✅ COMPLETE. Created the `Bookmark` model and `UserDataService`, the writable SQLite layer (`user_data.db`) for all user-generated content. Added `BookmarkSortOrder`, full CRUD API, conditional-import web/native split, and 32 unit tests.
 
 **Post-merge bug fix: nav bar hidden on short chapters**
 
@@ -179,7 +179,7 @@ CREATE TABLE bookmarks (
   created_at      INTEGER NOT NULL    -- Unix milliseconds
 );
 CREATE INDEX idx_bm_created   ON bookmarks(created_at DESC);
-CREATE INDEX idx_bm_canonical ON bookmarks(book_sort_order ASC, chapter ASC, verse ASC);
+CREATE INDEX idx_bm_canonical ON bookmarks(book_sort_order ASC, chapter ASC);
 ```
 
 ### Key numbers

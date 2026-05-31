@@ -231,11 +231,13 @@ class UserDataService {
     );
 
     // Index 2: support [BookmarkSortOrder.canonicalOrder] sort.
-    // Sorting by book position then chapter then verse without scanning the
-    // whole table.
+    // Covers the (book_sort_order, chapter) prefix, which is sufficient for
+    // the canonical ORDER BY.  The verse tier uses CAST(verse AS INTEGER) in
+    // the query, which SQLite cannot satisfy from an index, so verse is
+    // intentionally omitted here — including it would be misleading.
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_bm_canonical '
-      'ON bookmarks(book_sort_order ASC, chapter ASC, verse ASC)',
+      'ON bookmarks(book_sort_order ASC, chapter ASC)',
     );
   }
 
