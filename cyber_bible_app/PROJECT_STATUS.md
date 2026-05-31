@@ -82,9 +82,9 @@ cyber_bible_app/
 
 ## Current Status
 
-**Phase 1 — Step 1.13 Complete: Chapter-to-chapter navigation**
+**Phase 1 — Step 1.14 Complete: Bookmarks data layer**
 
-Step 1.13 ✅ COMPLETE. Added seamless chapter-to-chapter navigation with a sliding bottom bar, horizontal swipe gestures, and keyboard shortcuts.
+Step 1.14 ✅ COMPLETE. Created the `Bookmark` model and `UserDataService`, the writable SQLite layer (`user_data.db`) for all user-generated content. Added `BookmarkSortOrder`, full CRUD API, conditional-import web/native split, and 32 unit tests.
 
 **Post-merge bug fix: nav bar hidden on short chapters**
 
@@ -150,7 +150,46 @@ Deferred to Step 1.16:
 - Widget tests for the nav bar visibility lifecycle (scroll → show → timer → hide) deferred to the Step 1.16 settings pass.
 - Keyboard shortcut integration tests on real desktop / web platforms deferred to a future integration-test step.
 
-Next: Step 1.14 — Bookmarks data layer. Create `Bookmark` model and SQLite table with `addBookmark`, `removeBookmark`, and `getBookmarks` methods.
+**Step 1.14 ✅ COMPLETE — Bookmarks data layer**
+
+Created the `Bookmark` model and `UserDataService`, the writable SQLite layer for all user-generated content.
+
+### What was built
+
+- **`lib/models/bookmark.dart`** — Immutable `Bookmark` data class with 9 fields plus `fromMap` / `toMap` / `copyWith` methods and a `reference` convenience getter. `BookmarkSortOrder` enum (`recentFirst` / `canonicalOrder`) in the same file.
+- **`lib/models/models.dart`** — Added `export 'bookmark.dart'` to the barrel export.
+- **`lib/services/user_data_service.dart`** — Static singleton service. Opens / creates `user_data.db` using the same concurrent-safe `ensureOpen()` / `_openFuture ??=` pattern as `BibleService`. Uses conditional import to handle web vs. native. Public API: `addBookmark`, `removeBookmark`, `getBookmarks`, `isBookmarked`. `@visibleForTesting` hooks (`testDbPath`, `closeForTesting`) allow real CRUD tests without platform plugins.
+- **`lib/services/user_data_service_io.dart`** — Native stub: `platformSetupUserDatabaseFactory()` is a no-op because sqflite uses its native factory by default.
+- **`lib/services/user_data_service_web.dart`** — Web implementation: sets `databaseFactory = databaseFactoryFfiWebNoWebWorker` (same factory as BibleService; idempotent if set twice).
+- **`pubspec.yaml`** — Added `sqflite_common_ffi: ^2.3.4` to `dev_dependencies` for in-memory SQLite in unit tests.
+- **`test/services/user_data_service_test.dart`** — 31 tests covering pre-open guards, `Bookmark` model (round-trip, nullable fields, sort enum, `copyWith`, `reference`, equality), and full CRUD (add, remove, both sort orders, `isBookmarked`, edge cases including string verse IDs like `"1a"` and null optional fields).
+
+### Schema (`user_data.db`, version 1)
+
+```sql
+CREATE TABLE bookmarks (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  book_code       TEXT    NOT NULL,
+  book_sort_order INTEGER NOT NULL,   -- denormalised for canonical-order queries
+  chapter         INTEGER NOT NULL,
+  verse           TEXT    NOT NULL,   -- string to handle "1a", "1-2", etc.
+  verse_end       TEXT,               -- nullable; reserved for Phase 8 ranges
+  verse_text      TEXT,               -- plain-text snapshot for list preview
+  label           TEXT,               -- optional user-written title
+  created_at      INTEGER NOT NULL    -- Unix milliseconds
+);
+CREATE INDEX idx_bm_created   ON bookmarks(created_at DESC);
+CREATE INDEX idx_bm_canonical ON bookmarks(book_sort_order ASC, chapter ASC);
+```
+
+### Key numbers
+- Validation: `flutter analyze` → No issues. `flutter test` → **200 passed** (168 pre-existing + 32 new).
+
+### PR review fixes (PR #17)
+- **Verse numeric sort bug fixed** (`user_data_service.dart`): `canonicalOrder` ORDER BY changed from `verse ASC` (lexicographic) to `CAST(verse AS INTEGER) ASC, verse ASC` (numeric primary, text tiebreaker). Plain `TEXT` sort placed `"10"` before `"2"`. New regression test added.
+- **`Bookmark.==` edge case documented** (`bookmark.dart`): two unsaved bookmarks (`id == null`) at the same location compare equal; doc comment now warns callers building a `Set<Bookmark>` of pending inserts.
+
+Next: Step 1.15 — Bookmarks UI. Add a bookmark icon to the reading screen and a Bookmarks list screen accessible from the nav drawer.
 
 ---
 
@@ -548,7 +587,7 @@ The goal: open the app, pick a book and chapter, and read formatted Bible text.
 | 1.11 ✅ | **Basic text formatting** | Render Bible text with paragraph breaks, poetry indentation, section headers, and verse numbers. Use HTML rendering or rich text widgets. |
 | 1.12 ✅ | **Verse navigation** | Add ability to jump to a specific verse within a chapter (scroll to verse). Add a quick-nav control (book > chapter > verse). |
 | 1.13 ✅ | **Chapter-to-chapter navigation** | Add previous/next chapter buttons or swipe gestures to move between chapters seamlessly. |
-| 1.14 | **Bookmarks — data layer** | Create a `Bookmark` model and SQLite table. Methods: `addBookmark(reference)`, `removeBookmark(id)`, `getBookmarks()`. |
+| 1.14 ✅ | **Bookmarks — data layer** | Create a `Bookmark` model and SQLite table. Methods: `addBookmark(reference)`, `removeBookmark(id)`, `getBookmarks()`. |
 | 1.15 | **Bookmarks — UI** | Add a way to bookmark the current location (long-press or button). Build a bookmarks list screen accessible from the home screen or menu. |
 | 1.16 | **Settings screen (font & theme)** | Build a settings screen with: font size slider; light/dark/system theme toggle; accent color picker (let users choose from a curated palette of seed colors that drive the Material 3 `ColorScheme` — e.g. the default calm blue, forest green, crimson, gold, purple, etc.); words-of-Christ color toggle (red or black); section headings toggle (show/hide `<s>` and `<d>` noncanonical text, per design doc); verse numbers toggle (show/hide inline verse number superscripts); **verse format toggle** (paragraph/prose mode — text flows as natural paragraphs with inline verse superscripts — vs. verse-list mode — each verse begins on its own line; default is paragraph/prose mode). Persist all settings with `shared_preferences`. The home screen branded gradient is fixed and unaffected by theme changes; all inner screens (book selection, chapter selection, reading) respond to the chosen theme. |
 | 1.17 | **Internationalization setup** | Set up Flutter l10n with ARB files. Extract all hard-coded UI strings into localizable constants. Start with English. Add structure for additional languages. |

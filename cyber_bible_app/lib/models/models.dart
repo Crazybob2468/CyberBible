@@ -11,3 +11,5 @@ export 'book.dart';
 export 'chapter.dart';
 export 'verse.dart';
 export 'bible_schema.dart';
+// User data models (bookmarks, notes, highlights — Step 1.14+).
+export 'bookmark.dart';
