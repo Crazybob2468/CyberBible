@@ -423,6 +423,52 @@ void main() {
       },
     );
 
+    test(
+      'getBookmarks(sort: canonicalOrder) sorts verses numerically not lexicographically',
+      () async {
+        // Regression test for PR #17 review comment: verse column is TEXT, so
+        // a plain `verse ASC` ORDER BY would sort lexicographically and place
+        // "10" before "2". The fix uses CAST(verse AS INTEGER) as the primary
+        // verse sort key so numeric order is preserved.
+        final verse1 = _makeBookmark(
+          bookCode: 'PSA',
+          bookSortOrder: 19,
+          chapter: 1,
+          verse: '1',
+          createdAt: DateTime.fromMillisecondsSinceEpoch(1000),
+        );
+        final verse2 = _makeBookmark(
+          bookCode: 'PSA',
+          bookSortOrder: 19,
+          chapter: 1,
+          verse: '2',
+          createdAt: DateTime.fromMillisecondsSinceEpoch(2000),
+        );
+        final verse10 = _makeBookmark(
+          bookCode: 'PSA',
+          bookSortOrder: 19,
+          chapter: 1,
+          verse: '10',
+          createdAt: DateTime.fromMillisecondsSinceEpoch(3000),
+        );
+
+        // Insert in reverse canonical order to confirm sort is not insertion-order.
+        await UserDataService.addBookmark(verse10);
+        await UserDataService.addBookmark(verse2);
+        await UserDataService.addBookmark(verse1);
+
+        final results = await UserDataService.getBookmarks(
+          sort: BookmarkSortOrder.canonicalOrder,
+        );
+
+        expect(results, hasLength(3));
+        // Must be 1, 2, 10 — NOT 1, 10, 2 (lexicographic text order).
+        expect(results[0].verse, '1');
+        expect(results[1].verse, '2');
+        expect(results[2].verse, '10');
+      },
+    );
+
     // -- removeBookmark --
 
     test('removeBookmark removes the bookmark from the database', () async {

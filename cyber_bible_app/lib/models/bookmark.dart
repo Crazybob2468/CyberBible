@@ -244,6 +244,13 @@ class Bookmark {
   /// Two bookmarks are considered equal when they share the same [id],
   /// [bookCode], [chapter], and [verse]. Content fields ([verseText], [label])
   /// are not considered for equality because they may change after creation.
+  ///
+  /// **Edge case — unsaved bookmarks:** before a bookmark is persisted, [id]
+  /// is `null`. Two unsaved [Bookmark] objects at the same location therefore
+  /// compare equal (both `id == null`, same `bookCode`, `chapter`, `verse`).
+  /// Callers that build a `Set<Bookmark>` of pending inserts should be aware
+  /// that duplicates will be silently collapsed. In Phase 1 bookmarks are
+  /// always inserted immediately, so this edge case does not arise in practice.
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||

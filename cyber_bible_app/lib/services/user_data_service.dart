@@ -319,12 +319,19 @@ class UserDataService {
     BookmarkSortOrder sort = BookmarkSortOrder.recentFirst,
   }) async {
     // Map the sort enum to the corresponding SQL ORDER BY clause.
-    // Both clauses match an existing index (see [_createSchema]), so queries
-    // are O(log n) on the index rather than a full table scan.
+    // recentFirst matches idx_bm_created for an O(log n) index scan.
+    // canonicalOrder matches idx_bm_canonical on (book_sort_order, chapter);
+    // the CAST expression on verse breaks the index for the verse tier but the
+    // table will be tiny in Phase 1, so a partial index scan is acceptable.
+    //
+    // CAST(verse AS INTEGER) sorts verses numerically so that verse '10' comes
+    // after '2', not before it (SQLite's default TEXT sort is lexicographic).
+    // The trailing 'verse ASC' is a text tiebreaker within the same integer
+    // cast, which correctly orders segment suffixes like '1a' after '1'.
     final orderBy = switch (sort) {
       BookmarkSortOrder.recentFirst => 'created_at DESC',
       BookmarkSortOrder.canonicalOrder =>
-        'book_sort_order ASC, chapter ASC, verse ASC',
+        'book_sort_order ASC, chapter ASC, CAST(verse AS INTEGER) ASC, verse ASC',
     };
 
     final rows = await _database.query('bookmarks', orderBy: orderBy);

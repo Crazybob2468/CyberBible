@@ -82,9 +82,9 @@ cyber_bible_app/
 
 ## Current Status
 
-**Phase 1 — Step 1.13 Complete: Chapter-to-chapter navigation**
+**Phase 1 — Step 1.14 Complete: Bookmarks data layer**
 
-Step 1.13 ✅ COMPLETE. Added seamless chapter-to-chapter navigation with a sliding bottom bar, horizontal swipe gestures, and keyboard shortcuts.
+Step 1.14 ✅ COMPLETE. Added seamless chapter-to-chapter navigation with a sliding bottom bar, horizontal swipe gestures, and keyboard shortcuts.
 
 **Post-merge bug fix: nav bar hidden on short chapters**
 
@@ -183,7 +183,11 @@ CREATE INDEX idx_bm_canonical ON bookmarks(book_sort_order ASC, chapter ASC, ver
 ```
 
 ### Key numbers
-- Validation: `flutter analyze` → No issues. `flutter test` → **199 passed** (168 pre-existing + 31 new).
+- Validation: `flutter analyze` → No issues. `flutter test` → **200 passed** (168 pre-existing + 32 new).
+
+### PR review fixes (PR #17)
+- **Verse numeric sort bug fixed** (`user_data_service.dart`): `canonicalOrder` ORDER BY changed from `verse ASC` (lexicographic) to `CAST(verse AS INTEGER) ASC, verse ASC` (numeric primary, text tiebreaker). Plain `TEXT` sort placed `"10"` before `"2"`. New regression test added.
+- **`Bookmark.==` edge case documented** (`bookmark.dart`): two unsaved bookmarks (`id == null`) at the same location compare equal; doc comment now warns callers building a `Set<Bookmark>` of pending inserts.
 
 Next: Step 1.15 — Bookmarks UI. Add a bookmark icon to the reading screen and a Bookmarks list screen accessible from the nav drawer.
 
@@ -583,7 +587,7 @@ The goal: open the app, pick a book and chapter, and read formatted Bible text.
 | 1.11 ✅ | **Basic text formatting** | Render Bible text with paragraph breaks, poetry indentation, section headers, and verse numbers. Use HTML rendering or rich text widgets. |
 | 1.12 ✅ | **Verse navigation** | Add ability to jump to a specific verse within a chapter (scroll to verse). Add a quick-nav control (book > chapter > verse). |
 | 1.13 ✅ | **Chapter-to-chapter navigation** | Add previous/next chapter buttons or swipe gestures to move between chapters seamlessly. |
-| 1.14 | **Bookmarks — data layer** | Create a `Bookmark` model and SQLite table. Methods: `addBookmark(reference)`, `removeBookmark(id)`, `getBookmarks()`. |
+| 1.14 ✅ | **Bookmarks — data layer** | Create a `Bookmark` model and SQLite table. Methods: `addBookmark(reference)`, `removeBookmark(id)`, `getBookmarks()`. |
 | 1.15 | **Bookmarks — UI** | Add a way to bookmark the current location (long-press or button). Build a bookmarks list screen accessible from the home screen or menu. |
 | 1.16 | **Settings screen (font & theme)** | Build a settings screen with: font size slider; light/dark/system theme toggle; accent color picker (let users choose from a curated palette of seed colors that drive the Material 3 `ColorScheme` — e.g. the default calm blue, forest green, crimson, gold, purple, etc.); words-of-Christ color toggle (red or black); section headings toggle (show/hide `<s>` and `<d>` noncanonical text, per design doc); verse numbers toggle (show/hide inline verse number superscripts); **verse format toggle** (paragraph/prose mode — text flows as natural paragraphs with inline verse superscripts — vs. verse-list mode — each verse begins on its own line; default is paragraph/prose mode). Persist all settings with `shared_preferences`. The home screen branded gradient is fixed and unaffected by theme changes; all inner screens (book selection, chapter selection, reading) respond to the chosen theme. |
 | 1.17 | **Internationalization setup** | Set up Flutter l10n with ARB files. Extract all hard-coded UI strings into localizable constants. Start with English. Add structure for additional languages. |
