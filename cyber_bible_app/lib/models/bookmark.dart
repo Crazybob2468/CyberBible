@@ -106,11 +106,18 @@ class Bookmark {
   /// supply text.
   final String? verseText;
 
-  /// Optional user-written title (e.g. `"Morning reading"`, `"Sermon verse"`).
+  /// Optional user-written title (e.g. `"Memorize"`, `"Sermon verse"`).
   ///
-  /// `null` until the user explicitly sets a label. The UI falls back to
-  /// displaying the scripture reference when this is `null`.
+  /// Displayed as the card subtitle below the scripture reference. `null`
+  /// until the user explicitly sets a label.
   final String? label;
+
+  /// Optional free-text note attached to this bookmark.
+  ///
+  /// Displayed as secondary body text on the bookmark card below the [label].
+  /// May be multiple sentences. `null` when the user leaves the notes field
+  /// blank at creation time.
+  final String? notes;
 
   /// When this bookmark was saved.
   ///
@@ -133,6 +140,7 @@ class Bookmark {
     this.verseEnd,
     this.verseText,
     this.label,
+    this.notes,
     required this.createdAt,
   });
 
@@ -153,6 +161,7 @@ class Bookmark {
       verseEnd: map['verse_end'] as String?,
       verseText: map['verse_text'] as String?,
       label: map['label'] as String?,
+      notes: map['notes'] as String?,
       createdAt: DateTime.fromMillisecondsSinceEpoch(
         map['created_at'] as int,
       ),
@@ -180,6 +189,7 @@ class Bookmark {
       'verse_end': verseEnd,
       'verse_text': verseText,
       'label': label,
+      'notes': notes,
       'created_at': createdAt.millisecondsSinceEpoch,
     };
   }
@@ -209,6 +219,7 @@ class Bookmark {
     String? verseEnd,
     String? verseText,
     String? label,
+    String? notes,
     DateTime? createdAt,
   }) {
     return Bookmark(
@@ -220,6 +231,7 @@ class Bookmark {
       verseEnd: verseEnd ?? this.verseEnd,
       verseText: verseText ?? this.verseText,
       label: label ?? this.label,
+      notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -228,8 +240,13 @@ class Bookmark {
 
   /// Short scripture reference string, e.g. `"GEN 1:1"` or `"GEN 1:1-3"`.
   ///
-  /// Appends the [verseEnd] when this bookmark covers a verse range.
+  /// When [verse] is empty (`''`), this is a chapter-level bookmark and the
+  /// reference is formatted without a verse component (e.g. `"GEN 1"`).
+  ///
+  /// Appends [verseEnd] when this bookmark covers a verse range.
   String get reference {
+    // Chapter-level bookmarks have an empty verse string — omit the colon.
+    if (verse.isEmpty) return '$bookCode $chapter';
     final base = '$bookCode $chapter:$verse';
     if (verseEnd != null) return '$base-$verseEnd';
     return base;

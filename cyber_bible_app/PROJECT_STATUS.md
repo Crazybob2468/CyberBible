@@ -82,77 +82,52 @@ cyber_bible_app/
 
 ## Current Status
 
-**Phase 1 — Step 1.14 Complete: Bookmarks data layer**
+**Phase 1 — Step 1.15 Complete: Bookmarks UI**
 
-Step 1.14 ✅ COMPLETE. Created the `Bookmark` model and `UserDataService`, the writable SQLite layer (`user_data.db`) for all user-generated content. Added `BookmarkSortOrder`, full CRUD API, conditional-import web/native split, and 32 unit tests.
+Step 1.15 ✅ COMPLETE. Built the full Bookmarks UI on top of the Step 1.14 data layer: an Add Bookmark sheet in the reading screen, an inline bookmark glyph indicator in rendered chapter HTML, a card-based Bookmarks list tab in the book-selection screen, and verse-level deep navigation from bookmarks back to the reading screen.
 
-**Post-merge bug fix: nav bar hidden on short chapters**
+### What was built
 
-Corrected two related bugs that caused the prev/next chapter buttons to remain permanently hidden when a chapter's content fit entirely on screen (no scroll available):
+- **`lib/models/bookmark.dart`** (updated) — Added optional `notes` (free-text annotation) field. `copyWith`, `toMap`, `fromMap` all updated. `reference` getter now returns `"GEN 1"` (no colon) for chapter-level bookmarks (`verse = ''`).
+- **`lib/services/user_data_service.dart`** (updated) — Schema bumped to **v2**; migration adds `notes TEXT` column to existing `user_data.db` installations. New `getBookmarkedVerses(bookCode, chapter) → Future<Set<String>>` method returns all verse IDs with bookmarks in a chapter (empty string `''` included for chapter-level bookmarks).
+- **`lib/utils/usfx_renderer.dart`** (updated) — `renderChapterToHtml` now accepts `Set<String> bookmarkedVerses = const {}`. For each bookmarked verse a small 🔖 glyph (styled to match `verseNumColorCss`) is injected after the superscript verse number. Chapter-level bookmarks (`''` in the set) render the glyph on verse 1 as a stand-in for the whole chapter.
+- **`lib/screens/bookmarks_screen.dart`** (new) — `BookmarksTab` widget embedded in the book-selection screen's third tab. Card-based list with filter chips (All / label chips / Unlabeled), sort toggle (recent-first ↔ canonical order), and confirmation-dialog delete. Tapping a card navigates to the reading screen at the exact chapter and verse via `ReadingArgs.initialVerse`.
+- **`lib/screens/book_selection_screen.dart`** (updated) — `TabController` expanded from 2 → 3 tabs; "Bookmarks" tab added with `const BookmarksTab()`.
+- **`lib/screens/reading_screen.dart`** (updated):
+  - `Set<String> _bookmarkedVerses` state field loaded alongside `_loadChapter`.
+  - `bookmarkedVerses: _bookmarkedVerses` passed to `renderChapterToHtml`.
+  - Bookmark `IconButton` (`Icons.bookmark_add_rounded`) added to `SliverAppBar.actions`.
+  - `_openAddBookmarkSheet()` method shows `AddBookmarkSheet` as `showModalBottomSheet`.
+  - `AddBookmarkSheet` class (new, in same file) — bottom sheet with verse selector (reuses `_VerseListPickerSheet`), label field, notes field, Cancel/Save buttons.
+  - `widget.initialVerse` constructor parameter added; used to jump to a specific verse after chapter loads.
+- **`lib/app_routes.dart`** (updated) — `ReadingArgs` gains optional `String? initialVerse` field; `routes.dart` passes it through to `ReadingScreen`.
 
-- **`_isNearChapterEnd`** — Removed the early `return false` for `maxScrollExtent <= 0` and replaced it with `return true`. When content fits without scrolling the reader is simultaneously at the start and end, so the bar must be pinned.
-- **`_scheduleChapterNavBarVisibilityCheck()`** — New helper called at the end of every `_rebuildHtml()`. Schedules a post-frame callback that shows the nav bar immediately when `_isNearChapterEnd` is true. This is the missing trigger — `_onScroll` never fires on non-scrollable chapters.
+### Schema (`user_data.db`)
 
-Validation: `flutter analyze` → No issues. `flutter test` → 168 passed.
+| Version | Change | When |
+|---------|--------|------|
+| v1 | Initial schema (Step 1.14) | Fresh installs up to Step 1.14 |
+| v2 | `ALTER TABLE bookmarks ADD COLUMN notes TEXT` | Upgrade for v1 installs; included in fresh installs from Step 1.15 |
 
-**Post-merge bug fix: Page Up/Down consumed at Bible boundaries (PR review)**
+### Key numbers
+- **209 tests passing** (200 pre-existing + 9 new Step 1.15 tests).
+- New tests cover: `notes` round-trip (model + DB), `copyWith(notes:)`, chapter-level `reference` getter (`verse = ''`), `getBookmarkedVerses` pre-open guard, empty-chapter result, multi-verse result, chapter-level bookmark in result, deduplication.
+- `flutter analyze` → No issues.
 
-`_onKeyEvent` was returning `KeyEventResult.handled` even when the destination ref was `null` (Genesis 1 has no previous; last Revelation chapter has no next). This swallowed Page Up/Down and prevented the scroll view from using them for normal scrolling. Fixed to return `KeyEventResult.ignored` when the destination is null.
+### Accessibility checklist
+- Bookmark card: full card content announced as a single `Semantics` node with a descriptive concatenated label; delete icon has `excludeSemantics: true` inside the card's `Semantics` wrapper but has its own `Semantics(label: 'Delete bookmark …')` node so the action is still reachable.
+- Filter chips: `materialTapTargetSize: MaterialTapTargetSize.padded` ensures ≥ 48 dp tap targets.
+- Sort toggle: `Semantics(label: 'Sort order: … Tap to toggle.')` announced for screen readers.
+- `AddBookmarkSheet` action buttons: `Semantics(label: '…', button: true)` on Cancel and Save.
+- Bookmark AppBar icon: `tooltip: 'Add bookmark'` provides the accessible label.
 
-Validation: `flutter analyze` → No issues. `flutter test` → 168 passed.
+Next: Step 1.16 — User preferences screen (font size, theme, red letters toggle).
 
-Step 1.13 implementation:
+---
 
-- **New pure utility**: `lib/utils/chapter_nav.dart`
-  - `computeChapterNavigation()` — pure function that resolves the previous and next `ReadingArgs` destinations from a canonical book list and chapter map. Handles all edge cases: within-book steps, cross-book boundaries, Bible start/end, non-contiguous chapter numbers, missing chapter data.
-  - `ChapterNavResult` — holds the optional `prev` and `next` destinations.
+**Previous: Step 1.14 ✅ COMPLETE — Bookmarks data layer**
 
-- **Sliding chapter nav bar** (`lib/screens/reading_screen.dart`):
-  - Hidden on load; slides up from the bottom on the first scroll event via `AnimatedSlide`.
-  - Auto-hides after 5 seconds of scroll inactivity (`_chapterNavBarAutoHideDelay`).
-  - Stays pinned when the reader is within `_chapterEndProximityPx` (160 px) of the chapter bottom, so the buttons are always accessible when the user finishes a chapter.
-  - Shows destination labels ("← Genesis 3" / "Exodus 1 →") in `OutlinedButton` widgets; buttons are hidden when no navigation is available (Genesis 1 / last chapter of Revelation).
-  - Respects `MediaQuery.padding.bottom` so buttons sit above the system navigation bar.
-  - Bottom content padding increased from 48 px to `_contentBottomPadding` (108 px) so the last verse is never hidden behind the bar.
 
-- **Horizontal swipe gesture** (`lib/screens/reading_screen.dart`):
-  - Outer `GestureDetector` with `behavior: HitTestBehavior.translucent` detects `onHorizontalDragEnd`.
-  - Swipe left (finger moves left, negative velocity > 350 px/s) = next chapter.
-  - Swipe right (positive velocity > 350 px/s) = previous chapter.
-
-- **Keyboard shortcuts** (`lib/screens/reading_screen.dart`):
-  - Outer `Focus(autofocus: true, onKeyEvent: ...)` captures arrow / page keys.
-  - Arrow Left / Page Up → previous chapter.
-  - Arrow Right / Page Down → next chapter.
-  - All other keys propagate normally (Up/Down, Enter, etc.).
-
-- **Cross-book boundary navigation**:
-  - Past the last chapter of a book → first chapter of the next book.
-  - Before the first chapter of a book → last chapter of the preceding book.
-  - At Genesis 1 → Previous button hidden; at Revelation last chapter → Next button hidden.
-
-- **Push routing**: each chapter navigation pushes a new route (`Navigator.pushNamed`) so the OS back button walks back through the chapter history. Scroll position is always reset to top for new chapters.
-
-- **Adjacent chapter pre-loading** (`_loadNavInfo()`): runs concurrently with `_loadChapter()` in `initState`. Calls `BibleService.getChapters()` for the current book and any adjacent books at chapter boundaries (at most 2–3 DB calls). Failures are silently handled — buttons remain disabled rather than surfacing an error to the reader.
-
-Step 1.13 tests and validation:
-- **New test file**: `test/utils/chapter_nav_test.dart` — 17 unit tests covering:
-  - Bible start (Genesis 1: no prev) and end (last Revelation chapter: no next).
-  - Within-book prev/next navigation.
-  - Cross-book boundary navigation in both directions.
-  - Non-contiguous chapter numbers (gap in Revelation).
-  - Empty book list, unknown book code, chapter not in list, missing chapter data for current and adjacent books.
-  - Single-book and single-chapter edge cases.
-- `dart analyze lib/ test/ tools/` → No issues.
-- `flutter test` → **168 passed** (151 pre-existing + 17 new).
-
-Deferred to Step 1.16:
-- Widget tests for the nav bar visibility lifecycle (scroll → show → timer → hide) deferred to the Step 1.16 settings pass.
-- Keyboard shortcut integration tests on real desktop / web platforms deferred to a future integration-test step.
-
-**Step 1.14 ✅ COMPLETE — Bookmarks data layer**
-
-Created the `Bookmark` model and `UserDataService`, the writable SQLite layer for all user-generated content.
 
 ### What was built
 
@@ -588,7 +563,7 @@ The goal: open the app, pick a book and chapter, and read formatted Bible text.
 | 1.12 ✅ | **Verse navigation** | Add ability to jump to a specific verse within a chapter (scroll to verse). Add a quick-nav control (book > chapter > verse). |
 | 1.13 ✅ | **Chapter-to-chapter navigation** | Add previous/next chapter buttons or swipe gestures to move between chapters seamlessly. |
 | 1.14 ✅ | **Bookmarks — data layer** | Create a `Bookmark` model and SQLite table. Methods: `addBookmark(reference)`, `removeBookmark(id)`, `getBookmarks()`. |
-| 1.15 | **Bookmarks — UI** | Add a way to bookmark the current location (long-press or button). Build a bookmarks list screen accessible from the home screen or menu. |
+| 1.15 ✅ | **Bookmarks — UI** | Add a way to bookmark the current location (long-press or button). Build a bookmarks list screen accessible from the home screen or menu. |
 | 1.16 | **Settings screen (font & theme)** | Build a settings screen with: font size slider; light/dark/system theme toggle; accent color picker (let users choose from a curated palette of seed colors that drive the Material 3 `ColorScheme` — e.g. the default calm blue, forest green, crimson, gold, purple, etc.); words-of-Christ color toggle (red or black); section headings toggle (show/hide `<s>` and `<d>` noncanonical text, per design doc); verse numbers toggle (show/hide inline verse number superscripts); **verse format toggle** (paragraph/prose mode — text flows as natural paragraphs with inline verse superscripts — vs. verse-list mode — each verse begins on its own line; default is paragraph/prose mode). Persist all settings with `shared_preferences`. The home screen branded gradient is fixed and unaffected by theme changes; all inner screens (book selection, chapter selection, reading) respond to the chosen theme. |
 | 1.17 | **Internationalization setup** | Set up Flutter l10n with ARB files. Extract all hard-coded UI strings into localizable constants. Start with English. Add structure for additional languages. |
 

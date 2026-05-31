@@ -84,7 +84,11 @@ class UserDataService {
   ///
   /// Increment this when adding or changing tables / columns, and add the
   /// corresponding migration logic to [_upgradeSchema].
-  static const int _schemaVersion = 1;
+  ///
+  /// Version history:
+  ///   1 — initial schema (bookmarks table, created in Step 1.14)
+  ///   2 — added `notes TEXT` column (Step 1.15)
+  static const int _schemaVersion = 2;
 
   /// SQL statement that creates the `bookmarks` table on a fresh install.
   ///
@@ -94,10 +98,12 @@ class UserDataService {
   ///   - `book_sort_order` — denormalised from `books.sort_order`; avoids a
   ///                         cross-DB JOIN when querying in canonical order.
   ///   - `chapter`         — 1-based chapter number.
-  ///   - `verse`           — string to handle "1a", "1-2" etc.
+  ///   - `verse`           — string to handle "1a", "1-2" etc.; empty string
+  ///                         (`''`) means the bookmark is for the whole chapter.
   ///   - `verse_end`       — nullable; reserved for Phase 8 verse-range highlights.
   ///   - `verse_text`      — plain-text snapshot for list preview; nullable.
   ///   - `label`           — optional user-written title; nullable.
+  ///   - `notes`           — optional free-text note; nullable. Added in v2.
   ///   - `created_at`      — Unix milliseconds; used for most-recent-first sort.
   static const String _createBookmarksTable = '''
     CREATE TABLE IF NOT EXISTS bookmarks (
@@ -109,6 +115,7 @@ class UserDataService {
       verse_end       TEXT,
       verse_text      TEXT,
       label           TEXT,
+      notes           TEXT,
       created_at      INTEGER NOT NULL
     )
   ''';
@@ -243,19 +250,21 @@ class UserDataService {
 
   /// Migrates the schema when the app is updated with a new [_schemaVersion].
   ///
-  /// Currently a no-op because [_schemaVersion] is 1 and [_createSchema]
-  /// handles all fresh installs.  Add `ALTER TABLE` / `CREATE TABLE` statements
-  /// here in future steps, guarded by `if (oldVersion < N)` checks.
+  /// Each migration block is guarded by `if (oldVersion < N)` so it is
+  /// skipped for installs that were already at that version.
   static Future<void> _upgradeSchema(
     Database db,
     int oldVersion,
     int newVersion,
   ) async {
-    // No migrations needed for version 1.
-    // Example for a future version 2:
-    //   if (oldVersion < 2) {
-    //     await db.execute('ALTER TABLE bookmarks ADD COLUMN color INTEGER');
-    //   }
+    // v1 → v2 (Step 1.15): add the optional free-text notes column.
+    // ALTER TABLE is safe here because the column is nullable with no DEFAULT,
+    // which SQLite treats as adding a null-padded column to all existing rows.
+    if (oldVersion < 2) {
+      await db.execute(
+        'ALTER TABLE bookmarks ADD COLUMN notes TEXT',
+      );
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -338,6 +347,31 @@ class UserDataService {
 
     final rows = await _database.query('bookmarks', orderBy: orderBy);
     return rows.map(Bookmark.fromMap).toList();
+  }
+
+  /// Returns the set of verse strings that have at least one bookmark in the
+  /// given [bookCode] + [chapter].
+  ///
+  /// Used by the reading screen to determine which verse numbers should show
+  /// an inline bookmark indicator in the rendered HTML. Returns an empty set
+  /// when no bookmarks exist for that chapter.
+  ///
+  /// Chapter-level bookmarks (stored with `verse = ''`) are included in the
+  /// returned set as an empty string, so the renderer can attach the indicator
+  /// to verse 1 as a stand-in.
+  ///
+  /// Throws [StateError] if [ensureOpen] has not been called.
+  static Future<Set<String>> getBookmarkedVerses(
+    String bookCode,
+    int chapter,
+  ) async {
+    final rows = await _database.query(
+      'bookmarks',
+      columns: ['verse'],
+      where: 'book_code = ? AND chapter = ?',
+      whereArgs: [bookCode, chapter],
+    );
+    return rows.map((r) => r['verse'] as String).toSet();
   }
 
   /// Returns `true` if there is at least one bookmark at the given location.

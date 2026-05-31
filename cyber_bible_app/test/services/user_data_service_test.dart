@@ -41,6 +41,7 @@ import 'package:cyber_bible_app/services/user_data_service.dart';
 /// [bookSortOrder] — defaults to `1` (Genesis is the first book).
 /// [chapter]       — defaults to `1`.
 /// [verse]         — defaults to `'1'`.
+/// [notes]         — optional free-text note; defaults to `null`.
 /// [createdAt]     — defaults to Unix epoch (1970-01-01 00:00:00 UTC) for
 ///                   deterministic ordering in sort tests.
 Bookmark _makeBookmark({
@@ -51,6 +52,7 @@ Bookmark _makeBookmark({
   String? verseEnd,
   String? verseText = 'In the beginning God created the heavens and the earth.',
   String? label,
+  String? notes,
   DateTime? createdAt,
 }) {
   return Bookmark(
@@ -61,6 +63,7 @@ Bookmark _makeBookmark({
     verseEnd: verseEnd,
     verseText: verseText,
     label: label,
+    notes: notes,
     createdAt: createdAt ?? DateTime.fromMillisecondsSinceEpoch(0),
   );
 }
@@ -135,6 +138,14 @@ void main() {
         throwsA(isA<StateError>()),
       );
     });
+
+    test('getBookmarkedVerses throws StateError before ensureOpen', () {
+      // getBookmarkedVerses should guard like all other query methods.
+      expect(
+        () async => UserDataService.getBookmarkedVerses('GEN', 1),
+        throwsA(isA<StateError>()),
+      );
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -152,6 +163,7 @@ void main() {
       verseEnd: '12',
       verseText: 'Blessed are the poor in spirit...',
       label: 'Beatitudes',
+      notes: 'Study this passage for Sunday sermon.',
       createdAt: DateTime.fromMillisecondsSinceEpoch(1_700_000_000_000),
     );
 
@@ -177,6 +189,7 @@ void main() {
       expect(map['verse_end'], '12');
       expect(map['verse_text'], 'Blessed are the poor in spirit...');
       expect(map['label'], 'Beatitudes');
+      expect(map['notes'], 'Study this passage for Sunday sermon.');
       // created_at stored as Unix milliseconds.
       expect(map['created_at'], 1_700_000_000_000);
     });
@@ -201,6 +214,7 @@ void main() {
       expect(restored.verseEnd, fullBookmark.verseEnd);
       expect(restored.verseText, fullBookmark.verseText);
       expect(restored.label, fullBookmark.label);
+      expect(restored.notes, fullBookmark.notes);
       expect(
         restored.createdAt.millisecondsSinceEpoch,
         fullBookmark.createdAt.millisecondsSinceEpoch,
@@ -218,17 +232,27 @@ void main() {
         'verse_end': null,
         'verse_text': null,
         'label': null,
+        'notes': null,
         'created_at': 0,
       };
       final bm = Bookmark.fromMap(map);
       expect(bm.verseEnd, isNull);
       expect(bm.verseText, isNull);
       expect(bm.label, isNull);
+      expect(bm.notes, isNull);
     });
 
     test('reference getter returns book:chapter:verse string', () {
       final bm = _makeBookmark(bookCode: 'PSA', chapter: 23, verse: '1');
       expect(bm.reference, 'PSA 23:1');
+    });
+
+    test('reference getter returns book-space-chapter (no colon) for chapter-level bookmarks', () {
+      // Chapter-level bookmarks use verse = '' (empty string). The reference
+      // should be "GEN 1" (no colon, no trailing content) to distinguish them
+      // from verse-level bookmarks.
+      final bm = _makeBookmark(bookCode: 'GEN', chapter: 1, verse: '');
+      expect(bm.reference, 'GEN 1');
     });
 
     test('reference getter includes verseEnd for a range', () {
@@ -249,6 +273,26 @@ void main() {
       expect(updated.bookCode, fullBookmark.bookCode);
       expect(updated.verse, fullBookmark.verse);
       expect(updated.id, fullBookmark.id);
+    });
+
+    test('copyWith(notes: ...) replaces notes field', () {
+      // Verify that the notes field can be updated via copyWith while all
+      // other fields remain unchanged.
+      final updated = fullBookmark.copyWith(notes: 'Updated note');
+      expect(updated.notes, 'Updated note');
+      expect(updated.label, fullBookmark.label);
+      expect(updated.verse, fullBookmark.verse);
+    });
+
+    test('notes field round-trips through toMap/fromMap', () {
+      // Create a bookmark with a non-null notes value, serialise, deserialise,
+      // and confirm the notes string is preserved exactly.
+      final bm = _makeBookmark(notes: 'Test note content');
+      final map = bm.toMap();
+      expect(map['notes'], 'Test note content');
+
+      final restored = Bookmark.fromMap(map);
+      expect(restored.notes, 'Test note content');
     });
 
     test('equality is based on id, bookCode, chapter, verse', () {
@@ -563,7 +607,7 @@ void main() {
         bookSortOrder: 1,
         chapter: 1,
         verse: '1',
-        // verseEnd, verseText, and label all omitted (null).
+        // verseEnd, verseText, label, and notes all omitted (null).
         createdAt: DateTime.fromMillisecondsSinceEpoch(0),
       );
       final id = await UserDataService.addBookmark(bm);
@@ -573,6 +617,73 @@ void main() {
       expect(fetched.verseEnd, isNull);
       expect(fetched.verseText, isNull);
       expect(fetched.label, isNull);
+      expect(fetched.notes, isNull);
+    });
+
+    // -- notes field --
+
+    test('notes field round-trips through the database', () async {
+      // Save a bookmark that has a non-null notes value, then reload and verify.
+      final bm = _makeBookmark(notes: 'A persistent study note');
+      final id = await UserDataService.addBookmark(bm);
+
+      final all = await UserDataService.getBookmarks();
+      final fetched = all.firstWhere((b) => b.id == id);
+      expect(fetched.notes, 'A persistent study note');
+    });
+
+    // -- getBookmarkedVerses --
+
+    test('getBookmarkedVerses returns empty set when chapter has no bookmarks',
+        () async {
+      // No bookmarks added — result should be an empty set.
+      final set = await UserDataService.getBookmarkedVerses('GEN', 1);
+      expect(set, isEmpty);
+    });
+
+    test('getBookmarkedVerses returns correct verse IDs for a chapter',
+        () async {
+      // Add two verse-level bookmarks in GEN 1.
+      await UserDataService.addBookmark(
+          _makeBookmark(bookCode: 'GEN', chapter: 1, verse: '1'));
+      await UserDataService.addBookmark(
+          _makeBookmark(bookCode: 'GEN', chapter: 1, verse: '3'));
+      // Add a bookmark in a different chapter — must not appear.
+      await UserDataService.addBookmark(
+          _makeBookmark(bookCode: 'GEN', chapter: 2, verse: '5'));
+
+      final set = await UserDataService.getBookmarkedVerses('GEN', 1);
+      expect(set, containsAll(['1', '3']));
+      expect(set, isNot(contains('5')));
+      expect(set.length, 2);
+    });
+
+    test('getBookmarkedVerses includes empty string for chapter-level bookmarks',
+        () async {
+      // A chapter-level bookmark has verse = ''. The set must include ''.
+      await UserDataService.addBookmark(
+          _makeBookmark(bookCode: 'MAT', chapter: 5, verse: ''));
+      // Also add a verse-level bookmark in the same chapter.
+      await UserDataService.addBookmark(
+          _makeBookmark(bookCode: 'MAT', chapter: 5, verse: '3'));
+
+      final set = await UserDataService.getBookmarkedVerses('MAT', 5);
+      expect(set, contains(''));   // chapter-level
+      expect(set, contains('3'));  // verse-level
+    });
+
+    test('getBookmarkedVerses deduplicates when same verse bookmarked twice',
+        () async {
+      // A verse bookmarked twice with different labels still appears once.
+      await UserDataService.addBookmark(
+          _makeBookmark(bookCode: 'GEN', chapter: 1, verse: '1', label: 'A'));
+      await UserDataService.addBookmark(
+          _makeBookmark(bookCode: 'GEN', chapter: 1, verse: '1', label: 'B'));
+
+      final set = await UserDataService.getBookmarkedVerses('GEN', 1);
+      expect(set, contains('1'));
+      // Set deduplication means the verse appears only once.
+      expect(set.length, 1);
     });
   });
 }

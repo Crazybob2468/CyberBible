@@ -92,6 +92,7 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
         builder: (_) => ReadingScreen(
           book: readingArgs.book,
           chapter: readingArgs.chapter,
+          initialVerse: readingArgs.initialVerse,
         ),
       );
 
