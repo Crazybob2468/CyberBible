@@ -65,41 +65,70 @@ wait for confirmation before proceeding.
    `docs/design-document.md` and the architecture decisions in `PROJECT_STATUS.md`?
    Call out any deviation and discuss before continuing.
 
-6. **[AGENT] Core documents current** — Do `PROJECT_STATUS.md` and
+6. **[AGENT] Accessibility (a11y) compliance** — Does every new or changed UI element
+   meet full accessibility requirements? Check all of the following before marking
+   this item complete:
+   - **Semantic labels** — Every interactive widget (buttons, icons, images) has a
+     meaningful label that a screen reader will announce. Icon-only or chevron-only
+     buttons must have an explicit `Semantics(label: ...)` or `tooltip`; labels must
+     include directional/contextual context, not just a destination reference.
+   - **Tap targets** — Every tappable element is at least 48 × 48 dp (Material
+     minimum). Use `VisualDensity` or `minimumSize` on buttons if needed.
+   - **Contrast** — Foreground text and icons use the correct `on*` color token for
+     their background (e.g. `onPrimaryContainer` on `primaryContainer`). Never leave
+     the default `colorScheme.primary` foreground on a `primaryContainer` background.
+   - **Focus order** — On desktop/web, tab-focus order matches the visual reading
+     order. Use `FocusTraversalOrder` or `FocusScope` only when the default is wrong.
+   - **Keyboard operability** — Every action reachable by touch/mouse is also
+     reachable by keyboard. Do not consume key events (return `handled`) unless
+     the action will actually execute — never swallow keys at boundaries or when
+     modifier keys are held.
+   - **Dynamic text** — All text scales with `textScaleFactor`; no layout breaks at
+     200 % scale. Avoid hard-coded pixel font sizes for body text.
+   - **No information conveyed by color alone** — Icons, borders, or labels must
+     supplement any color-only distinction.
+   - **ExcludeSemantics / MergeSemantics used correctly** — `excludeSemantics: true`
+     on a `Semantics` inside a button child suppresses redundant child labels while
+     keeping the button's own tap-action node intact. Never wrap an entire interactive
+     widget in `ExcludeSemantics` — that strips the tap action from the a11y tree.
+   If any item above is not met, fix it before proceeding. Note any items that are
+   intentionally deferred (with justification) in `PROJECT_STATUS.md`.
+
+7. **[AGENT] Core documents current** — Do `PROJECT_STATUS.md` and
    `docs/design-document.md` still accurately reflect the project? Update them
    if anything has changed or been clarified during this step.
 
 ### Group 2 — Wrap-up and Handoff
 
-7. **[AGENT] PROJECT_STATUS.md updated** — Update the "Current Status" section to
+8. **[AGENT] PROJECT_STATUS.md updated** — Update the "Current Status" section to
    reflect the completed step, what was built, key numbers/facts, and what comes next.
 
-8. **[AGENT] Agent memory updated** — Update `/memories/repo/cyber-bible.md` if
+9. **[AGENT] Agent memory updated** — Update `/memories/repo/cyber-bible.md` if
    your agent environment provides that path (this is an external VS Code Copilot
    memory path, not a tracked file in this repository). If that path is unavailable,
    record the same handoff context in `cyber_bible_app/PROJECT_STATUS.md` so future
    agents can recover the necessary context without re-reading all files.
 
-9. **[HUMAN] Commit and push** — Prompt the developer to commit all changes with a
-   clear commit message and push to the remote. Do not do this yourself.
-   Wait for the developer to confirm before continuing.
+10. **[HUMAN] Commit and push** — Prompt the developer to commit all changes with a
+    clear commit message and push to the remote. Do not do this yourself.
+    Wait for the developer to confirm before continuing.
 
-10. **[HUMAN] Open a PR** — Prompt the developer to open a Pull Request for this step.
+11. **[HUMAN] Open a PR** — Prompt the developer to open a Pull Request for this step.
     Offer to draft the PR title and description. Wait for confirmation.
 
-11. **[HUMAN] PR reviewed** — Remind the developer to request a Copilot code review
+12. **[HUMAN] PR reviewed** — Remind the developer to request a Copilot code review
     on the PR. Do not start the next step until the developer confirms the review
     is complete.
 
-12. **[HUMAN] PR comments addressed** — Ask the developer whether any review comments
+13. **[HUMAN] PR comments addressed** — Ask the developer whether any review comments
     need to be addressed before merging. Do not start the next step until the
     developer confirms all comments are resolved or intentionally deferred.
 
-13. **[HUMAN] PR merged** — Ask the developer to merge the PR into the main branch
+14. **[HUMAN] PR merged** — Ask the developer to merge the PR into the main branch
     once all review comments are resolved. Do not start the next step until the
     developer confirms the merge is complete.
 
-14. **[HUMAN] New branch created** — Before starting the next step, prompt the
+15. **[HUMAN] New branch created** — Before starting the next step, prompt the
     developer to create and check out a new branch named for that step
     (e.g. `step/1.6-bundle-bible`). Do not begin any code changes until the
     developer confirms they are on the new branch.

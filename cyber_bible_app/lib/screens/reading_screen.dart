@@ -335,17 +335,33 @@ class _ReadingScreenState extends State<ReadingScreen> {
   }
 
   /// Schedules a post-frame check that pins the chapter nav bar when the
-  /// chapter content fits entirely on screen without scrolling.
+  /// chapter content fits entirely on screen without scrolling, or starts the
+  /// auto-hide timer if previously short content has grown (e.g. after a font
+  /// size increase) so the bar now correctly fades out.
   ///
   /// Called after every HTML render so the check runs once layout has settled
   /// and [ScrollController.position.maxScrollExtent] reflects the real size.
   void _scheduleChapterNavBarVisibilityCheck() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      // _isNearChapterEnd now returns true for maxScrollExtent == 0, so this
-      // correctly handles both "short chapter" and "scrolled near the bottom".
-      if (_isNearChapterEnd && !_chapterNavBarVisible) {
-        setState(() => _chapterNavBarVisible = true);
+
+      if (_isNearChapterEnd) {
+        // Chapter fits on screen (maxScrollExtent == 0) or user is near the
+        // bottom — pin the bar so they can always proceed to the next chapter.
+        if (!_chapterNavBarVisible) {
+          setState(() => _chapterNavBarVisible = true);
+        }
+      } else if (_chapterNavBarVisible) {
+        // Content has grown since the bar was pinned (e.g. font size increase
+        // made a previously short chapter scrollable).  The bar is visible but
+        // should no longer be permanently pinned — start the auto-hide timer
+        // so it fades out naturally after the standard inactivity delay.
+        _chapterNavBarHideTimer?.cancel();
+        _chapterNavBarHideTimer = Timer(_chapterNavBarAutoHideDelay, () {
+          if (mounted && !_isNearChapterEnd) {
+            setState(() => _chapterNavBarVisible = false);
+          }
+        });
       }
     });
   }
@@ -1003,6 +1019,18 @@ class _ReadingScreenState extends State<ReadingScreen> {
               ],
             );
 
+      // Semantic label includes the directional context ("Next chapter:" /
+      // "Previous chapter:") that the chevron icon provides visually but that
+      // screen readers would otherwise never announce.  The visible button
+      // text is kept short (just the reference) so it fits in the bar.
+      //
+      // The Semantics widget is placed INSIDE the button child (not around the
+      // OutlinedButton) so the button keeps its own tap-action semantics node.
+      // excludeSemantics on the inner node suppresses the Row's text/icon so
+      // TalkBack/VoiceOver announces only the single directional label.
+      final direction = isNext ? 'Next chapter' : 'Previous chapter';
+      final semanticLabel = '$direction: $label';
+
       return Expanded(
         child: OutlinedButton(
           onPressed: () => _navigateToChapter(args),
@@ -1015,7 +1043,11 @@ class _ReadingScreenState extends State<ReadingScreen> {
             alignment: isNext ? Alignment.centerRight : Alignment.centerLeft,
             visualDensity: VisualDensity.compact,
           ),
-          child: buttonChild,
+          child: Semantics(
+            label: semanticLabel,
+            excludeSemantics: true,
+            child: buttonChild,
+          ),
         ),
       );
     }
@@ -1768,24 +1800,36 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
       itemCount: chapters.length,
       itemBuilder: (context, index) {
         final chapter = chapters[index];
-        return Material(
-          color: theme.colorScheme.primaryContainer,
-          borderRadius: BorderRadius.circular(12),
-          child: InkWell(
+        // Semantics wrapper announces "Chapter N" so screen readers give full
+        // context, not just the bare number "1".  button: true + ExcludeSemantics
+        // on the inner text mirrors the _ChapterTile pattern used on the main
+        // chapter-selection screen.
+        return Semantics(
+          label: 'Chapter $chapter',
+          button: true,
+          child: Material(
+            color: theme.colorScheme.primaryContainer,
             borderRadius: BorderRadius.circular(12),
-            onTap: () {
-              Navigator.pop(
-                context,
-                _BookChapterSelectionResult(book: book, chapter: chapter),
-              );
-            },
-            child: Center(
-              child: Text(
-                '$chapter',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
-                  color: theme.colorScheme.onPrimaryContainer,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () {
+                Navigator.pop(
+                  context,
+                  _BookChapterSelectionResult(book: book, chapter: chapter),
+                );
+              },
+              // ExcludeSemantics suppresses the bare Text number so TalkBack
+              // only announces the label from the outer Semantics node above.
+              child: ExcludeSemantics(
+                child: Center(
+                  child: Text(
+                    '$chapter',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.onPrimaryContainer,
+                    ),
+                  ),
                 ),
               ),
             ),
