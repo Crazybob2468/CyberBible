@@ -156,6 +156,18 @@ String renderChapterToHtml(
   /// Use the `script_direction` column from `bible_info`, lowercased
   /// (the database stores `'LTR'` / `'RTL'`).
   String scriptDirection = 'ltr',
+
+  /// Set of verse IDs that have at least one bookmark in this chapter.
+  ///
+  /// When provided, a small inline bookmark glyph (🔖) is injected
+  /// immediately after the verse superscript for each verse in this set.
+  /// Chapter-level bookmarks are stored with `verse = ''` (empty string);
+  /// the renderer maps these to verse `'1'` (attaches the indicator to the
+  /// first verse number as a stand-in for the whole chapter).
+  ///
+  /// The glyph is non-interactive — it is a visual hint only.  Tapping to
+  /// manage bookmarks is done via the AppBar bookmark icon.
+  Set<String> bookmarkedVerses = const <String>{},
 }) {
   // Delegate to the internal renderer class, which holds the colour/font
   // values as fields so every private method can access them without
@@ -171,6 +183,7 @@ String renderChapterToHtml(
     highlightedVerseBackgroundCss: highlightedVerseBackgroundCss,
     langCode: langCode,
     scriptDirection: scriptDirection,
+    bookmarkedVerses: bookmarkedVerses,
   ).render(usfxFragment);
 }
 
@@ -200,6 +213,13 @@ class _UsfxRenderer {
   final String? highlightedVerseId;
   final String highlightedVerseBackgroundCss;
 
+  /// Set of verse IDs that should display an inline bookmark indicator.
+  ///
+  /// An empty string in this set represents a chapter-level bookmark;
+  /// the renderer maps it to verse `'1'` so the glyph appears on the first
+  /// verse as a stand-in for the whole chapter.
+  final Set<String> bookmarkedVerses;
+
   /// BCP 47 language code for the HTML `lang` attribute (e.g. `'en'`).
   final String langCode;
 
@@ -228,6 +248,7 @@ class _UsfxRenderer {
     this.highlightedVerseBackgroundCss = 'rgba(255, 235, 59, 0.45)',
     this.langCode = 'en',
     this.scriptDirection = 'ltr',
+    this.bookmarkedVerses = const <String>{},
   }) {
     _smallPx = (baseFontSizePx * 0.65).toStringAsFixed(1);
     _s1Px = (baseFontSizePx * 0.85).toStringAsFixed(1);
@@ -802,13 +823,34 @@ class _UsfxRenderer {
         // paragraphs to be fully highlighted.
         // id="v{N}" provides a stable HTML anchor so Step 1.12 (jump-to-verse)
         // can scroll directly to any verse without additional DOM queries.
-        return '$markerTag<sup id="v${_escapeHtml(id)}" style="'
+        final sup = '$markerTag<sup id="v${_escapeHtml(id)}" style="'
             'color:$verseNumColorCss;'
             'font-size:${_smallPx}px;'
             'font-weight:bold;'
             'vertical-align:super;'
             'margin-right:1px;'
             '">${_escapeHtml(id)}</sup>\u200A';
+
+        // Inject a non-interactive bookmark glyph immediately after the
+        // verse superscript when this verse (or its chapter, mapped to '1')
+        // has a saved bookmark.  Chapter-level bookmarks use verse = '' and
+        // are displayed on verse 1 as a stand-in for the whole chapter.
+        final isBookmarked = bookmarkedVerses.contains(id) ||
+            (id == '1' && bookmarkedVerses.contains(''));
+        if (isBookmarked) {
+          // The bookmark glyph is styled to match the verse-number color for
+          // visual consistency. font-size slightly larger than the superscript
+          // so it reads clearly without dominating the verse number.
+          final glyph = '<span style="'
+              'color:$verseNumColorCss;'
+              'font-size:${(baseFontSizePx * 0.75).toStringAsFixed(1)}px;'
+              'vertical-align:middle;'
+              'margin-right:3px;'
+              '" aria-label="bookmarked"'  // screen-reader label
+              '>\uD83D\uDD16</span>';
+          return '$sup$glyph';
+        }
+        return sup;
 
       case 've':
         // Verse end milestone — purely structural, produces no visible output.

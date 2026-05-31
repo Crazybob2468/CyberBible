@@ -27,8 +27,10 @@ import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart
 
 import '../app_routes.dart';
 import '../models/book.dart';
+import '../models/bookmark.dart';
 import '../models/verse.dart';
 import '../services/bible_service.dart';
+import '../services/user_data_service.dart';
 import '../utils/chapter_nav.dart';
 import '../utils/usfx_renderer.dart';
 
@@ -107,7 +109,19 @@ class ReadingScreen extends StatefulWidget {
   /// The 1-based chapter number to display.
   final int chapter;
 
-  const ReadingScreen({super.key, required this.book, required this.chapter});
+  /// Optional verse ID to scroll to after the chapter loads.
+  ///
+  /// Supplied by [BookmarksTab] when the user taps a verse-level bookmark
+  /// so the reading screen opens at the exact verse rather than the chapter
+  /// top.  `null` means no automatic scroll (normal chapter navigation).
+  final String? initialVerse;
+
+  const ReadingScreen({
+    super.key,
+    required this.book,
+    required this.chapter,
+    this.initialVerse,
+  });
 
   @override
   State<ReadingScreen> createState() => _ReadingScreenState();
@@ -167,6 +181,13 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
   /// Verse ID currently highlighted in HTML output after a jump.
   String? _highlightedVerseId;
+
+  /// Set of verse IDs (within the current chapter) that have bookmarks.
+  ///
+  /// An empty string in this set represents a chapter-level bookmark;
+  /// the renderer maps it to verse '1' for display.
+  /// Loaded in [_loadChapter] alongside the chapter content.
+  Set<String> _bookmarkedVerses = const <String>{};
 
   /// Timer that clears temporary verse highlight state.
   Timer? _highlightClearTimer;
@@ -295,7 +316,32 @@ class _ReadingScreenState extends State<ReadingScreen> {
         _topVerse = _verseOrder.first;
       }
 
+      // Load bookmark indicators for this chapter so the renderer can show
+      // a glyph next to bookmarked verse numbers.
+      try {
+        await UserDataService.ensureOpen();
+        final verseSet = await UserDataService.getBookmarkedVerses(
+            widget.book.code, widget.chapter);
+        if (mounted && generation == _loadGeneration) {
+          setState(() => _bookmarkedVerses = verseSet);
+        }
+      } catch (_) {
+        // Bookmark indicator failure is non-fatal — the chapter still renders.
+      }
+
       _rebuildHtml();
+
+      // If an initial verse was provided (e.g. navigation from BookmarksTab),
+      // jump to it after a short delay to let layout complete.
+      if (widget.initialVerse != null && widget.initialVerse!.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
+          if (!mounted) return;
+          await Future<void>.delayed(const Duration(milliseconds: 300));
+          if (mounted) {
+            await _jumpToVerse(widget.initialVerse!, manualSelection: false);
+          }
+        });
+      }
     } catch (e) {
       if (mounted && generation == _loadGeneration) {
         setState(() {
@@ -324,6 +370,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
       baseFontSizePx: 17.0,
       highlightedVerseId: _highlightedVerseId,
       highlightedVerseBackgroundCss: _colorToCss(colorScheme.tertiaryContainer.withAlpha(191)),
+      bookmarkedVerses: _bookmarkedVerses,
     );
 
     setState(() => _html = html);
@@ -507,6 +554,49 @@ class _ReadingScreenState extends State<ReadingScreen> {
   }
 
   // ---- Quick navigation actions ----
+
+  /// Opens the Add Bookmark bottom sheet for the current chapter.
+  ///
+  /// Defaults to a chapter-level bookmark (verse = ''). The user can choose
+  /// a specific verse inside the sheet using the verse picker.
+  /// After saving, the bookmark indicators in the HTML are refreshed.
+  Future<void> _openAddBookmarkSheet() async {
+    final saved = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => AddBookmarkSheet(
+        book: widget.book,
+        chapter: widget.chapter,
+        // Pass verse list so the sheet can offer a verse picker.
+        verses: _verses ?? const <Verse>[],
+      ),
+    );
+
+    if (!mounted || saved != true) return;
+
+    // Refresh bookmark indicators for the newly saved bookmark.
+    try {
+      await UserDataService.ensureOpen();
+      final verses = await UserDataService.getBookmarkedVerses(
+          widget.book.code, widget.chapter);
+      if (mounted) {
+        setState(() => _bookmarkedVerses = verses);
+        _rebuildHtml();
+      }
+    } catch (_) {
+      // Silently ignore — the snackbar from AddBookmarkSheet is sufficient.
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Bookmark saved'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
 
   /// Opens the two-step quick-nav sheet (book -> chapter) and pushes a new
   /// reading route when the user confirms a destination chapter.
@@ -1094,6 +1184,14 @@ class _ReadingScreenState extends State<ReadingScreen> {
               style: const TextStyle(fontWeight: FontWeight.w700),
             )
           : null,
+      // Bookmark action — opens the add-bookmark bottom sheet.
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.bookmark_add_rounded),
+          tooltip: 'Add bookmark',
+          onPressed: _openAddBookmarkSheet,
+        ),
+      ],
       flexibleSpace: FlexibleSpaceBar(
         titlePadding: EdgeInsets.zero,
         background: _buildExpandedHeader(colorScheme),
@@ -2000,3 +2098,328 @@ class _VerseListPickerSheet extends StatelessWidget {
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Add Bookmark sheet — Step 1.15
+// ---------------------------------------------------------------------------
+
+/// Bottom sheet for creating a new bookmark at the current reading location.
+///
+/// Defaults to a chapter-level bookmark (verse = '').  The user can tap
+/// "Change verse" to select a specific verse from a picker.
+///
+/// Fields:
+///   • Verse selector — shows "Full chapter" or a specific verse; tappable
+///   • Label — single-line optional text field (hint: "Memorize")
+///   • Notes — multi-line optional text field (hint: "Add a note...")
+///
+/// Returns `true` via [Navigator.pop] when a bookmark is successfully saved,
+/// so the calling screen can refresh bookmark indicators.
+class AddBookmarkSheet extends StatefulWidget {
+  /// The book being read, used for the bookmark's [Bookmark.bookCode] and
+  /// display title.
+  final Book book;
+
+  /// The current chapter number, used as the bookmark's chapter.
+  final int chapter;
+
+  /// All verses in the chapter.  Passed to the verse picker sheet so the
+  /// user can select a specific verse.  May be empty when the chapter has
+  /// no verse data (e.g. an intro page), in which case verse selection is
+  /// disabled.
+  final List<Verse> verses;
+
+  const AddBookmarkSheet({
+    super.key,
+    required this.book,
+    required this.chapter,
+    required this.verses,
+  });
+
+  @override
+  State<AddBookmarkSheet> createState() => _AddBookmarkSheetState();
+}
+
+class _AddBookmarkSheetState extends State<AddBookmarkSheet> {
+  // ---- State ----
+
+  /// Currently selected verse ID; empty string means the full chapter.
+  String _selectedVerse = '';
+
+  /// Text controllers for label and notes inputs.
+  final TextEditingController _labelController = TextEditingController();
+  final TextEditingController _notesController = TextEditingController();
+
+  /// Whether a save is in progress (prevents double-taps).
+  bool _saving = false;
+
+  // ---- Lifecycle ----
+
+  @override
+  void dispose() {
+    _labelController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  // ---- Verse picker ----
+
+  /// Opens the verse list picker and updates [_selectedVerse].
+  Future<void> _pickVerse() async {
+    if (widget.verses.isEmpty) return;
+
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      builder: (_) => _VerseListPickerSheet(
+        verses: widget.verses,
+        // If nothing selected yet, highlight the first verse.
+        currentVerse: _selectedVerse.isEmpty
+            ? widget.verses.first.verse
+            : _selectedVerse,
+      ),
+    );
+
+    if (picked != null && mounted) {
+      setState(() => _selectedVerse = picked);
+    }
+  }
+
+  // ---- Save ----
+
+  /// Saves the bookmark and closes the sheet.
+  Future<void> _save() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+
+    try {
+      await UserDataService.ensureOpen();
+
+      // Build a plain-text verse snippet for the card display in BookmarksTab.
+      // For chapter-level bookmarks (verse = '') there is no verse text.
+      String? verseText;
+      if (_selectedVerse.isNotEmpty) {
+        try {
+          final match = widget.verses
+              .where((v) => v.verse == _selectedVerse)
+              .firstOrNull;
+          verseText = match?.textPlain;
+        } catch (_) {
+          verseText = null;
+        }
+      }
+
+      final bm = Bookmark(
+        bookCode: widget.book.code,
+        bookSortOrder: widget.book.sortOrder,
+        chapter: widget.chapter,
+        verse: _selectedVerse,
+        // verseEnd is null in Phase 1 — verse-range bookmarks are Phase 8.
+        // Using null (not '') ensures the reference getter does not append a
+        // trailing dash (the getter checks `if (verseEnd != null)`).
+        verseEnd: null,
+        verseText: verseText,
+        label: _labelController.text.trim().isEmpty
+            ? null
+            : _labelController.text.trim(),
+        notes: _notesController.text.trim().isEmpty
+            ? null
+            : _notesController.text.trim(),
+        createdAt: DateTime.now(),
+      );
+
+      await UserDataService.addBookmark(bm);
+
+      if (mounted) {
+        // Return true to signal the caller that a bookmark was saved.
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not save bookmark.')),
+        );
+      }
+    }
+  }
+
+  // ---- Build ----
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    // Display label for the current verse selection.
+    final verseLabel = _selectedVerse.isEmpty
+        ? 'Full chapter: ${widget.book.nameShort} ${widget.chapter}'
+        : '${widget.book.nameShort} ${widget.chapter}:$_selectedVerse';
+
+    return Padding(
+      // Inset for the on-screen keyboard.
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ---- Sheet handle / title ----
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: colorScheme.onSurfaceVariant.withAlpha(80),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Add Bookmark',
+                style: textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // ---- Verse selector ----
+              // Shows which location will be bookmarked; tapping opens the
+              // verse list picker.  Disabled when there are no verses.
+              InkWell(
+                onTap: widget.verses.isNotEmpty ? _pickVerse : null,
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                        color: colorScheme.outline.withAlpha(128)),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.bookmark_outline_rounded,
+                          color: colorScheme.primary, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          verseLabel,
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurface,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      if (widget.verses.isNotEmpty)
+                        Icon(Icons.chevron_right_rounded,
+                            color: colorScheme.onSurfaceVariant),
+                    ],
+                  ),
+                ),
+              ),
+
+              // "Full chapter" reset chip — only shown when a specific verse
+              // is selected, so the user can revert to chapter-level.
+              if (_selectedVerse.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Semantics(
+                  label: 'Switch to full chapter bookmark',
+                  button: true,
+                  child: ActionChip(
+                    avatar: const Icon(Icons.layers_rounded, size: 16),
+                    label: const Text('Full chapter'),
+                    onPressed: () => setState(() => _selectedVerse = ''),
+                    visualDensity: VisualDensity.compact,
+                    materialTapTargetSize: MaterialTapTargetSize.padded,
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 20),
+
+              // ---- Label field ----
+              TextField(
+                controller: _labelController,
+                decoration: InputDecoration(
+                  labelText: 'Label (optional)',
+                  hintText: 'Memorize',
+                  border: const OutlineInputBorder(),
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 12),
+                ),
+                textCapitalization: TextCapitalization.words,
+                maxLines: 1,
+                // Dismiss keyboard on submit; move focus to notes field.
+                textInputAction: TextInputAction.next,
+              ),
+
+              const SizedBox(height: 16),
+
+              // ---- Notes field ----
+              TextField(
+                controller: _notesController,
+                decoration: InputDecoration(
+                  labelText: 'Notes (optional)',
+                  hintText: 'Add a note...',
+                  border: const OutlineInputBorder(),
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 12),
+                  alignLabelWithHint: true,
+                ),
+                maxLines: 4,
+                minLines: 2,
+                textCapitalization: TextCapitalization.sentences,
+                textInputAction: TextInputAction.newline,
+              ),
+
+              const SizedBox(height: 24),
+
+              // ---- Action buttons ----
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  // Cancel
+                  Semantics(
+                    label: 'Cancel, close bookmark sheet',
+                    button: true,
+                    child: TextButton(
+                      onPressed: _saving
+                          ? null
+                          : () => Navigator.pop(context, false),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Save
+                  Semantics(
+                    label: 'Save bookmark',
+                    button: true,
+                    child: FilledButton(
+                      onPressed: _saving ? null : _save,
+                      child: _saving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2),
+                            )
+                          : const Text('Save'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+

@@ -1,6 +1,6 @@
-// Book selection screen — Step 1.8.
+// Book selection screen — Step 1.8 / updated Step 1.15.
 //
-// Lists all books of the Bible in two tabs:
+// Lists all books of the Bible in three tabs:
 //
 //   • "Traditional" tab — books grouped in canonical order under three
 //     section headers: Old Testament, New Testament, and (only when the
@@ -11,6 +11,10 @@
 //     Deuterocanon books appear inline in the sorted list — no special
 //     handling needed.
 //
+//   • "Bookmarks" tab — card list of saved bookmarks with label-based
+//     filtering and sort toggle. Provided by BookmarksTab in
+//     bookmarks_screen.dart.
+//
 // Tapping any book navigates to `ChapterSelectionScreen` via the named
 // route `AppRoutes.chapters`.
 
@@ -19,12 +23,14 @@ import 'package:flutter/material.dart';
 import '../models/book.dart';
 import '../app_routes.dart';
 import '../services/bible_service.dart';
+import 'bookmarks_screen.dart';
 
 // ---------------------------------------------------------------------------
 // Main screen widget
 // ---------------------------------------------------------------------------
 
-/// Displays all books of the Bible in Traditional and Alphabetical tabs.
+/// Displays all books of the Bible in Traditional, Alphabetical, and
+/// Bookmarks tabs.
 ///
 /// Books are loaded from [BibleService] when the screen first mounts.
 /// While loading, a centered activity indicator is shown. If loading fails,
@@ -46,7 +52,7 @@ class _BookSelectionScreenState extends State<BookSelectionScreen>
   /// Non-null when the book-load operation threw an error.
   String? _errorMessage;
 
-  /// Controls the two-tab layout (Traditional / Alphabetical).
+  /// Controls the three-tab layout (Traditional / Alphabetical / Bookmarks).
   late TabController _tabController;
 
   // ---- Lifecycle ----
@@ -55,8 +61,8 @@ class _BookSelectionScreenState extends State<BookSelectionScreen>
   void initState() {
     super.initState();
 
-    // Create a tab controller for the two tabs.
-    _tabController = TabController(length: 2, vsync: this);
+    // Create a tab controller for the three tabs.
+    _tabController = TabController(length: 3, vsync: this);
 
     // Load books as soon as the screen mounts.
     _loadBooks();
@@ -122,6 +128,7 @@ class _BookSelectionScreenState extends State<BookSelectionScreen>
           tabs: const [
             Tab(text: 'Traditional'),
             Tab(text: 'Alphabetical'),
+            Tab(text: 'Bookmarks'),
           ],
         ),
       ),
@@ -160,13 +167,16 @@ class _BookSelectionScreenState extends State<BookSelectionScreen>
       );
     }
 
-    // Books loaded — build the two-tab view.
+    // Books loaded — build the three-tab view.
     final books = _books!;
     return TabBarView(
       controller: _tabController,
       children: [
         _TraditionalTab(books: books, onBookTapped: _onBookTapped),
         _AlphabeticalTab(books: books, onBookTapped: _onBookTapped),
+        // BookmarksTab manages its own loading state independently of the
+        // book list; it only needs UserDataService, not BibleService books.
+        const BookmarksTab(),
       ],
     );
   }

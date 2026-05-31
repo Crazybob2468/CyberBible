@@ -62,7 +62,10 @@ class ChapterArgs {
 
 /// Arguments passed to [AppRoutes.reading].
 ///
-/// Contains both the [Book] and the chapter number to display.
+/// Contains the [Book], the chapter number to display, and an optional
+/// [initialVerse] to scroll to immediately after the chapter loads.
+/// [initialVerse] is used when navigating from the Bookmarks tab so the
+/// reading screen can jump directly to the saved verse.
 class ReadingArgs {
   /// The book being read.
   final Book book;
@@ -70,5 +73,12 @@ class ReadingArgs {
   /// The 1-based chapter number to display.
   final int chapter;
 
-  const ReadingArgs({required this.book, required this.chapter});
+  /// Optional verse ID string to scroll to on load (e.g. `'3'` for verse 3).
+  ///
+  /// When provided, the reading screen will scroll so that the target verse
+  /// is visible immediately after rendering.  `null` means no automatic scroll
+  /// (normal chapter-level navigation).
+  final String? initialVerse;
+
+  const ReadingArgs({required this.book, required this.chapter, this.initialVerse});
 }
