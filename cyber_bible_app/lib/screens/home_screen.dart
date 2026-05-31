@@ -386,6 +386,11 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Image.asset(
               'assets/branding/cyber_bible_icon.png',
               fit: BoxFit.contain,
+              // This is the same artwork as the launcher icon — purely
+              // decorative on the landing screen.  Exclude it from the
+              // accessibility tree so screen readers skip it rather than
+              // announcing a useless "image" node.
+              excludeFromSemantics: true,
             ),
           ),
         ],
@@ -763,7 +768,10 @@ class _GoldButton extends StatelessWidget {
           child: Padding(
             padding: EdgeInsets.symmetric(
               horizontal: large ? 40 : 24,
-              vertical: large ? 18 : 14,
+              // Minimum 16 px vertical padding so the non-large (Retry)
+              // button renders at ≥ 48 dp height — the Material tap-target
+              // minimum.  14 px was ~46 dp which was just below the threshold.
+              vertical: large ? 18 : 16,
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,

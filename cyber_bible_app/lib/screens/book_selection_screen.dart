@@ -404,7 +404,13 @@ class _BookTile extends StatelessWidget {
 
     return ListTile(
       // Abbreviation badge on the left — gives each row a visual anchor.
-      leading: _AbbreviationBadge(abbreviation: book.abbreviation),
+      // ExcludeSemantics prevents the badge from being merged into the
+      // ListTile's semantic node, which would cause screen readers to
+      // announce the abbreviation *and* the full name redundantly
+      // (e.g., "Gen Genesis 50 ch. button").
+      leading: ExcludeSemantics(
+        child: _AbbreviationBadge(abbreviation: book.abbreviation),
+      ),
       // Book name as the primary content, slightly bolder than default.
       title: Text(
         book.nameShort,
