@@ -852,9 +852,25 @@ class _ReadingScreenState extends State<ReadingScreen> {
   /// (Genesis 1 has no previous; last Revelation chapter has no next) the
   /// destination is null and we must return [KeyEventResult.ignored] so the
   /// platform and scroll view can still use Page Up/Down for normal scrolling.
+  ///
+  /// IMPORTANT: modifier-key combinations (Alt+Left for browser back,
+  /// Ctrl+Right for word-jump, etc.) must also be ignored.  We only intercept
+  /// the plain, unmodified arrow/page keys to avoid hijacking well-known
+  /// platform and browser shortcuts on desktop and web.
   KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
     // Only act on initial key-down events to avoid double-firing on key repeat.
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
+
+    // Pass through any combo that involves a modifier key (Alt, Ctrl, Meta/Cmd,
+    // Shift).  Examples that must not be consumed:
+    //   Alt+Left/Right  — browser history back/forward on web
+    //   Ctrl+Left/Right — word-by-word cursor movement on desktop
+    //   Shift+Page Down — extend text selection
+    final HardwareKeyboard kb = HardwareKeyboard.instance;
+    if (kb.isAltPressed || kb.isControlPressed ||
+        kb.isMetaPressed || kb.isShiftPressed) {
+      return KeyEventResult.ignored;
+    }
 
     if (event.logicalKey == LogicalKeyboardKey.arrowLeft ||
         event.logicalKey == LogicalKeyboardKey.pageUp) {
@@ -991,6 +1007,11 @@ class _ReadingScreenState extends State<ReadingScreen> {
         child: OutlinedButton(
           onPressed: () => _navigateToChapter(args),
           style: OutlinedButton.styleFrom(
+            // The bar background is primaryContainer, so use the matching
+            // contrast tokens for foreground text/icons and the border.
+            // This ensures legibility across all Material 3 custom themes.
+            foregroundColor: colorScheme.onPrimaryContainer,
+            side: BorderSide(color: colorScheme.onPrimaryContainer.withAlpha(80)),
             alignment: isNext ? Alignment.centerRight : Alignment.centerLeft,
             visualDensity: VisualDensity.compact,
           ),
