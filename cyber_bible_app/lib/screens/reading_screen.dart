@@ -846,18 +846,26 @@ class _ReadingScreenState extends State<ReadingScreen> {
   /// Arrow Left / Page Up  → previous chapter.
   /// Arrow Right / Page Down → next chapter.
   /// All other keys are ignored so normal text/scroll shortcuts still work.
+  ///
+  /// IMPORTANT: only return [KeyEventResult.handled] when navigation will
+  /// actually occur (i.e. the destination is non-null).  At Bible boundaries
+  /// (Genesis 1 has no previous; last Revelation chapter has no next) the
+  /// destination is null and we must return [KeyEventResult.ignored] so the
+  /// platform and scroll view can still use Page Up/Down for normal scrolling.
   KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
     // Only act on initial key-down events to avoid double-firing on key repeat.
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
 
     if (event.logicalKey == LogicalKeyboardKey.arrowLeft ||
         event.logicalKey == LogicalKeyboardKey.pageUp) {
+      if (_prevChapterRef == null) return KeyEventResult.ignored;
       _navigateToChapter(_prevChapterRef);
       return KeyEventResult.handled;
     }
 
     if (event.logicalKey == LogicalKeyboardKey.arrowRight ||
         event.logicalKey == LogicalKeyboardKey.pageDown) {
+      if (_nextChapterRef == null) return KeyEventResult.ignored;
       _navigateToChapter(_nextChapterRef);
       return KeyEventResult.handled;
     }

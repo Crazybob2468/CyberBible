@@ -95,6 +95,12 @@ Corrected two related bugs that caused the prev/next chapter buttons to remain p
 
 Validation: `flutter analyze` → No issues. `flutter test` → 168 passed.
 
+**Post-merge bug fix: Page Up/Down consumed at Bible boundaries (PR review)**
+
+`_onKeyEvent` was returning `KeyEventResult.handled` even when the destination ref was `null` (Genesis 1 has no previous; last Revelation chapter has no next). This swallowed Page Up/Down and prevented the scroll view from using them for normal scrolling. Fixed to return `KeyEventResult.ignored` when the destination is null.
+
+Validation: `flutter analyze` → No issues. `flutter test` → 168 passed.
+
 Step 1.13 implementation:
 
 - **New pure utility**: `lib/utils/chapter_nav.dart`
