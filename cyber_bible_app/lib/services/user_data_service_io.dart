@@ -14,12 +14,6 @@
 /// [UserDataService._doOpen] in the main file.
 library;
 
-// sqflite import is required here to match the function signature used by the
-// web implementation (both files must export the same [platformSetupUserDatabaseFactory]
-// symbol so the conditional import compiles on every platform).
-// ignore: unused_import
-import 'package:sqflite/sqflite.dart';
-
 /// No-op on native platforms — sqflite uses the native factory by default.
 ///
 /// On Flutter Web, `user_data_service_web.dart` overrides this function to

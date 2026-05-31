@@ -191,6 +191,14 @@ class Bookmark {
   /// Useful when the user edits a bookmark's [label] or when [id] is
   /// assigned after the initial INSERT.
   ///
+  /// **Important — nullable fields cannot be cleared to `null` via this
+  /// method.** Passing `label: null` (or any other nullable field as null)
+  /// retains the existing value rather than clearing it, because the `??`
+  /// operator cannot distinguish "clear to null" from "keep existing".
+  /// Phase 1 has no use case that requires clearing a nullable field, but
+  /// if that need arises in a future step, this method will need to be
+  /// updated to use a sentinel or `Optional` wrapper.
+  ///
   /// Fields not provided retain their current values.
   Bookmark copyWith({
     int? id,
