@@ -55,6 +55,11 @@ dev_dependencies:
   # directory. Not needed for the app runtime; sqflite_common_ffi_web loads
   # the WASM build of sqlite3 separately at runtime.
   sqlite3: ^3.3.1
+  # sqflite_common_ffi: provides the databaseFactoryFfi factory used in unit
+  # tests to open real (or in-memory) SQLite databases on Windows/macOS/Linux
+  # without platform channels or a physical device. Tests in
+  # test/services/user_data_service_test.dart depend on this package.
+  sqflite_common_ffi: ^2.3.4
   # path is declared in dependencies (above) and is also used by the build tool.
 
 flutter:
