@@ -82,7 +82,73 @@ cyber_bible_app/
 
 ## Current Status
 
-**Maintenance update (post-Step 1.12 QA polish round 4): USFM style coverage hardened for all eBible.org translations**
+**Phase 1 — Step 1.13 Complete: Chapter-to-chapter navigation**
+
+Step 1.13 ✅ COMPLETE. Added seamless chapter-to-chapter navigation with a sliding bottom bar, horizontal swipe gestures, and keyboard shortcuts.
+
+**Post-merge bug fix: nav bar hidden on short chapters**
+
+Corrected two related bugs that caused the prev/next chapter buttons to remain permanently hidden when a chapter's content fit entirely on screen (no scroll available):
+
+- **`_isNearChapterEnd`** — Removed the early `return false` for `maxScrollExtent <= 0` and replaced it with `return true`. When content fits without scrolling the reader is simultaneously at the start and end, so the bar must be pinned.
+- **`_scheduleChapterNavBarVisibilityCheck()`** — New helper called at the end of every `_rebuildHtml()`. Schedules a post-frame callback that shows the nav bar immediately when `_isNearChapterEnd` is true. This is the missing trigger — `_onScroll` never fires on non-scrollable chapters.
+
+Validation: `flutter analyze` → No issues. `flutter test` → 168 passed.
+
+Step 1.13 implementation:
+
+- **New pure utility**: `lib/utils/chapter_nav.dart`
+  - `computeChapterNavigation()` — pure function that resolves the previous and next `ReadingArgs` destinations from a canonical book list and chapter map. Handles all edge cases: within-book steps, cross-book boundaries, Bible start/end, non-contiguous chapter numbers, missing chapter data.
+  - `ChapterNavResult` — holds the optional `prev` and `next` destinations.
+
+- **Sliding chapter nav bar** (`lib/screens/reading_screen.dart`):
+  - Hidden on load; slides up from the bottom on the first scroll event via `AnimatedSlide`.
+  - Auto-hides after 5 seconds of scroll inactivity (`_chapterNavBarAutoHideDelay`).
+  - Stays pinned when the reader is within `_chapterEndProximityPx` (160 px) of the chapter bottom, so the buttons are always accessible when the user finishes a chapter.
+  - Shows destination labels ("← Genesis 3" / "Exodus 1 →") in `OutlinedButton` widgets; buttons are hidden when no navigation is available (Genesis 1 / last chapter of Revelation).
+  - Respects `MediaQuery.padding.bottom` so buttons sit above the system navigation bar.
+  - Bottom content padding increased from 48 px to `_contentBottomPadding` (108 px) so the last verse is never hidden behind the bar.
+
+- **Horizontal swipe gesture** (`lib/screens/reading_screen.dart`):
+  - Outer `GestureDetector` with `behavior: HitTestBehavior.translucent` detects `onHorizontalDragEnd`.
+  - Swipe left (finger moves left, negative velocity > 350 px/s) = next chapter.
+  - Swipe right (positive velocity > 350 px/s) = previous chapter.
+
+- **Keyboard shortcuts** (`lib/screens/reading_screen.dart`):
+  - Outer `Focus(autofocus: true, onKeyEvent: ...)` captures arrow / page keys.
+  - Arrow Left / Page Up → previous chapter.
+  - Arrow Right / Page Down → next chapter.
+  - All other keys propagate normally (Up/Down, Enter, etc.).
+
+- **Cross-book boundary navigation**:
+  - Past the last chapter of a book → first chapter of the next book.
+  - Before the first chapter of a book → last chapter of the preceding book.
+  - At Genesis 1 → Previous button hidden; at Revelation last chapter → Next button hidden.
+
+- **Push routing**: each chapter navigation pushes a new route (`Navigator.pushNamed`) so the OS back button walks back through the chapter history. Scroll position is always reset to top for new chapters.
+
+- **Adjacent chapter pre-loading** (`_loadNavInfo()`): runs concurrently with `_loadChapter()` in `initState`. Calls `BibleService.getChapters()` for the current book and any adjacent books at chapter boundaries (at most 2–3 DB calls). Failures are silently handled — buttons remain disabled rather than surfacing an error to the reader.
+
+Step 1.13 tests and validation:
+- **New test file**: `test/utils/chapter_nav_test.dart` — 17 unit tests covering:
+  - Bible start (Genesis 1: no prev) and end (last Revelation chapter: no next).
+  - Within-book prev/next navigation.
+  - Cross-book boundary navigation in both directions.
+  - Non-contiguous chapter numbers (gap in Revelation).
+  - Empty book list, unknown book code, chapter not in list, missing chapter data for current and adjacent books.
+  - Single-book and single-chapter edge cases.
+- `dart analyze lib/ test/ tools/` → No issues.
+- `flutter test` → **168 passed** (151 pre-existing + 17 new).
+
+Deferred to Step 1.16:
+- Widget tests for the nav bar visibility lifecycle (scroll → show → timer → hide) deferred to the Step 1.16 settings pass.
+- Keyboard shortcut integration tests on real desktop / web platforms deferred to a future integration-test step.
+
+Next: Step 1.14 — Bookmarks data layer. Create `Bookmark` model and SQLite table with `addBookmark`, `removeBookmark`, and `getBookmarks` methods.
+
+---
+
+**Previous: Maintenance update (post-Step 1.12 QA polish round 4) — USFM style coverage hardened**
 
 A comprehensive USFM style audit confirmed the WEB Bible's element set is fully covered. To support the full eBible.org catalogue (1,535+ translations) without silent content loss, the renderer has been expanded with all remaining USFM/USFX styles documented in the USFM specification.
 
@@ -463,22 +529,22 @@ The goal: open the app, pick a book and chapter, and read formatted Bible text.
 
 | Step | Task | Description |
 |------|------|-------------|
-| 1.1 | **Set up project structure** | Create the folder layout (`models/`, `services/`, `screens/`, `widgets/`, `l10n/`, `assets/`, `tools/`). Set up basic app shell with MaterialApp, theme, and a home screen placeholder. |
-| 1.2 | **Acquire WEB Bible data** | Download the World English Bible USFX XML and metadata from eBible.org. Store raw files in `tools/data/` (not shipped with app — just for processing). Document where and how to download. |
-| 1.3 | **Design Bible data models** | Create Dart data classes: `BibleInfo`, `Book`, `Chapter`, `Verse`. Define the SQLite schema for storing parsed Bible content with book/chapter/verse indexing. |
-| 1.4 | **Build USFX parser** | Write a Dart script/tool that reads a USFX XML file and extracts books, chapters, verses, and basic formatting markup. Output structured data. |
-| 1.5 | **Build SQLite Bible database** | Create a tool that takes parsed USFX data and writes it into a SQLite database file. This DB file becomes the Bible module that ships with the app. |
-| 1.6 | **Bundle WEB Bible with app** | Add the generated SQLite database to `assets/bibles/`. Write a service to copy it to the app's local storage on first launch. |
-| 1.7 | **Bible service layer** | Create `BibleService` — Dart class that reads from the SQLite DB. Methods: `getBooks()`, `getChapters(bookId)`, `getVerses(bookId, chapterId)`. |
-| 1.8 | **Book selection screen** | Build a screen that lists all books of the Bible (OT and NT sections). Tapping a book navigates to chapter selection. |
+| 1.1 ✅ | **Set up project structure** | Create the folder layout (`models/`, `services/`, `screens/`, `widgets/`, `l10n/`, `assets/`, `tools/`). Set up basic app shell with MaterialApp, theme, and a home screen placeholder. |
+| 1.2 ✅ | **Acquire WEB Bible data** | Download the World English Bible USFX XML and metadata from eBible.org. Store raw files in `tools/data/` (not shipped with app — just for processing). Document where and how to download. |
+| 1.3 ✅ | **Design Bible data models** | Create Dart data classes: `BibleInfo`, `Book`, `Chapter`, `Verse`. Define the SQLite schema for storing parsed Bible content with book/chapter/verse indexing. |
+| 1.4 ✅ | **Build USFX parser** | Write a Dart script/tool that reads a USFX XML file and extracts books, chapters, verses, and basic formatting markup. Output structured data. |
+| 1.5 ✅ | **Build SQLite Bible database** | Create a tool that takes parsed USFX data and writes it into a SQLite database file. This DB file becomes the Bible module that ships with the app. |
+| 1.6 ✅ | **Bundle WEB Bible with app** | Add the generated SQLite database to `assets/bibles/`. Write a service to copy it to the app's local storage on first launch. |
+| 1.7 ✅ | **Bible service layer** | Create `BibleService` — Dart class that reads from the SQLite DB. Methods: `getBooks()`, `getChapters(bookId)`, `getVerses(bookId, chapterId)`. |
+| 1.8 ✅ | **Book selection screen** | Build a screen that lists all books of the Bible (OT and NT sections). Tapping a book navigates to chapter selection. |
 | 1.9 ✅ | **Chapter selection screen** | Build a screen showing a grid of chapter numbers for the selected book. Tapping a chapter navigates to the reading screen. |
 | 1.10 ✅ | **Scripture reading screen** | Build the main reading screen. Display a full chapter of Bible text (plain-text verse list for Step 1.10; full formatting in Step 1.11). Include the book name and chapter number as a collapsible header. Support scrolling. |
 | 1.11 ✅ | **Basic text formatting** | Render Bible text with paragraph breaks, poetry indentation, section headers, and verse numbers. Use HTML rendering or rich text widgets. |
 | 1.12 ✅ | **Verse navigation** | Add ability to jump to a specific verse within a chapter (scroll to verse). Add a quick-nav control (book > chapter > verse). |
-| 1.13 | **Chapter-to-chapter navigation** | Add previous/next chapter buttons or swipe gestures to move between chapters seamlessly. |
+| 1.13 ✅ | **Chapter-to-chapter navigation** | Add previous/next chapter buttons or swipe gestures to move between chapters seamlessly. |
 | 1.14 | **Bookmarks — data layer** | Create a `Bookmark` model and SQLite table. Methods: `addBookmark(reference)`, `removeBookmark(id)`, `getBookmarks()`. |
 | 1.15 | **Bookmarks — UI** | Add a way to bookmark the current location (long-press or button). Build a bookmarks list screen accessible from the home screen or menu. |
-| 1.16 | **Settings screen (font & theme)** | Build a settings screen with: font size slider; light/dark/system theme toggle; accent color picker (let users choose from a curated palette of seed colors that drive the Material 3 `ColorScheme` — e.g. the default calm blue, forest green, crimson, gold, purple, etc.); words-of-Christ color toggle (red or black); section headings toggle (show/hide `<s>` and `<d>` noncanonical text, per design doc); verse numbers toggle (show/hide inline verse number superscripts). Persist all settings with `shared_preferences`. The home screen branded gradient is fixed and unaffected by theme changes; all inner screens (book selection, chapter selection, reading) respond to the chosen theme. |
+| 1.16 | **Settings screen (font & theme)** | Build a settings screen with: font size slider; light/dark/system theme toggle; accent color picker (let users choose from a curated palette of seed colors that drive the Material 3 `ColorScheme` — e.g. the default calm blue, forest green, crimson, gold, purple, etc.); words-of-Christ color toggle (red or black); section headings toggle (show/hide `<s>` and `<d>` noncanonical text, per design doc); verse numbers toggle (show/hide inline verse number superscripts); **verse format toggle** (paragraph/prose mode — text flows as natural paragraphs with inline verse superscripts — vs. verse-list mode — each verse begins on its own line; default is paragraph/prose mode). Persist all settings with `shared_preferences`. The home screen branded gradient is fixed and unaffected by theme changes; all inner screens (book selection, chapter selection, reading) respond to the chosen theme. |
 | 1.17 | **Internationalization setup** | Set up Flutter l10n with ARB files. Extract all hard-coded UI strings into localizable constants. Start with English. Add structure for additional languages. |
 
 ### Phase 2 — Study Features

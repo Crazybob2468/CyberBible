@@ -95,6 +95,7 @@ Main parts and sub-parts:
 - Font face & size selection for reading text and menus
 - Color scheme selection
 - Display options (words of Jesus in red or not, show verse numbers or not, show illustrations or not, etc.)
+- **Verse format mode**: users may choose between *paragraph/prose mode* (text flows as natural paragraphs and poetry stanzas, matching the original USFX layout — verse numbers appear as small inline superscripts) and *verse-list mode* (each verse starts on a new line, making individual verses easy to locate and reference). Default is paragraph/prose mode. This setting is stored with the other reading preferences and applies to all translations.
 - Play Scripture audio in parallel with primary pane text
 - Search options
 - Translation picker for currently displayed Bibles

@@ -1,9 +1,15 @@
-// Scripture reading screen — Step 1.12.
+// Scripture reading screen — Steps 1.10 → 1.13.
 //
 // Displays a fully formatted chapter of Bible text for the selected book and
-// chapter, plus quick navigation controls for:
-//   1) Book + chapter (two-step selector in a bottom sheet)
-//   2) Verse (adaptive picker: wheel on touch-centric layouts, list on desktop/web)
+// chapter, plus navigation controls for:
+//   1) Book + chapter quick nav (two-step bottom-sheet selector)
+//   2) Verse quick nav (adaptive picker: wheel on touch, list on desktop/web)
+//   3) Previous / next chapter (sliding bottom bar, swipe, keyboard shortcuts)
+//
+// Step 1.10 — plain-text verse list with collapsible header
+// Step 1.11 — USFX → HTML rendering via flutter_widget_from_html_core
+// Step 1.12 — verse navigation; cb-verse-marker offset tracking
+// Step 1.13 — chapter-to-chapter navigation (prev/next bar, swipe, keys)
 //
 // The renderer emits an internal <cb-verse-marker data-verse="..."> tag before
 // every verse number. HtmlWidget maps each marker to a zero-sized keyed widget,
@@ -23,6 +29,7 @@ import '../app_routes.dart';
 import '../models/book.dart';
 import '../models/verse.dart';
 import '../services/bible_service.dart';
+import '../utils/chapter_nav.dart';
 import '../utils/usfx_renderer.dart';
 
 // ---------------------------------------------------------------------------
@@ -44,6 +51,34 @@ const Duration _verseJumpDuration = Duration(milliseconds: 520);
 
 /// Duration for temporary verse-number highlight after a jump.
 const Duration _verseHighlightDuration = Duration(milliseconds: 1400);
+
+// ---- Chapter navigation bar constants ------------------------------------
+
+/// Approximate height of the sliding chapter navigation bar (pixels).
+///
+/// Used for bottom padding so the last verse is never hidden behind the bar,
+/// and for the slide animation target offset.
+const double _chapterNavBarHeight = 60.0;
+
+/// Extra bottom padding added to chapter content so the last verse remains
+/// fully visible when the chapter nav bar is on screen.
+const double _contentBottomPadding = 48.0 + _chapterNavBarHeight;
+
+/// Slide-in / slide-out animation duration for the chapter navigation bar.
+const Duration _chapterNavBarAnimDuration = Duration(milliseconds: 250);
+
+/// How long the chapter nav bar stays visible after the last scroll event
+/// before auto-hiding (provided the reader is not near the end of the chapter).
+const Duration _chapterNavBarAutoHideDelay = Duration(seconds: 5);
+
+/// Minimum horizontal swipe velocity (logical pixels per second) required to
+/// trigger a chapter navigation gesture.  Lower values feel too sensitive;
+/// higher values require an aggressive flick.
+const double _swipeChapterVelocityThreshold = 350.0;
+
+/// Scroll-extent distance from the chapter bottom below which the reader is
+/// considered to be "near the end" and the nav bar stays permanently visible.
+const double _chapterEndProximityPx = 160.0;
 
 /// Maximum post-frame retries while waiting for HtmlWidget to finish async
 /// building marker widgets for a large chapter.
@@ -142,6 +177,30 @@ class _ReadingScreenState extends State<ReadingScreen> {
   /// Prevents queuing duplicate marker-collection callbacks while scrolling.
   bool _markerCollectionScheduled = false;
 
+  // ---- Chapter navigation state ----
+
+  /// Whether the chapter navigation bar (Previous / Next) is currently visible.
+  ///
+  /// Hidden on load; slides in on the first scroll event; auto-hides after
+  /// [_chapterNavBarAutoHideDelay] of scroll inactivity; stays pinned when
+  /// the reader is near the bottom of the chapter.
+  bool _chapterNavBarVisible = false;
+
+  /// Auto-hide timer for the chapter navigation bar.
+  Timer? _chapterNavBarHideTimer;
+
+  /// Previous chapter destination; null when reading Genesis chapter 1.
+  ReadingArgs? _prevChapterRef;
+
+  /// Next chapter destination; null when reading the last chapter of the Bible.
+  ReadingArgs? _nextChapterRef;
+
+  /// Whether the adjacent-chapter look-up has finished loading.
+  ///
+  /// Buttons remain in a neutral/disabled state while false so the user is
+  /// never surprised by a delayed navigation to the wrong chapter.
+  bool _chapterNavLoaded = false;
+
   // ---- Lifecycle ----
 
   @override
@@ -149,11 +208,14 @@ class _ReadingScreenState extends State<ReadingScreen> {
     super.initState();
     _scrollController = ScrollController()..addListener(_onScroll);
     _loadChapter();
+    // Load adjacent-chapter info concurrently; result drives prev/next buttons.
+    _loadNavInfo();
   }
 
   @override
   void dispose() {
     _highlightClearTimer?.cancel();
+    _chapterNavBarHideTimer?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
@@ -169,7 +231,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
   // ---- Scroll tracking ----
 
-  /// Updates collapsed-header state and keeps top-verse label in sync.
+  /// Updates collapsed-header state, verse tracking, and chapter nav bar.
   void _onScroll() {
     const collapseThreshold = _expandedHeight - kToolbarHeight;
     final collapsed = _scrollController.offset > collapseThreshold;
@@ -184,6 +246,9 @@ class _ReadingScreenState extends State<ReadingScreen> {
     }
 
     _syncTopVerseFromScroll();
+
+    // Show chapter navigation bar and manage its auto-hide timer.
+    _handleChapterNavBarOnScroll();
   }
 
   // ---- Data loading ----
@@ -263,6 +328,26 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
     setState(() => _html = html);
     _scheduleMarkerCollection(resetRetryCounter: true);
+    // After layout completes, check whether the chapter fits entirely on screen
+    // and show the nav bar immediately if so.  Short chapters never generate a
+    // scroll event, which is the normal trigger for revealing the bar.
+    _scheduleChapterNavBarVisibilityCheck();
+  }
+
+  /// Schedules a post-frame check that pins the chapter nav bar when the
+  /// chapter content fits entirely on screen without scrolling.
+  ///
+  /// Called after every HTML render so the check runs once layout has settled
+  /// and [ScrollController.position.maxScrollExtent] reflects the real size.
+  void _scheduleChapterNavBarVisibilityCheck() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      // _isNearChapterEnd now returns true for maxScrollExtent == 0, so this
+      // correctly handles both "short chapter" and "scrolled near the bottom".
+      if (_isNearChapterEnd && !_chapterNavBarVisible) {
+        setState(() => _chapterNavBarVisible = true);
+      }
+    });
   }
 
   /// Rebuilds HTML while preserving the current chapter scroll offset.
@@ -608,19 +693,327 @@ class _ReadingScreenState extends State<ReadingScreen> {
     return '-';
   }
 
+  // ---- Chapter navigation ----
+
+  /// Loads the canonical book list and the chapters of adjacent books, then
+  /// computes [_prevChapterRef] and [_nextChapterRef].
+  ///
+  /// Runs concurrently with [_loadChapter] from [initState]; failures are
+  /// non-fatal — the nav buttons simply remain disabled.
+  Future<void> _loadNavInfo() async {
+    try {
+      await BibleService.ensureOpen();
+      final books = await BibleService.getBooks();
+      if (!mounted) return;
+
+      final bookIdx = books.indexWhere((b) => b.code == widget.book.code);
+      if (bookIdx < 0) {
+        if (mounted) setState(() => _chapterNavLoaded = true);
+        return;
+      }
+
+      // Build the chapter map with entries for the current book and any
+      // adjacent books we might need to cross into.
+      final chaptersByBook = <String, List<int>>{};
+
+      // Always fetch the current book's chapters.
+      chaptersByBook[widget.book.code] =
+          await BibleService.getChapters(widget.book.code);
+      if (!mounted) return;
+
+      final currentChapters = chaptersByBook[widget.book.code]!;
+      final chapterIdx = currentChapters.indexOf(widget.chapter);
+
+      // Fetch the previous book's chapters if we might be at the start of
+      // the current book (so we can offer navigation to the prev book's end).
+      if (chapterIdx <= 0 && bookIdx > 0) {
+        final prevBook = books[bookIdx - 1];
+        chaptersByBook[prevBook.code] =
+            await BibleService.getChapters(prevBook.code);
+        if (!mounted) return;
+      }
+
+      // Fetch the next book's chapters if we might be at the end of the
+      // current book (so we can offer navigation to the next book's start).
+      if ((chapterIdx < 0 || chapterIdx >= currentChapters.length - 1) &&
+          bookIdx < books.length - 1) {
+        final nextBook = books[bookIdx + 1];
+        chaptersByBook[nextBook.code] =
+            await BibleService.getChapters(nextBook.code);
+        if (!mounted) return;
+      }
+
+      // Compute final prev/next destinations using the pure utility function.
+      final navResult = computeChapterNavigation(
+        books: books,
+        bookCode: widget.book.code,
+        chapter: widget.chapter,
+        chaptersByBook: chaptersByBook,
+      );
+
+      setState(() {
+        _prevChapterRef = navResult.prev;
+        _nextChapterRef = navResult.next;
+        _chapterNavLoaded = true;
+      });
+    } catch (_) {
+      // A nav-info failure is non-critical. Leave buttons in a disabled state
+      // rather than surfacing an error to the reader.
+      if (mounted) setState(() => _chapterNavLoaded = true);
+    }
+  }
+
+  /// True when the scroll position is within [_chapterEndProximityPx] of the
+  /// bottom of the chapter content, OR when the entire chapter fits on screen
+  /// without scrolling.
+  ///
+  /// Used to keep the chapter nav bar permanently visible so the user can
+  /// always proceed to the next chapter.
+  ///
+  /// When [maxScrollExtent] is 0 the reader is simultaneously at the start
+  /// and end of the content — there is nowhere to scroll, so the nav bar
+  /// must be pinned immediately (the normal [_onScroll] trigger will never
+  /// fire and the buttons would otherwise stay hidden forever).
+  bool get _isNearChapterEnd {
+    if (!_scrollController.hasClients) return false;
+    final pos = _scrollController.position;
+    // maxScrollExtent == 0 → entire chapter visible on screen → treat as end.
+    if (pos.maxScrollExtent <= 0) return true;
+    return pos.extentAfter < _chapterEndProximityPx;
+  }
+
+  /// Shows the chapter nav bar on scroll and manages the auto-hide timer.
+  ///
+  /// - Reveals the bar on the first scroll event.
+  /// - Cancels and restarts the 5-second auto-hide timer on every scroll.
+  /// - When near the chapter end, cancels the timer so the bar stays pinned.
+  void _handleChapterNavBarOnScroll() {
+    // Reveal bar on first scroll.
+    if (!_chapterNavBarVisible) {
+      setState(() => _chapterNavBarVisible = true);
+    }
+
+    // Reset auto-hide timer on every scroll event.
+    _chapterNavBarHideTimer?.cancel();
+
+    if (_isNearChapterEnd) {
+      // Keep bar pinned — no timer when at the bottom.
+      return;
+    }
+
+    // Schedule auto-hide after inactivity.
+    _chapterNavBarHideTimer = Timer(_chapterNavBarAutoHideDelay, () {
+      if (mounted && !_isNearChapterEnd) {
+        setState(() => _chapterNavBarVisible = false);
+      }
+    });
+  }
+
+  /// Pushes a new route for [args], scrolling to the top of the new chapter.
+  ///
+  /// Does nothing when [args] is null (e.g., at Bible boundaries) or when the
+  /// widget is no longer mounted.
+  void _navigateToChapter(ReadingArgs? args) {
+    if (args == null || !mounted) return;
+    Navigator.pushNamed(
+      context,
+      AppRoutes.reading,
+      arguments: args,
+    );
+  }
+
+  /// Handles a completed horizontal drag gesture to trigger chapter navigation.
+  ///
+  /// Left swipe (negative velocity) = next chapter (like turning a page forward).
+  /// Right swipe (positive velocity) = previous chapter (like turning back).
+  ///
+  /// The [_swipeChapterVelocityThreshold] guards against accidental micro-swipes.
+  void _onHorizontalSwipeEnd(DragEndDetails details) {
+    final velocity = details.primaryVelocity;
+    if (velocity == null) return;
+
+    if (velocity < -_swipeChapterVelocityThreshold) {
+      // Finger moved left → go forward to next chapter.
+      _navigateToChapter(_nextChapterRef);
+    } else if (velocity > _swipeChapterVelocityThreshold) {
+      // Finger moved right → go back to previous chapter.
+      _navigateToChapter(_prevChapterRef);
+    }
+  }
+
+  /// Handles keyboard events for chapter navigation on desktop and web.
+  ///
+  /// Arrow Left / Page Up  → previous chapter.
+  /// Arrow Right / Page Down → next chapter.
+  /// All other keys are ignored so normal text/scroll shortcuts still work.
+  KeyEventResult _onKeyEvent(FocusNode node, KeyEvent event) {
+    // Only act on initial key-down events to avoid double-firing on key repeat.
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+
+    if (event.logicalKey == LogicalKeyboardKey.arrowLeft ||
+        event.logicalKey == LogicalKeyboardKey.pageUp) {
+      _navigateToChapter(_prevChapterRef);
+      return KeyEventResult.handled;
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.arrowRight ||
+        event.logicalKey == LogicalKeyboardKey.pageDown) {
+      _navigateToChapter(_nextChapterRef);
+      return KeyEventResult.handled;
+    }
+
+    return KeyEventResult.ignored;
+  }
+
   // ---- Build ----
 
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      body: CustomScrollView(
-        controller: _scrollController,
-        slivers: [
-          _buildSliverAppBar(colorScheme),
-          _buildBody(colorScheme),
-        ],
+    // Focus captures keyboard arrow / page keys for chapter navigation on
+    // desktop and web.  autofocus claims focus when the screen first mounts.
+    return Focus(
+      autofocus: true,
+      onKeyEvent: _onKeyEvent,
+      // GestureDetector catches horizontal swipes for chapter navigation on
+      // touch screens.  HitTestBehavior.translucent lets child widgets
+      // (HtmlWidget link taps, scroll view) also receive pointer events.
+      child: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onHorizontalDragEnd: _onHorizontalSwipeEnd,
+        child: Scaffold(
+          body: Stack(
+            children: [
+              // ---- Main chapter content ----
+              CustomScrollView(
+                controller: _scrollController,
+                slivers: [
+                  _buildSliverAppBar(colorScheme),
+                  _buildBody(colorScheme),
+                ],
+              ),
+
+              // ---- Chapter navigation bar overlay ----
+              //
+              // Positioned at the bottom of the Stack so it overlays (rather
+              // than displacing) the chapter text.  AnimatedSlide moves it
+              // down one full bar-height when hidden, and back to 0 when shown.
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: AnimatedSlide(
+                  offset: Offset(0.0, _chapterNavBarVisible ? 0.0 : 1.0),
+                  duration: _chapterNavBarAnimDuration,
+                  curve: Curves.easeInOut,
+                  child: _buildChapterNavBar(colorScheme),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ---- Chapter navigation bar ----
+
+  /// Sliding chapter navigation bar shown at the bottom of the screen.
+  ///
+  /// Contains a Previous and Next chapter button.  Each button shows the
+  /// destination book abbreviation and chapter number.  A button is hidden
+  /// (replaced by an empty [SizedBox]) when navigation is not available in
+  /// that direction (e.g., Previous is hidden on Genesis 1).
+  ///
+  /// The bar uses a [Material] elevation shadow to separate it visually from
+  /// the chapter text it overlays.  [MediaQuery.padding.bottom] is respected
+  /// so buttons sit above the system navigation bar on devices that have one.
+  Widget _buildChapterNavBar(ColorScheme colorScheme) {
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+
+    // Build a single nav button.  [icon] appears on the leading side; text
+    // shows the destination.  Returns an empty widget when [args] is null.
+    Widget navButton({
+      required ReadingArgs? args,
+      required IconData icon,
+      required bool isNext,
+    }) {
+      if (!_chapterNavLoaded || args == null) {
+        return const Expanded(child: SizedBox.shrink());
+      }
+
+      final label = '${args.book.nameShort} ${args.chapter}';
+
+      // Next button: text on the left, chevron on the right (→ direction).
+      // Prev button: chevron on the left, text on the right (← direction).
+      final buttonChild = isNext
+          ? Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Icon(icon, size: 16),
+              ],
+            )
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                Icon(icon, size: 16),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            );
+
+      return Expanded(
+        child: OutlinedButton(
+          onPressed: () => _navigateToChapter(args),
+          style: OutlinedButton.styleFrom(
+            alignment: isNext ? Alignment.centerRight : Alignment.centerLeft,
+            visualDensity: VisualDensity.compact,
+          ),
+          child: buttonChild,
+        ),
+      );
+    }
+
+    return Material(
+      // Match the sticky header's primaryContainer color for visual consistency.
+      elevation: 4,
+      color: colorScheme.primaryContainer,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(16, 8, 16, 8 + bottomInset),
+        child: Row(
+          children: [
+            // Previous chapter button (left side).
+            navButton(
+              args: _prevChapterRef,
+              icon: Icons.chevron_left_rounded,
+              isNext: false,
+            ),
+            const SizedBox(width: 8),
+            // Next chapter button (right side).
+            navButton(
+              args: _nextChapterRef,
+              icon: Icons.chevron_right_rounded,
+              isNext: true,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -805,7 +1198,9 @@ class _ReadingScreenState extends State<ReadingScreen> {
     return SliverToBoxAdapter(
       child: Padding(
         key: _contentTopKey,
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 48),
+        // Bottom padding is extended by [_chapterNavBarHeight] so the last
+        // verse is never hidden behind the overlaid chapter navigation bar.
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, _contentBottomPadding),
         child: Stack(
           children: [
             ExcludeSemantics(
