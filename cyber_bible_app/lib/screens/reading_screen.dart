@@ -11,8 +11,9 @@
 // Step 1.12 — verse navigation; cb-verse-marker offset tracking
 // Step 1.13 — chapter-to-chapter navigation (prev/next bar, swipe, keys)
 //
-// The renderer emits an internal <cb-verse-marker data-verse="..."> tag before
-// every verse number. HtmlWidget maps each marker to a zero-sized keyed widget,
+// The renderer emits a `<div data-cbv="N">` block marker immediately BEFORE
+// every <p> that starts a new verse. HtmlWidget maps each marker to a
+// zero-sized keyed widget,
 // allowing this screen to compute exact verse offsets for:
 //   - smooth jump-to-verse scrolling
 //   - exact "verse at top of viewport" tracking for the sticky header label
@@ -1429,6 +1430,23 @@ class _ReadingScreenState extends State<ReadingScreen> {
                 html,
                 key: _htmlWidgetKey,
                 customWidgetBuilder: _buildCustomHtmlWidget,
+                // Ensure the <div data-cbv="N"> block markers take up exactly
+                // zero vertical space so they don't introduce visual gaps.
+                customStylesBuilder: (element) {
+                  final attrs = element.attributes as Map?;
+                  if (element.localName == 'div' &&
+                      attrs != null &&
+                      attrs.containsKey('data-cbv')) {
+                    return {
+                      'padding': '0',
+                      'margin': '0',
+                      'line-height': '0',
+                      'height': '0',
+                      'overflow': 'hidden',
+                    };
+                  }
+                  return null;
+                },
               ),
             ),
             if (_verses != null && _verses!.isNotEmpty)
@@ -1457,21 +1475,25 @@ class _ReadingScreenState extends State<ReadingScreen> {
     );
   }
 
-  /// Maps internal renderer marker tags to zero-sized keyed widgets.
+  /// Maps `<div data-cbv="N">` block markers to zero-sized keyed widgets.
   ///
-  /// The renderer outputs: `<cb-verse-marker data-verse="..."></cb-verse-marker>`
-  /// before each verse number. Each marker receives a stable GlobalKey so this
-  /// screen can compute exact verse positions after layout.
+  /// The renderer emits `<div data-cbv="{verseId}">` as a block sibling
+  /// BEFORE each verse paragraph. Each marker receives a stable [GlobalKey]
+  /// so this screen can compute exact verse positions after layout.
+  ///
+  /// Using `<div>` (block-level) rather than `<span>` (inline) is critical:
+  /// `flutter_widget_from_html_core` wraps `customWidgetBuilder` results in
+  /// `WidgetBit.block()` unconditionally. An inline `<span>` with a block
+  /// widget would cause the HTML5 parser to close the enclosing `<p>`,
+  /// putting every verse on its own line. A `<div>` placed as a sibling
+  /// before the `<p>` is valid HTML5 and never interrupts paragraph flow.
   Widget? _buildCustomHtmlWidget(dynamic element) {
-    final localName = element.localName as String?;
-    if (localName != 'cb-verse-marker') {
-      return null;
-    }
-
+    // Only handle our verse-position marker divs.
+    if (element.localName != 'div') return null;
     final attributes = element.attributes as Map<dynamic, dynamic>?;
-    final verseId = (attributes?['data-verse'] as String?)?.trim();
+    final verseId = (attributes?['data-cbv'] as String?)?.trim();
     if (verseId == null || verseId.isEmpty) {
-      return const SizedBox.shrink();
+      return null; // Not a marker div — use default rendering.
     }
 
     final key = _verseMarkerKeys.putIfAbsent(

@@ -82,7 +82,40 @@ cyber_bible_app/
 
 ## Current Status
 
-**Phase 1 — Step 1.16 Complete: Settings Screen + Theme Selection**
+**Phase 1 — Post-Step-1.16 Visual Polish (gear icon fix, paragraph mode, dark themes)**
+
+Step 1.16 ✅ COMPLETE. The session after Step 1.16 resolved four user-reported issues and completed the paragraph-mode rendering overhaul across multiple sessions.
+
+### Issues resolved
+
+1. **Gear icon on home screen was unreachable** — The `Positioned` gear icon was Stack child #4, but the full-screen `SingleChildScrollView` was child #5. In Flutter Stacks, later children paint (and receive events) on top, so the scroll view swallowed every tap. Fixed by moving the gear icon's `Positioned` widget to the *last* child in the Stack.
+
+2. **Paragraph mode and verse-list mode looked identical (ROOT CAUSE fixed)** — Root cause: `flutter_widget_from_html_core`'s `customWidgetBuilder` unconditionally calls `tree.prepareFor(StyleType.block)`, making every returned widget a block-level element regardless of CSS. Any inline marker (`<span data-cbv>`) inside a `<p>` therefore forced an implicit paragraph close, putting every verse on its own line. **Fix**: The renderer now emits `<div data-cbv="N">` block markers as siblings *before* each `<p>` (never inside it). The `_proseBlock` helper orchestrates this: in paragraph mode it emits one marker + one `<p>` per USFX paragraph (multi-verse flow); in verse-list mode it calls `_splitByVerse` to emit one marker + one `<p>` per verse. `_renderInlineChildren` no longer has a `breakBeforeVerse` parameter. `customWidgetBuilder` and `customStylesBuilder` in `reading_screen.dart` now match `div` with `data-cbv`.
+
+3. **Only light customizable themes existed** — Added three dark-base customizable themes: Night Sky (`0xFF1A2232`, sky-blue accent), Dark Forest (`0xFF0C1E10`, gold accent), and Charcoal (`0xFF1C1E24`, warm-gold accent). Added `isDarkBase` getter to `AppThemeDefinition`. Added `_customizableDark` builder in `AppThemeBuilder`.
+
+4. **All set theme reading backgrounds looked near-identical** — Updated each of the 6 set-theme `scaffoldBackgroundColor` to be distinctively colored: Forest Cathedral → `0xFF092410`, Midnight Ocean → `0xFF060E28`, Desert Sunrise → `0xFF1C1004`, Royal Amethyst → `0xFF120038`, Crimson Covenant → `0xFF1A0408`, Aurora → `0xFF050F22`.
+
+### Files changed in this combined session
+
+- **`lib/screens/home_screen.dart`** — Gear icon `Positioned` moved to last Stack child.
+- **`lib/utils/usfx_renderer.dart`** — Major rewrite: new helpers `_firstVerseId`, `_splitByVerse`, `_proseBlock`; `_renderParagraph` uses `_proseBlock` throughout; `_renderInlineChildren` has no `breakBeforeVerse` param; `_renderInline` case `'v'` emits only the `<sup>` number (no inline marker).
+- **`lib/screens/reading_screen.dart`** — `customWidgetBuilder` now handles `<div data-cbv="N">`; `customStylesBuilder` zeroes out height/margin/padding on those divs; file comment updated.
+- **`lib/models/app_theme_definition.dart`** — `isDarkBase` getter; 3 new dark customizable theme constants; `_customizableDark` builder; all 6 set-theme scaffold backgrounds made more distinctive.
+- **`lib/services/settings_service.dart`** — `_defaultAccentColors` + `_customizableThemeIds` extended with `night_sky`, `dark_forest`, `charcoal`.
+- **`test/utils/usfx_renderer_test.dart`** — Updated marker test to check `<div data-cbv>` before `<p>`; updated cross-paragraph highlight count test; updated `<p>` style tests to reflect styled output.
+
+### Key architectural fact (for future agents)
+`customWidgetBuilder` in `flutter_widget_from_html_core` ALWAYS creates `WidgetBit.block()` — no CSS override is possible. The only correct approach for verse-position markers is `<div data-cbv="N">` placed as a **block sibling before** each `<p>`, never inside one.
+
+### Key numbers
+- **240 tests passing**, `dart analyze` → No issues.
+
+Next: Step 1.17 — TBD (see roadmap below).
+
+---
+
+**Previous: Step 1.16 ✅ COMPLETE — Settings Screen + Theme Selection**
 
 Step 1.16 ✅ COMPLETE. Built the full user preferences system: a persistent `SettingsService`, an 11-theme catalog with hand-crafted set themes, a settings screen, and an ornate theme-selection screen featuring custom-painted preview cards.
 
@@ -120,8 +153,6 @@ Step 1.16 ✅ COMPLETE. Built the full user preferences system: a persistent `Se
 - `Slider` wrapped in `Semantics` with label, value, hint.
 - Theme cards: full card described via `Semantics(label: ..., button: true, selected: ...)`.
 - Gear icon on home screen: `Semantics(label: 'Settings', button: true)` wrapper.
-
-Next: Step 1.17 — TBD (see roadmap below).
 
 ---
 

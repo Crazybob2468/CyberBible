@@ -185,18 +185,18 @@ String renderChapterToHtml(
 
   /// Whether to render inline verse-number superscripts for `<v>` elements.
   ///
-  /// When false the `<sup>` and bookmark glyph are omitted, but the hidden
-  /// `<cb-verse-marker>` tag is still emitted so that jump-to-verse scrolling
-  /// and verse-position tracking continue to work.
+  /// When false the `<sup>` and bookmark glyph are omitted, but the
+  /// `<div data-cbv>` block position markers are still emitted so that
+  /// jump-to-verse scrolling and verse-position tracking continue to work.
   bool showVerseNumbers = true,
 
   /// When true (default), prose paragraphs are rendered with no bottom margin
   /// and a first-line text indent, mimicking the typography of a printed Bible
   /// where narrative text flows continuously between section headings.
   ///
-  /// When false (verse-list mode), each USFX `<p>` element becomes its own
-  /// HTML `<p>` with a 0.5 em bottom margin — the paragraphs are visually
-  /// separated so every paragraph group clearly begins on a new line.
+  /// When false (verse-list mode), each verse inside a USFX `<p>` becomes its
+  /// own HTML `<p>` with a 0.5 em bottom margin — every verse begins on a
+  /// new visible line.
   bool paragraphMode = true,
 }) {
   // Delegate to the internal renderer class, which holds the colour/font
@@ -274,12 +274,13 @@ class _UsfxRenderer {
   /// Whether inline verse-number superscripts are rendered.
   ///
   /// When false the `<sup>` element (and bookmark glyph) is suppressed, but
-  /// the `<cb-verse-marker>` tag is still emitted for jump-to-verse support.
+  /// the `<div data-cbv>` block markers are still emitted for verse-position
+  /// tracking and jump-to-verse support.
   final bool showVerseNumbers;
 
-  /// When true, prose `<p>` paragraphs use no bottom margin + first-line
-  /// text indent (printed-Bible look).  When false, each paragraph has the
-  /// standard 0.5 em bottom margin (verse-list look).
+  /// When true, all verses within one USFX `<p>` share a single HTML `<p>`
+  /// for continuous prose flow (printed-Bible look).  When false, each verse
+  /// gets its own HTML `<p>` with a 0.5 em bottom margin (verse-list look).
   final bool paragraphMode;
 
   /// Verse-number and footnote-marker font size — 65 % of [baseFontSizePx].
@@ -460,6 +461,125 @@ class _UsfxRenderer {
     }
   }
 
+  // ---- Paragraph verse-tracking helpers ------------------------------------
+
+  /// Returns the `id` attribute of the first `<v>` milestone child of [el],
+  /// or null if no verse milestone is present (e.g. intro paragraphs).
+  String? _firstVerseId(XmlElement el) {
+    for (final child in el.children) {
+      if (child is XmlElement && child.name.local == 'v') {
+        return child.getAttribute('id');
+      }
+    }
+    return null;
+  }
+
+  /// Splits the inline children of [el] into per-verse segments.
+  ///
+  /// Returns a list of `(verseId, innerHtml)` tuples, one per `<v>` milestone
+  /// found.  Content before the first `<v>` is discarded (rare in well-formed
+  /// USFX).  Used in verse-list mode to emit each verse as its own `<p>`.
+  ///
+  /// Highlight styling is applied at verse granularity: the entire content of
+  /// the matching verse is wrapped in a highlight span.
+  List<(String, String)> _splitByVerse(XmlElement el) {
+    String? currentId;
+    final buf = StringBuffer();
+    final segments = <(String, String)>[];
+
+    void flush() {
+      if (currentId != null) {
+        final content = buf.toString();
+        if (content.isNotEmpty) segments.add((currentId, content));
+        buf.clear();
+      }
+    }
+
+    for (final node in el.children) {
+      if (node is XmlElement && node.name.local == 'v') {
+        flush();
+        currentId = node.getAttribute('id') ?? '';
+        // Render the verse-number superscript for this verse start.
+        buf.write(_renderInline(node));
+      } else if (node is XmlElement && node.name.local == 've') {
+        // Verse-end milestone — no visible output; segment boundary is the
+        // start of the next <v>, not the <ve> marker.
+      } else if (node is XmlText) {
+        if (currentId != null) buf.write(_escapeHtml(node.value));
+      } else if (node is XmlElement) {
+        if (currentId != null) buf.write(_renderInline(node));
+      }
+    }
+    flush();
+
+    // Apply highlight: if a verse matches the highlighted ID, wrap all its
+    // content in a background-color span.  This is simpler than the
+    // cross-paragraph span tracking used in _renderInlineChildren because
+    // each verse is already its own paragraph in verse-list mode.
+    if (highlightedVerseId == null) return segments;
+    return segments.map((s) {
+      final (id, inner) = s;
+      if (id != highlightedVerseId) return s;
+      return (id, '<span style="'
+          'background-color:$highlightedVerseBackgroundCss;'
+          'border-radius:3px;'
+          'padding:0 2px;'
+          '">$inner</span>');
+    }).toList();
+  }
+
+  /// Emits an HTML prose block — the core building block for every USFX
+  /// paragraph style that contains verse text.
+  ///
+  /// **Paragraph mode** (`paragraphMode == true`):
+  ///   Emits `<div data-cbv="{firstVerse}"></div>` (a zero-height block
+  ///   position marker for verse tracking) followed by a single
+  ///   `<p style="[pmCss]">` containing ALL verses of this USFX paragraph
+  ///   as continuous flowing text — the printed-Bible look.
+  ///
+  /// **Verse-list mode** (`paragraphMode == false`):
+  ///   Calls `_splitByVerse` to partition the children by `<v>` milestone.
+  ///   Each verse gets its own `<div data-cbv="{N}">` marker + `<p style="[vlCss]">`.
+  ///   Paragraphs with no verse milestones (e.g. intro text) fall back to a
+  ///   single `<p>` without a position marker.
+  ///
+  /// **Why `<div data-cbv>` instead of inline `<span data-cbv>`?**
+  ///   `flutter_widget_from_html_core`'s `customWidgetBuilder` always wraps
+  ///   returned widgets in `WidgetBit.block()` regardless of `display:inline`
+  ///   in `customStylesBuilder`. An inline span whose custom widget is a block
+  ///   causes the HTML5 parser to implicitly close the enclosing `<p>`, putting
+  ///   every verse on its own line even in paragraph mode.  A `<div>` placed
+  ///   BEFORE the `<p>` (as a sibling, not a child) is valid HTML5 and never
+  ///   interrupts paragraph flow.
+  ///
+  /// Returns `''` when the paragraph has no renderable content.
+  String _proseBlock(XmlElement el, String pmCss, String vlCss) {
+    if (paragraphMode) {
+      final firstId = _firstVerseId(el);
+      final inner = _renderInlineChildren(el);
+      if (inner.isEmpty) return '';
+      final marker = firstId != null ? '<div data-cbv="$firstId"></div>' : '';
+      return '$marker<p style="$pmCss">$inner</p>';
+    }
+
+    // Verse-list mode: try to split by verse first.
+    final segments = _splitByVerse(el);
+    if (segments.isNotEmpty) {
+      final buf = StringBuffer();
+      for (final (id, inner) in segments) {
+        if (inner.isEmpty) continue;
+        buf.write('<div data-cbv="$id"></div>');
+        buf.write('<p style="$vlCss">$inner</p>');
+      }
+      return buf.toString();
+    }
+
+    // No verse milestones (e.g. intro paragraphs) — render as plain paragraph.
+    final inner = _renderInlineChildren(el);
+    if (inner.isEmpty) return '';
+    return '<p style="$vlCss">$inner</p>';
+  }
+
   /// Renders a `<p>` element.
   ///
   /// The `style` attribute (or `sfm` fallback) determines the presentation:
@@ -474,12 +594,6 @@ class _UsfxRenderer {
   /// These style families come from USFM and can appear in USFX `style`/`sfm`
   /// attributes depending on source conversion.
   String _renderParagraph(XmlElement el) {
-        String? cachedInner;
-
-        String getInner() {
-          return cachedInner ??= _renderInlineChildren(el);
-        }
-
     // USFX sometimes uses `sfm` instead of `style` to carry the paragraph type.
     // Prefer `style`; fall back to `sfm`; default to `p` (regular paragraph).
     final style = el.getAttribute('style') ?? el.getAttribute('sfm') ?? 'p';
@@ -559,15 +673,11 @@ class _UsfxRenderer {
     }
 
     if (style == 'pc' || style == 'pmc') {
-      final inner = getInner();
-      if (inner.isEmpty) return '';
-      return '<p style="text-align:center;">$inner</p>';
+      return _proseBlock(el, 'text-align:center', 'text-align:center');
     }
 
     if (style == 'pmr') {
-      final inner = getInner();
-      if (inner.isEmpty) return '';
-      return '<p style="text-align:right;">$inner</p>';
+      return _proseBlock(el, 'text-align:right', 'text-align:right');
     }
 
     // Spacer styles produce &nbsp; output regardless of child content — they
@@ -599,36 +709,37 @@ class _UsfxRenderer {
           '">$litText</p>';
     }
 
-    final inner = getInner();
-    if (inner.isEmpty) return '';
-
     if (style.startsWith('pi') || style.startsWith('li')) {
       // Indented prose/list paragraph — support arbitrary level suffixes.
       final level = _styleLevel(style);
       final indent = '${(level * 1.5).toStringAsFixed(1)}em';
-      return '<p style="margin:0 0 0.5em $indent;">$inner</p>';
+      return _proseBlock(el, 'margin:0 0 0.5em $indent', 'margin:0 0 0.5em $indent');
     }
 
     if (style == 'pr') {
       // Right-aligned prose paragraph.
-      return '<p style="text-align:right;">$inner</p>';
+      return _proseBlock(el, 'text-align:right', 'text-align:right');
     }
 
     if (style.startsWith('ph')) {
       // Hanging-indent paragraph (common in Acts and the epistles).
-      // A positive left-margin with a matching negative text-indent pulls
-      // only the first line back to the left margin.
       final level = _styleLevel(style);
       final leftEm = (level * 1.5).toStringAsFixed(1);
       final hangEm = (level * 1.5).toStringAsFixed(1);
-      return '<p style="margin:0 0 0.5em ${leftEm}em;'
-          'text-indent:-${hangEm}em;">$inner</p>';
+      return _proseBlock(
+        el,
+        'margin:0 0 0.5em ${leftEm}em;text-indent:-${hangEm}em',
+        'margin:0 0 0.5em ${leftEm}em;text-indent:-${hangEm}em',
+      );
     }
 
     if (style == 'sig') {
       // Epistle signature line (e.g. closing greetings in Paul's letters).
-      return '<p style="color:$bodyColorCss;'
-          'font-style:italic;margin:0.5em 0 0.5em 0;">$inner</p>';
+      return _proseBlock(
+        el,
+        'color:$bodyColorCss;font-style:italic;margin:0.5em 0 0.5em 0',
+        'color:$bodyColorCss;font-style:italic;margin:0 0 0.5em 0',
+      );
     }
 
     if (style.startsWith('is')) {
@@ -663,23 +774,22 @@ class _UsfxRenderer {
     if (style.startsWith('i')) {
       // Remaining introduction paragraph styles (ip, im, ipi, io, io1, io2,
       // iex, imi, imq, ipq, ipr) — render as plain prose paragraphs.
-      return '<p>$inner</p>';
+      // These rarely contain verse milestones; _proseBlock handles both cases.
+      return _proseBlock(el, 'margin:0 0 0.5em 0', 'margin:0 0 0.5em 0');
     }
 
-    // `p`, `m`, `nb`, `po`, `pmo`, `pm`, `pmi`, and any other prose style
-    // all map to a regular paragraph.
+    // `p`, `m`, `nb`, `po`, `pmo`, `pm`, `pmi`, and any other prose style.
     //
-    // paragraphMode: No bottom margin; first-line indent gives the printed-
-    // Bible look where continuous narrative flows without visual gaps between
-    // USFX paragraph groups.
+    // Paragraph mode: no bottom margin + first-line text indent → continuous
+    // narrative flow that mimics a printed Bible's paragraph typography.
     //
-    // verse-list mode (paragraphMode=false): Standard 0.5 em bottom margin
-    // from the global CSS keeps paragraph groups visually distinct so the
-    // reader can see where each paragraph begins.
-    if (paragraphMode) {
-      return '<p style="margin:0;text-indent:1.5em;">$inner</p>';
-    }
-    return '<p>$inner</p>';
+    // Verse-list mode: 0.5 em bottom margin, no indent → each verse is its
+    // own visually separated paragraph line.
+    return _proseBlock(
+      el,
+      'margin:0;text-indent:1.5em',  // paragraph mode: indent, no gap
+      'margin:0 0 0.5em 0',          // verse-list mode: gap between verses
+    );
   }
 
   /// Renders a `<tr>` (USFM table row) element.
@@ -814,6 +924,10 @@ class _UsfxRenderer {
   ///
   /// Inline children are a mix of [XmlText] nodes (verse text) and [XmlElement]
   /// nodes (verse milestones, Strong's wrappers, `<wj>`, `<f>`, etc.).
+  ///
+  /// Verse-level position markers (`<div data-cbv>`) are now emitted as block
+  /// siblings BEFORE each `<p>` by [_proseBlock], so no inline marker or
+  /// `breakBeforeVerse` logic is needed here.
   String _renderInlineChildren(XmlElement parent) {
     final buf = StringBuffer();
     var isHighlightOpenInThisBlock = false;
@@ -868,7 +982,7 @@ class _UsfxRenderer {
           }
           _openHighlightVerseId = null;
         }
-        
+
         buf.write(_renderInline(node));
       }
     }
@@ -891,26 +1005,21 @@ class _UsfxRenderer {
         // Verse start milestone — render the verse ID as a small superscript.
         // A hair-space (U+200A) after the number provides a sliver of breathing
         // room between the superscript and the verse text that follows.
+        //
+        // Position tracking markers are now emitted as block-level
+        // `<div data-cbv="N">` elements BEFORE each <p> by _proseBlock. This
+        // avoids the flutter_widget_from_html_core block-widget problem where
+        // customWidgetBuilder always creates WidgetBit.block() entries that
+        // implicitly close the enclosing <p> tag, breaking paragraph flow.
         final id = el.getAttribute('id') ?? '';
         if (id.isEmpty) return '';
-        // Add a custom zero-sized marker tag before the superscript so the
-        // reading screen can attach a keyed Flutter widget at each verse
-        // boundary and compute exact on-screen verse positions.
-        final markerTag =
-          '<cb-verse-marker data-verse="${_escapeHtml(id)}"></cb-verse-marker>';
-        // Note: Highlight background is now applied by _renderInlineChildren()
-        // to the entire verse (marker + content through all following blocks),
-        // not just the superscript. This allows verses that wrap across multiple
-        // paragraphs to be fully highlighted.
-        // id="v{N}" provides a stable HTML anchor so Step 1.12 (jump-to-verse)
-        // can scroll directly to any verse without additional DOM queries.
 
         // When showVerseNumbers is false, suppress the visual superscript and
-        // bookmark glyph but keep the invisible marker so jump-to-verse and
-        // verse-position tracking continue to work correctly.
-        if (!showVerseNumbers) return markerTag;
+        // bookmark glyph. Position tracking still works via the <div data-cbv>
+        // block markers emitted by _proseBlock (those are always emitted).
+        if (!showVerseNumbers) return '';
 
-        final sup = '$markerTag<sup id="v${_escapeHtml(id)}" style="'
+        final sup = '<sup id="v${_escapeHtml(id)}" style="'
             'color:$verseNumColorCss;'
             'font-size:${_smallPx}px;'
             'font-weight:bold;'

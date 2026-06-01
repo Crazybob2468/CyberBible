@@ -72,6 +72,10 @@ const Map<String, int> _defaultAccentColors = {
   'aged_parchment': 0xFF8D6E63, // Warm brown / sepia
   'cool_slate':    0xFF1565C0,  // Ocean blue
   'warm_sand':     0xFFBF360C,  // Terracotta
+  // Dark customisable themes
+  'night_sky':     0xFF7EB2E8,  // Soft sky blue
+  'dark_forest':   0xFFD4AF37,  // Antique gold
+  'charcoal':      0xFFE8C97A,  // Warm gold
 };
 
 /// Fallback accent used when a theme ID has no entry in [_defaultAccentColors].
@@ -279,6 +283,10 @@ const Set<String> _customizableThemeIds = {
   'aged_parchment',
   'cool_slate',
   'warm_sand',
+  // Dark customisable themes
+  'night_sky',
+  'dark_forest',
+  'charcoal',
 };
 
 /// Public read-only view of the customisable-theme ID set.

@@ -273,26 +273,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: IgnorePointer(child: _SideFiligreeOverlay()),
         ),
 
-        // 4. Settings gear icon — top-right corner, accessible at all times.
-        Positioned(
-          top: 0,
-          right: 0,
-          child: SafeArea(
-            child: Semantics(
-              label: 'Settings',
-              button: true,
-              child: IconButton(
-                icon: const Icon(Icons.settings_rounded),
-                color: const Color(0xCCF3E6C8), // cream-gold, matches home screen palette
-                tooltip: 'Settings',
-                onPressed: () =>
-                    Navigator.pushNamed(context, AppRoutes.settings),
-              ),
-            ),
-          ),
-        ),
-
-        // 5. Main scrollable content column.
+        // 4. Main scrollable content column.
         //    SingleChildScrollView prevents overflow on very small screens.
         SafeArea(
           child: SingleChildScrollView(
@@ -356,6 +337,28 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 48),
                 ],
+              ),
+            ),
+          ),
+        ),
+
+        // 5. Settings gear icon — rendered LAST so it sits on top of the
+        //    full-screen scroll view in Z-order. (If positioned earlier in
+        //    the Stack, the SingleChildScrollView above it captures all taps
+        //    and the icon becomes unreachable.)
+        Positioned(
+          top: 0,
+          right: 0,
+          child: SafeArea(
+            child: Semantics(
+              label: 'Settings',
+              button: true,
+              child: IconButton(
+                icon: const Icon(Icons.settings_rounded),
+                color: const Color(0xCCF3E6C8), // cream-gold, matches home screen palette
+                tooltip: 'Settings',
+                onPressed: () =>
+                    Navigator.pushNamed(context, AppRoutes.settings),
               ),
             ),
           ),

@@ -65,6 +65,15 @@ class AppThemeDefinition {
 
   /// Whether this theme is customisable (accent color can be changed).
   bool get isCustomizable => category == AppThemeCategory.customizable;
+
+  /// Whether this customisable theme uses a dark base color.
+  ///
+  /// Dark-base customisable themes generate a dark [ColorScheme] rather than
+  /// a light one.  They always use [ThemeMode.light] (a single dark-looking
+  /// [ThemeData]) because only one ThemeData is ever constructed for them.
+  bool get isDarkBase =>
+      baseColor != null &&
+      ThemeData.estimateBrightnessForColor(baseColor!) == Brightness.dark;
 }
 
 // ---------------------------------------------------------------------------
@@ -123,6 +132,44 @@ class AppThemeCatalog {
     category: AppThemeCategory.customizable,
     baseColor: Color(0xFFF5EFE0),
     defaultAccent: Color(0xFFBF360C),
+  );
+
+  // ---- Dark customisable themes ----
+
+  /// Night Sky — dark steel-blue base + accent picker.
+  ///
+  /// A clean dark reading environment with a cool starlit tone.
+  /// The user's chosen accent color drives buttons, links, and highlights.
+  static const nightSky = AppThemeDefinition(
+    id: 'night_sky',
+    name: 'Night Sky',
+    category: AppThemeCategory.customizable,
+    baseColor: Color(0xFF1A2232), // Dark slate-blue
+    defaultAccent: Color(0xFF7EB2E8), // Soft sky blue
+  );
+
+  /// Dark Forest — deep forest-green base matching the home screen aesthetic.
+  ///
+  /// Pairs naturally with the default antique-gold accent for a rich nighttime
+  /// reading environment.  Any accent can be chosen by the user.
+  static const darkForest = AppThemeDefinition(
+    id: 'dark_forest',
+    name: 'Dark Forest',
+    category: AppThemeCategory.customizable,
+    baseColor: Color(0xFF0C1E10), // Deep forest green
+    defaultAccent: Color(0xFFD4AF37), // Antique gold
+  );
+
+  /// Charcoal — warm graphite base + accent picker.
+  ///
+  /// A neutral dark canvas that works well with almost any accent color and
+  /// keeps eye strain low for extended reading sessions.
+  static const charcoal = AppThemeDefinition(
+    id: 'charcoal',
+    name: 'Charcoal',
+    category: AppThemeCategory.customizable,
+    baseColor: Color(0xFF1C1E24), // Dark warm graphite
+    defaultAccent: Color(0xFFE8C97A), // Warm gold
   );
 
   // ---- Set themes ----
@@ -187,6 +234,9 @@ class AppThemeCatalog {
     agedParchment,
     coolSlate,
     warmSand,
+    nightSky,
+    darkForest,
+    charcoal,
     forestCathedral,
     midnightOcean,
     desertSunrise,
@@ -220,6 +270,9 @@ class AppThemeBuilder {
   /// For set themes, a hand-crafted scheme is returned regardless of [accent].
   static ThemeData buildLight(AppThemeDefinition def, Color accent) {
     if (!def.isCustomizable) return _setTheme(def.id);
+    // Dark-base customisable themes (Night Sky, Dark Forest, Charcoal) use a
+    // specially constructed dark scheme rather than the standard light one.
+    if (def.isDarkBase) return _customizableDark(def, accent);
     return _customizableLight(def, accent);
   }
 
@@ -270,6 +323,46 @@ class AppThemeBuilder {
       surfaceContainerLowest: Color.lerp(base, seed.surfaceContainerLowest, 0.8)!,
     );
     return _baseThemeData(scheme);
+  }
+
+  /// Generates a dark [ThemeData] for customisable themes with a dark base.
+  ///
+  /// A full Material 3 [Brightness.dark] scheme is seeded from the user-chosen
+  /// accent color, then all surface slots are replaced with the theme's
+  /// characteristic dark base tone so every screen has a consistent colored
+  /// background.  Small white-alpha blends create subtle surface hierarchy
+  /// (surfaceContainerLowest ← base, surfaceContainerHighest ← brightest)
+  /// without losing the overall dark character.
+  static ThemeData _customizableDark(AppThemeDefinition def, Color accent) {
+    final base = def.baseColor!;
+    // Seed a full dark Material 3 scheme from the chosen accent color.
+    final seed = ColorScheme.fromSeed(
+      seedColor: accent,
+      brightness: Brightness.dark,
+    );
+    // Override surface hierarchy with blends on the base color.
+    final scheme = seed.copyWith(
+      surface:                 base,
+      surfaceContainerLowest:  base,
+      surfaceContainerLow:     Color.alphaBlend(Colors.white.withAlpha(8),  base),
+      surfaceContainer:        Color.alphaBlend(Colors.white.withAlpha(14), base),
+      surfaceContainerHigh:    Color.alphaBlend(Colors.white.withAlpha(22), base),
+      surfaceContainerHighest: Color.alphaBlend(Colors.white.withAlpha(30), base),
+    );
+    // Scaffold is slightly darker than the base for depth on background areas.
+    final scaffoldBg = Color.alphaBlend(Colors.black.withAlpha(30), base);
+    return ThemeData(
+      colorScheme: scheme,
+      scaffoldBackgroundColor: scaffoldBg,
+      useMaterial3: true,
+      appBarTheme: AppBarTheme(
+        centerTitle: true,
+        backgroundColor: scaffoldBg,
+        foregroundColor: accent,
+        elevation: 0,
+        scrolledUnderElevation: 2,
+      ),
+    );
   }
 
   /// Dark variant for 'classic_white' — deep, coherent, accent-driven.
@@ -373,11 +466,13 @@ class AppThemeBuilder {
 
     return ThemeData(
       colorScheme: scheme,
-      scaffoldBackgroundColor: const Color(0xFF071A0E),
+      // Richer forest green — visually distinct from near-black, evokes
+      // cathedral canopy even on the reading screen background.
+      scaffoldBackgroundColor: const Color(0xFF092410),
       useMaterial3: true,
       appBarTheme: const AppBarTheme(
         centerTitle: true,
-        backgroundColor: Color(0xFF071A0E),
+        backgroundColor: Color(0xFF092410),
         foregroundColor: Color(0xFFD4AF37), // Gold icons/title
         elevation: 0,
         scrolledUnderElevation: 0,
@@ -423,11 +518,13 @@ class AppThemeBuilder {
 
     return ThemeData(
       colorScheme: scheme,
-      scaffoldBackgroundColor: const Color(0xFF030810),
+      // Real deep navy — clearly blue rather than near-black, giving the
+      // reading page a genuine open-ocean depth.
+      scaffoldBackgroundColor: const Color(0xFF060E28),
       useMaterial3: true,
       appBarTheme: const AppBarTheme(
         centerTitle: true,
-        backgroundColor: Color(0xFF030810),
+        backgroundColor: Color(0xFF060E28),
         foregroundColor: Color(0xFF90CAF9),
         elevation: 0,
       ),
@@ -472,11 +569,13 @@ class AppThemeBuilder {
 
     return ThemeData(
       colorScheme: scheme,
-      scaffoldBackgroundColor: const Color(0xFF110800),
+      // Warm amber-brown — noticeably warmer and more inviting than near-black,
+      // evoking desert sandstone at dusk.
+      scaffoldBackgroundColor: const Color(0xFF1C1004),
       useMaterial3: true,
       appBarTheme: const AppBarTheme(
         centerTitle: true,
-        backgroundColor: Color(0xFF110800),
+        backgroundColor: Color(0xFF1C1004),
         foregroundColor: Color(0xFFFFCC80),
         elevation: 0,
       ),
@@ -521,11 +620,13 @@ class AppThemeBuilder {
 
     return ThemeData(
       colorScheme: scheme,
-      scaffoldBackgroundColor: const Color(0xFF080018),
+      // Deep jewel purple — clearly violet rather than near-black, giving the
+      // reading page a regal, velvet-draped feel.
+      scaffoldBackgroundColor: const Color(0xFF120038),
       useMaterial3: true,
       appBarTheme: const AppBarTheme(
         centerTitle: true,
-        backgroundColor: Color(0xFF080018),
+        backgroundColor: Color(0xFF120038),
         foregroundColor: Color(0xFFFFD54F), // Gold
         elevation: 0,
       ),
@@ -570,11 +671,13 @@ class AppThemeBuilder {
 
     return ThemeData(
       colorScheme: scheme,
-      scaffoldBackgroundColor: const Color(0xFF110103),
+      // Deep wine-red — clearly burgundy rather than near-black, evoking aged
+      // parchment and stained glass in candlelight.
+      scaffoldBackgroundColor: const Color(0xFF1A0408),
       useMaterial3: true,
       appBarTheme: const AppBarTheme(
         centerTitle: true,
-        backgroundColor: Color(0xFF110103),
+        backgroundColor: Color(0xFF1A0408),
         foregroundColor: Color(0xFFFFCCBC),
         elevation: 0,
       ),
@@ -619,11 +722,13 @@ class AppThemeBuilder {
 
     return ThemeData(
       colorScheme: scheme,
-      scaffoldBackgroundColor: const Color(0xFF020508),
+      // Dark teal-blue — clearly cool and oceanic rather than near-black,
+      // letting the electric aurora highlights pop against a real night sky.
+      scaffoldBackgroundColor: const Color(0xFF050F22),
       useMaterial3: true,
       appBarTheme: const AppBarTheme(
         centerTitle: true,
-        backgroundColor: Color(0xFF020508),
+        backgroundColor: Color(0xFF050F22),
         foregroundColor: Color(0xFF64FFDA),
         elevation: 0,
       ),
