@@ -35,8 +35,18 @@ import 'bookmarks_screen.dart';
 /// Books are loaded from [BibleService] when the screen first mounts.
 /// While loading, a centered activity indicator is shown. If loading fails,
 /// an error message with a retry button is shown instead.
+///
+/// [initialTab] controls which tab is shown on entry (0 = Traditional,
+/// 1 = Alphabetical, 2 = Bookmarks).  Supplied via [BookSelectArgs] when
+/// navigating from the reading screen; defaults to 0 when omitted.
 class BookSelectionScreen extends StatefulWidget {
-  const BookSelectionScreen({super.key});
+  /// The tab to show when the screen first opens.
+  ///
+  /// 0 = Traditional (default), 1 = Alphabetical, 2 = Bookmarks.
+  /// Out-of-range values are clamped to 0 in [initState].
+  final int initialTab;
+
+  const BookSelectionScreen({super.key, this.initialTab = 0});
 
   @override
   State<BookSelectionScreen> createState() => _BookSelectionScreenState();
@@ -62,7 +72,14 @@ class _BookSelectionScreenState extends State<BookSelectionScreen>
     super.initState();
 
     // Create a tab controller for the three tabs.
-    _tabController = TabController(length: 3, vsync: this);
+    // Clamp initialTab to the valid range [0, 2] in case a caller passes an
+    // out-of-range value (defensive programming; should never happen in practice).
+    final safeInitialTab = widget.initialTab.clamp(0, 2);
+    _tabController = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: safeInitialTab,
+    );
 
     // Load books as soon as the screen mounts.
     _loadBooks();

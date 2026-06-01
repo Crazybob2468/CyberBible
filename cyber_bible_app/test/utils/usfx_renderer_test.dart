@@ -184,14 +184,22 @@ void main() {
       expect(html, contains('>1a</sup>'));
     });
 
-    /// Step 1.12 adds an internal marker tag before each verse number so the
-    /// reading screen can map every verse to an exact render offset.
-    test('verse start milestone emits internal cb-verse-marker tag', () {
+    /// Step 1.12 adds a block position marker before each verse paragraph so
+    /// the reading screen can map every verse to an exact render offset.
+    /// The marker is a `<div data-cbv="N">` placed as a block sibling BEFORE
+    /// the `<p>` — this avoids flutter_widget_from_html_core's WidgetBit.block()
+    /// issue where any customWidgetBuilder widget inside a <p> forces an
+    /// implicit paragraph close, breaking multi-verse paragraph flow.
+    test('verse paragraph emits block div data-cbv marker before p', () {
       final html = _render(
         '<p style="p"><v id="3" bcv="GEN.1.3"/>Text.<ve/></p>',
       );
-      expect(html, contains('<cb-verse-marker data-verse="3"></cb-verse-marker>'));
+      expect(html, contains('<div data-cbv="3"></div>'));
       expect(html, contains('id="v3"'));
+      // Marker must appear BEFORE the paragraph, not inside it.
+      final markerPos = html.indexOf('<div data-cbv="3">');
+      final paraPos = html.indexOf('<p ');
+      expect(markerPos, lessThan(paraPos));
     });
 
     /// Optional highlighted verse styling is used after quick-nav jumps to
@@ -211,9 +219,11 @@ void main() {
       expect(html, contains('id="v8"'));
     });
 
-    /// When a highlighted verse spans multiple blocks, each block should emit
-    /// its own balanced highlight span (rather than crossing paragraph tags).
-    test('highlighted verse spanning blocks keeps block-local balanced spans', () {
+    /// When a highlighted verse spans multiple USFX blocks in verse-list mode,
+    /// only the block that contains the verse-start milestone is highlighted.
+    /// The continuation block (no <v> milestone, only <ve/>) is a separate
+    /// _proseBlock segment and does not receive a highlight span.
+    test('highlighted verse spanning blocks keeps highlight in verse-start block', () {
       final html = renderChapterToHtml(
         '<p style="p"><v id="8" bcv="GEN.1.8"/>Line A.</p>'
         '<p style="p">Line B.<ve/></p>',
@@ -224,12 +234,17 @@ void main() {
         footnoteColorCss: _footnoteColor,
         highlightedVerseId: '8',
         highlightedVerseBackgroundCss: 'rgba(255, 235, 59, 0.45)',
+        paragraphMode: false,
       );
 
+      // In verse-list mode, _splitByVerse emits one highlight span per verse
+      // segment. The continuation paragraph (Line B.) has no <v> milestone, so
+      // it falls back to plain _renderInlineChildren without a highlight.
       final highlightStylePattern =
           RegExp(r'background-color:rgba\(255, 235, 59, 0\.45\);');
-      expect(highlightStylePattern.allMatches(html).length, 2);
-      expect(html, contains('</span></p><p><span style="'));
+      expect(highlightStylePattern.allMatches(html).length, 1);
+      expect(html, contains('Line A.'));
+      expect(html, contains('Line B.'));
     });
   });
 
@@ -239,21 +254,37 @@ void main() {
 
   group('prose paragraphs', () {
     /// Standard prose paragraph — most common element in non-poetic books.
-    test('p style="p" renders as plain <p>', () {
-      final html = _render(
+    /// Verse-list mode: _proseBlock wraps each verse in its own <p> with a
+    /// margin style so verses have vertical breathing room.
+    test('p style="p" renders as styled <p> in verse-list mode', () {
+      final html = renderChapterToHtml(
         '<p style="p"><v id="1" bcv="JHN.1.1"/>Text.<ve/></p>',
+        bodyColorCss: _bodyColor,
+        verseNumColorCss: _verseNumColor,
+        headingColorCss: _headingColor,
+        dHeadingColorCss: _dHeadingColor,
+        footnoteColorCss: _footnoteColor,
+        baseFontSizePx: _fontSize,
+        paragraphMode: false,
       );
-      expect(html, contains('<p>'));
+      expect(html, contains('<p style='));
       expect(html, contains('Text.'));
     });
 
     /// Continuation paragraph (m = margin) — used after lists or for
-    /// unindented continuations.
-    test('p style="m" renders as plain <p>', () {
-      final html = _render(
+    /// unindented continuations. Verse-list mode produces a styled <p>.
+    test('p style="m" renders as styled <p> in verse-list mode', () {
+      final html = renderChapterToHtml(
         '<p style="m"><v id="1" bcv="NUM.13.4"/>Text.<ve/></p>',
+        bodyColorCss: _bodyColor,
+        verseNumColorCss: _verseNumColor,
+        headingColorCss: _headingColor,
+        dHeadingColorCss: _dHeadingColor,
+        footnoteColorCss: _footnoteColor,
+        baseFontSizePx: _fontSize,
+        paragraphMode: false,
       );
-      expect(html, contains('<p>'));
+      expect(html, contains('<p style='));
     });
 
     /// Indented paragraph (pi1) — quoted letters, speeches, etc.
@@ -885,7 +916,7 @@ void main() {
     test('ip renders as plain paragraph', () {
       final html = _render(
           '<p style="ip"><v id="1" bcv="MAT.1.1"/>Intro text.<ve/></p>');
-      expect(html, contains('<p>'));
+      expect(html, contains('<p style='));
       expect(html, contains('Intro text.'));
     });
   });

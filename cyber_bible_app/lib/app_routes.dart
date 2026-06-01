@@ -44,11 +44,35 @@ class AppRoutes {
   /// Scripture reading screen — displays a single chapter.
   /// Expects a `ReadingArgs` instance as the route argument.
   static const String reading = '/read';
+
+  /// Settings screen — font size, verse format, display toggles, theme nav.
+  static const String settings = '/settings';
+
+  /// Theme selection screen — full-page theme picker with custom painters.
+  static const String themeSelection = '/theme';
 }
 
 // ---------------------------------------------------------------------------
 // Route argument classes
 // ---------------------------------------------------------------------------
+
+/// Arguments passed to [AppRoutes.bookSelect].
+///
+/// All fields are optional — callers that just want the default (Traditional
+/// tab) can use [Navigator.pushNamed] without any arguments.
+class BookSelectArgs {
+  /// The tab index to show on entry.
+  ///
+  /// Tab indices correspond to [BookSelectionScreen]'s `TabController`:
+  ///   0 — Traditional (canonical order, default)
+  ///   1 — Alphabetical
+  ///   2 — Bookmarks
+  ///
+  /// Out-of-range values are clamped to 0 by [BookSelectionScreen].
+  final int initialTab;
+
+  const BookSelectArgs({this.initialTab = 0});
+}
 
 /// Arguments passed to [AppRoutes.chapters].
 ///
