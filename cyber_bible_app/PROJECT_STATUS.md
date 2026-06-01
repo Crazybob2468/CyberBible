@@ -82,11 +82,52 @@ cyber_bible_app/
 
 ## Current Status
 
-**Phase 1 — Step 1.15 Complete: Bookmarks UI**
+**Phase 1 — Step 1.16 Complete: Settings Screen + Theme Selection**
 
-Step 1.15 ✅ COMPLETE. Built the full Bookmarks UI on top of the Step 1.14 data layer: an Add Bookmark sheet in the reading screen, an inline bookmark glyph indicator in rendered chapter HTML, a card-based Bookmarks list tab in the book-selection screen, and verse-level deep navigation from bookmarks back to the reading screen.
+Step 1.16 ✅ COMPLETE. Built the full user preferences system: a persistent `SettingsService`, an 11-theme catalog with hand-crafted set themes, a settings screen, and an ornate theme-selection screen featuring custom-painted preview cards.
 
 ### What was built
+
+- **`pubspec.yaml`** (updated) — Added `shared_preferences: ^2.5.3` and `flex_color_picker: ^3.5.1`.
+- **`lib/services/settings_service.dart`** (new) — Singleton `ChangeNotifier` backed by `SharedPreferences`. Exposes 8 settings: `selectedThemeId`, `accentColor(themeId)`, `themeMode`, `fontSizePx` (12–28, clamped), `showVerseNumbers`, `showSectionHeadings`, `wordsOfChristRed`, `paragraphMode`. `@visibleForTesting resetForTesting()` allows unit tests to reinitialise without a real device.
+- **`lib/models/app_theme_definition.dart`** (new) — `AppThemeDefinition`, `AppThemeCatalog` (11 themes: 5 customisable + 6 set), and `AppThemeBuilder` (static helpers: `buildLight`, `buildDark`, `resolveFromSettings`). Each of the 6 set themes (`forestCathedral`, `midnightOcean`, `desertSunrise`, `royalAmethyst`, `crimsonCovenant`, `aurora`) has a fully hand-crafted `ColorScheme` + `ThemeData`.
+- **`lib/app.dart`** (updated) — `StatelessWidget` → `StatefulWidget`; listens to `SettingsService` and passes live `ThemeData` to `MaterialApp`.
+- **`lib/main.dart`** (updated) — Calls `await SettingsService.ensureLoaded()` before `runApp`.
+- **`lib/utils/usfx_renderer.dart`** (updated) — `renderChapterToHtml` gains 4 new named parameters: `wjColorCss`, `showSectionHeadings`, `showVerseNumbers`, `paragraphMode` (default `true`). Paragraph mode renders prose `<p>` as `<p style="margin:0;text-indent:1.5em;">`.
+- **`lib/screens/reading_screen.dart`** (updated) — Listens to `SettingsService`; `_rebuildHtml` reads all 5 rendering settings; gear icon added to `SliverAppBar.actions`.
+- **`lib/screens/settings_screen.dart`** (new) — Font-size slider (with live preview sentence), verse-format segmented button (Paragraph / Verse-List), Words of Christ switch, Section Headings switch, Verse Numbers switch, and a Theme tile that navigates to `AppRoutes.themeSelection`.
+- **`lib/screens/theme_selection_screen.dart`** (new) — Horizontally scrollable rows of theme cards. Customisable cards show base colour + accent swatch; Set theme cards are custom-painted (`CustomPainter`). Forest Cathedral card mirrors home-screen brand filigree/gold ornaments. Tapping a customisable card opens `_AccentPickerSheet` with 8 curated swatches + `flex_color_picker` custom wheel + L/D/S toggle (classic_white only).
+- **`lib/app_routes.dart`** (updated) — Added `AppRoutes.settings` (`'/settings'`) and `AppRoutes.themeSelection` (`'/theme'`).
+- **`lib/routes.dart`** (updated) — Route cases for `settings` and `themeSelection`.
+- **`lib/screens/home_screen.dart`** (updated) — Gear `IconButton` overlay added to `_buildReadyState` Stack (top-right, cream-gold colour to match home screen palette).
+- **`test/services/settings_service_test.dart`** (new) — 31 unit tests: defaults, all 8 setters (persist + notify), accent-per-theme isolation, font-size clamping, `ensureLoaded` idempotency, persistence round-trip.
+- **`test/utils/usfx_renderer_test.dart`** (updated) — 3 existing tests updated to pass `paragraphMode: false` where they expected plain `<p>` output (verse-list mode).
+
+### Key numbers
+- **240 tests passing** (209 pre-existing + 31 new Step 1.16 + some merged/updated).
+- `dart analyze` → No issues.
+
+### PR self-review fixes applied
+- `settings_screen.dart` `_ThemeNavigationTile` — replaced manual string-split/title-case with canonical `AppThemeCatalog.byId(themeId).name`; added `app_theme_definition.dart` import.
+- `theme_selection_screen.dart` `_AccentPickerSheet` — wrapped inner `Column` in `SingleChildScrollView` to prevent overflow on small screens when the brightness toggle is also displayed.
+- `theme_selection_screen.dart` — all three tappable circle widgets (`_ThemeCard`, `_SwatchButton`, `_CustomPickerButton`) migrated from `GestureDetector` to `InkWell` (keyboard Tab/Enter operability + ripple feedback).
+- `theme_selection_screen.dart` — `_SwatchButton` and `_CustomPickerButton` visual circles wrapped in `SizedBox(width:48, height:48)` to meet the 48 dp Material tap-target minimum.
+
+### Accessibility checklist
+- All new `IconButton`s have `tooltip:` (accessible label for screen readers).
+- `_SwatchButton` uses `Semantics(label: ..., button: true, selected: isSelected)`.
+- `SegmentedButton` targets have `minimumSize: Size(0, 48)` (≥ 48 dp tap targets).
+- `Slider` wrapped in `Semantics` with label, value, hint.
+- Theme cards: full card described via `Semantics(label: ..., button: true, selected: ...)`.
+- Gear icon on home screen: `Semantics(label: 'Settings', button: true)` wrapper.
+
+Next: Step 1.17 — TBD (see roadmap below).
+
+---
+
+**Previous: Step 1.15 ✅ COMPLETE — Bookmarks UI**
+
+Step 1.15 ✅ COMPLETE. Built the full Bookmarks UI on top of the Step 1.14 data layer: an Add Bookmark sheet in the reading screen, an inline bookmark glyph indicator in rendered chapter HTML, a card-based Bookmarks list tab in the book-selection screen, and verse-level deep navigation from bookmarks back to the reading screen.
 
 - **`lib/models/bookmark.dart`** (updated) — Added optional `notes` (free-text annotation) field. `copyWith`, `toMap`, `fromMap` all updated. `reference` getter now returns `"GEN 1"` (no colon) for chapter-level bookmarks (`verse = ''`).
 - **`lib/services/user_data_service.dart`** (updated) — Schema bumped to **v2**; migration adds `notes TEXT` column to existing `user_data.db` installations. New `getBookmarkedVerses(bookCode, chapter) → Future<Set<String>>` method returns all verse IDs with bookmarks in a chapter (empty string `''` included for chapter-level bookmarks).
@@ -121,7 +162,7 @@ Step 1.15 ✅ COMPLETE. Built the full Bookmarks UI on top of the Step 1.14 data
 - `AddBookmarkSheet` action buttons: `Semantics(label: '…', button: true)` on Cancel and Save.
 - Bookmark AppBar icon: `tooltip: 'Add bookmark'` provides the accessible label.
 
-Next: Step 1.16 — User preferences screen (font size, theme, red letters toggle).
+Next: Step 1.17 — Internationalization setup.
 
 ---
 
@@ -564,7 +605,7 @@ The goal: open the app, pick a book and chapter, and read formatted Bible text.
 | 1.13 ✅ | **Chapter-to-chapter navigation** | Add previous/next chapter buttons or swipe gestures to move between chapters seamlessly. |
 | 1.14 ✅ | **Bookmarks — data layer** | Create a `Bookmark` model and SQLite table. Methods: `addBookmark(reference)`, `removeBookmark(id)`, `getBookmarks()`. |
 | 1.15 ✅ | **Bookmarks — UI** | Add a way to bookmark the current location (long-press or button). Build a bookmarks list screen accessible from the home screen or menu. |
-| 1.16 | **Settings screen (font & theme)** | Build a settings screen with: font size slider; light/dark/system theme toggle; accent color picker (let users choose from a curated palette of seed colors that drive the Material 3 `ColorScheme` — e.g. the default calm blue, forest green, crimson, gold, purple, etc.); words-of-Christ color toggle (red or black); section headings toggle (show/hide `<s>` and `<d>` noncanonical text, per design doc); verse numbers toggle (show/hide inline verse number superscripts); **verse format toggle** (paragraph/prose mode — text flows as natural paragraphs with inline verse superscripts — vs. verse-list mode — each verse begins on its own line; default is paragraph/prose mode). Persist all settings with `shared_preferences`. The home screen branded gradient is fixed and unaffected by theme changes; all inner screens (book selection, chapter selection, reading) respond to the chosen theme. |
+| 1.16 ✅ | **Settings screen (font & theme)** | Build a settings screen with: font size slider; light/dark/system theme toggle; accent color picker (let users choose from a curated palette of seed colors that drive the Material 3 `ColorScheme` — e.g. the default calm blue, forest green, crimson, gold, purple, etc.); words-of-Christ color toggle (red or black); section headings toggle (show/hide `<s>` and `<d>` noncanonical text, per design doc); verse numbers toggle (show/hide inline verse number superscripts); **verse format toggle** (paragraph/prose mode — text flows as natural paragraphs with inline verse superscripts — vs. verse-list mode — each verse begins on its own line; default is paragraph/prose mode). Persist all settings with `shared_preferences`. The home screen branded gradient is fixed and unaffected by theme changes; all inner screens (book selection, chapter selection, reading) respond to the chosen theme. |
 | 1.17 | **Internationalization setup** | Set up Flutter l10n with ARB files. Extract all hard-coded UI strings into localizable constants. Start with English. Add structure for additional languages. |
 
 ### Phase 2 — Study Features

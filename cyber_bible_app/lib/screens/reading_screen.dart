@@ -30,6 +30,7 @@ import '../models/book.dart';
 import '../models/bookmark.dart';
 import '../models/verse.dart';
 import '../services/bible_service.dart';
+import '../services/settings_service.dart';
 import '../services/user_data_service.dart';
 import '../utils/chapter_nav.dart';
 import '../utils/usfx_renderer.dart';
@@ -231,14 +232,32 @@ class _ReadingScreenState extends State<ReadingScreen> {
     _loadChapter();
     // Load adjacent-chapter info concurrently; result drives prev/next buttons.
     _loadNavInfo();
+    // Rebuild HTML whenever the user changes a reading-display preference
+    // (font size, verse numbers, section headings, words-of-Christ color,
+    // verse format).  Theme changes are handled by CyberBibleApp rebuilding
+    // MaterialApp, which triggers didChangeDependencies here.
+    SettingsService.instance.addListener(_onSettingsChanged);
   }
 
   @override
   void dispose() {
+    SettingsService.instance.removeListener(_onSettingsChanged);
     _highlightClearTimer?.cancel();
     _chapterNavBarHideTimer?.cancel();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  /// Called when SettingsService notifies any change.
+  ///
+  /// Only renderer-relevant settings (font size, verse numbers, section
+  /// headings, words-of-Christ, paragraph mode) need an HTML rebuild.
+  /// Theme/accent changes come through [didChangeDependencies] instead
+  /// because they change the ColorScheme that drives the CSS color params.
+  void _onSettingsChanged() {
+    if (_contentUsfx != null) {
+      _rebuildHtmlPreservingScrollOffset();
+    }
   }
 
   @override
@@ -360,6 +379,15 @@ class _ReadingScreenState extends State<ReadingScreen> {
     if (_contentUsfx == null) return;
 
     final colorScheme = Theme.of(context).colorScheme;
+    final settings = SettingsService.instance;
+
+    // Words-of-Christ color: red when the setting is on, body color otherwise.
+    // The hardcoded red (#e53935) is intentionally NOT from the accent scheme
+    // so that red letters look consistent across all themes.
+    final wjColor = settings.wordsOfChristRed
+        ? '#e53935'
+        : _colorToCss(colorScheme.onSurface);
+
     final html = renderChapterToHtml(
       _contentUsfx!,
       bodyColorCss: _colorToCss(colorScheme.onSurface),
@@ -367,10 +395,14 @@ class _ReadingScreenState extends State<ReadingScreen> {
       headingColorCss: _colorToCss(colorScheme.onSurface.withAlpha(153)),
       dHeadingColorCss: _colorToCss(colorScheme.onSurface.withAlpha(127)),
       footnoteColorCss: _colorToCss(colorScheme.primary),
-      baseFontSizePx: 17.0,
+      baseFontSizePx: settings.fontSizePx,
       highlightedVerseId: _highlightedVerseId,
       highlightedVerseBackgroundCss: _colorToCss(colorScheme.tertiaryContainer.withAlpha(191)),
       bookmarkedVerses: _bookmarkedVerses,
+      wjColorCss: wjColor,
+      showSectionHeadings: settings.showSectionHeadings,
+      showVerseNumbers: settings.showVerseNumbers,
+      paragraphMode: settings.paragraphMode,
     );
 
     setState(() => _html = html);
@@ -1184,12 +1216,42 @@ class _ReadingScreenState extends State<ReadingScreen> {
               style: const TextStyle(fontWeight: FontWeight.w700),
             )
           : null,
-      // Bookmark action — opens the add-bookmark bottom sheet.
+      // ---- AppBar actions (right side) ----
+      // Home icon — clears the back stack and returns to the home screen.
+      // Uses pushNamedAndRemoveUntil so the user cannot accidentally swipe
+      // back into a stale reading session.
       actions: [
+        IconButton(
+          icon: const Icon(Icons.home_rounded),
+          tooltip: 'Home',
+          onPressed: () => Navigator.pushNamedAndRemoveUntil(
+            context,
+            AppRoutes.home,
+            (route) => false, // Remove every route below home.
+          ),
+        ),
+        // Bookmarks icon — opens the book-selection screen with the
+        // Bookmarks tab pre-selected (index 2).
+        IconButton(
+          icon: const Icon(Icons.bookmarks_rounded),
+          tooltip: 'Bookmarks',
+          onPressed: () => Navigator.pushNamed(
+            context,
+            AppRoutes.bookSelect,
+            arguments: const BookSelectArgs(initialTab: 2),
+          ),
+        ),
+        // Add bookmark icon — opens the add-bookmark bottom sheet.
         IconButton(
           icon: const Icon(Icons.bookmark_add_rounded),
           tooltip: 'Add bookmark',
           onPressed: _openAddBookmarkSheet,
+        ),
+        // Settings icon — opens the settings screen.
+        IconButton(
+          icon: const Icon(Icons.settings_rounded),
+          tooltip: 'Settings',
+          onPressed: () => Navigator.pushNamed(context, AppRoutes.settings),
         ),
       ],
       flexibleSpace: FlexibleSpaceBar(

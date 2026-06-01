@@ -75,8 +75,6 @@
 ///
 /// ## Deferred items
 ///
-/// - Section-heading show/hide toggle (`<s>`, `<d>`) — settings step.
-/// - Red-letter toggle for `<wj>` — Step 1.16.
 /// - Footnote pop-up/tap interaction for `<f>` — Step 2.1.
 /// - Cross-reference links for `<x>` — Phase 2.
 /// - Strong's number interactivity for `<w>` — Phase 4.
@@ -168,6 +166,38 @@ String renderChapterToHtml(
   /// The glyph is non-interactive — it is a visual hint only.  Tapping to
   /// manage bookmarks is done via the AppBar bookmark icon.
   Set<String> bookmarkedVerses = const <String>{},
+
+  /// CSS color for `<wj>` (Words of Jesus) elements.
+  ///
+  /// Defaults to red (`#e53935`) so that red-letter text is shown by default.
+  /// When the user turns off the Words-of-Christ color setting, the caller
+  /// should pass [bodyColorCss] here so the text blends with normal verse text.
+  ///
+  /// The value is a CSS color string (e.g. `'#e53935'` or
+  /// `'rgba(229, 57, 53, 1)'`). Using a hardcoded red that does NOT derive
+  /// from the accent scheme keeps red-letter color stable across all themes.
+  String wjColorCss = '#e53935',
+
+  /// Whether to render `<s>` (section heading) and `<d>` (Psalm descriptive
+  /// heading) elements.  When false, these elements are completely omitted
+  /// from the HTML output so only scripture text is shown.  Defaults to true.
+  bool showSectionHeadings = true,
+
+  /// Whether to render inline verse-number superscripts for `<v>` elements.
+  ///
+  /// When false the `<sup>` and bookmark glyph are omitted, but the hidden
+  /// `<cb-verse-marker>` tag is still emitted so that jump-to-verse scrolling
+  /// and verse-position tracking continue to work.
+  bool showVerseNumbers = true,
+
+  /// When true (default), prose paragraphs are rendered with no bottom margin
+  /// and a first-line text indent, mimicking the typography of a printed Bible
+  /// where narrative text flows continuously between section headings.
+  ///
+  /// When false (verse-list mode), each USFX `<p>` element becomes its own
+  /// HTML `<p>` with a 0.5 em bottom margin — the paragraphs are visually
+  /// separated so every paragraph group clearly begins on a new line.
+  bool paragraphMode = true,
 }) {
   // Delegate to the internal renderer class, which holds the colour/font
   // values as fields so every private method can access them without
@@ -184,6 +214,10 @@ String renderChapterToHtml(
     langCode: langCode,
     scriptDirection: scriptDirection,
     bookmarkedVerses: bookmarkedVerses,
+    wjColorCss: wjColorCss,
+    showSectionHeadings: showSectionHeadings,
+    showVerseNumbers: showVerseNumbers,
+    paragraphMode: paragraphMode,
   ).render(usfxFragment);
 }
 
@@ -226,6 +260,28 @@ class _UsfxRenderer {
   /// HTML text-direction attribute value (`'ltr'` or `'rtl'`).
   final String scriptDirection;
 
+  /// CSS color for `<wj>` (Words of Jesus) text.
+  ///
+  /// Defaults to red (`#e53935`).  Pass [bodyColorCss] to neutralise
+  /// red-letter styling when the user has turned off the WoJ color setting.
+  final String wjColorCss;
+
+  /// Whether `<s>` section headings and `<d>` Psalm headings are shown.
+  ///
+  /// When false, all heading-type block elements are omitted from the output.
+  final bool showSectionHeadings;
+
+  /// Whether inline verse-number superscripts are rendered.
+  ///
+  /// When false the `<sup>` element (and bookmark glyph) is suppressed, but
+  /// the `<cb-verse-marker>` tag is still emitted for jump-to-verse support.
+  final bool showVerseNumbers;
+
+  /// When true, prose `<p>` paragraphs use no bottom margin + first-line
+  /// text indent (printed-Bible look).  When false, each paragraph has the
+  /// standard 0.5 em bottom margin (verse-list look).
+  final bool paragraphMode;
+
   /// Verse-number and footnote-marker font size — 65 % of [baseFontSizePx].
   late final String _smallPx;
 
@@ -249,6 +305,10 @@ class _UsfxRenderer {
     this.langCode = 'en',
     this.scriptDirection = 'ltr',
     this.bookmarkedVerses = const <String>{},
+    this.wjColorCss = '#e53935',
+    this.showSectionHeadings = true,
+    this.showVerseNumbers = true,
+    this.paragraphMode = true,
   }) {
     _smallPx = (baseFontSizePx * 0.65).toStringAsFixed(1);
     _s1Px = (baseFontSizePx * 0.85).toStringAsFixed(1);
@@ -323,6 +383,8 @@ class _UsfxRenderer {
       case 'ms':
         // Major section heading as a standalone <ms> element. Some USFX
         // converters use this form instead of <p style="ms1">.
+        // Omitted when showSectionHeadings is false.
+        if (!showSectionHeadings) return '';
         final msText = _extractTextOnly(el);
         if (msText.isEmpty) return '';
         final msPx = (baseFontSizePx * 0.95).toStringAsFixed(1);
@@ -336,6 +398,8 @@ class _UsfxRenderer {
 
       case 'mr':
         // Major section range reference (e.g. "Psalms 1–41").
+        // Omitted when showSectionHeadings is false.
+        if (!showSectionHeadings) return '';
         final mrText = _extractTextOnly(el);
         if (mrText.isEmpty) return '';
         return '<p style="'
@@ -348,6 +412,8 @@ class _UsfxRenderer {
 
       case 'sr':
         // Section cross-reference range (e.g. "(Matthew 5:1–7:29)").
+        // Omitted when showSectionHeadings is false.
+        if (!showSectionHeadings) return '';
         final srText = _extractTextOnly(el);
         if (srText.isEmpty) return '';
         return '<p style="'
@@ -363,8 +429,12 @@ class _UsfxRenderer {
       case 'q':
         return _renderPoetry(el);
       case 's':
+        // Section heading. Omitted when showSectionHeadings is false.
+        if (!showSectionHeadings) return '';
         return _renderSectionHeading(el);
       case 'd':
+        // Psalm descriptive heading. Omitted when showSectionHeadings is false.
+        if (!showSectionHeadings) return '';
         return _renderDescriptiveHeading(el);
       case 'b':
         // Blank-line separator between poetry stanzas (1,070 uses in WEB).
@@ -598,6 +668,17 @@ class _UsfxRenderer {
 
     // `p`, `m`, `nb`, `po`, `pmo`, `pm`, `pmi`, and any other prose style
     // all map to a regular paragraph.
+    //
+    // paragraphMode: No bottom margin; first-line indent gives the printed-
+    // Bible look where continuous narrative flows without visual gaps between
+    // USFX paragraph groups.
+    //
+    // verse-list mode (paragraphMode=false): Standard 0.5 em bottom margin
+    // from the global CSS keeps paragraph groups visually distinct so the
+    // reader can see where each paragraph begins.
+    if (paragraphMode) {
+      return '<p style="margin:0;text-indent:1.5em;">$inner</p>';
+    }
     return '<p>$inner</p>';
   }
 
@@ -823,6 +904,12 @@ class _UsfxRenderer {
         // paragraphs to be fully highlighted.
         // id="v{N}" provides a stable HTML anchor so Step 1.12 (jump-to-verse)
         // can scroll directly to any verse without additional DOM queries.
+
+        // When showVerseNumbers is false, suppress the visual superscript and
+        // bookmark glyph but keep the invisible marker so jump-to-verse and
+        // verse-position tracking continue to work correctly.
+        if (!showVerseNumbers) return markerTag;
+
         final sup = '$markerTag<sup id="v${_escapeHtml(id)}" style="'
             'color:$verseNumColorCss;'
             'font-size:${_smallPx}px;'
@@ -859,11 +946,16 @@ class _UsfxRenderer {
       // ---- Words of Jesus ---------------------------------------------------
 
       case 'wj':
-        // Words spoken by Jesus — rendered in red (#e53935).
-        // Step 1.16 will add a user preference to display these in body colour.
-        // The colour is hardcoded (not from the colour scheme) so that red
-        // letters are consistent regardless of the chosen accent theme.
-        return '<span style="color:#e53935;">${_renderInlineChildren(el)}</span>';
+        // Words spoken by Jesus — rendered in the configured wjColorCss color.
+        //
+        // The default is red (#e53935) so that red-letter Bibles display
+        // correctly out of the box.  When the user disables the Words-of-Christ
+        // color setting, the caller passes bodyColorCss here instead, making
+        // the text blend with normal verse text.
+        //
+        // Using a caller-supplied CSS string (rather than a boolean flag inside
+        // the renderer) keeps the API flexible and avoids an extra branch here.
+        return '<span style="color:$wjColorCss;">${_renderInlineChildren(el)}</span>';
 
       // ---- Footnotes and cross-references -----------------------------------
 

@@ -224,6 +224,7 @@ void main() {
         footnoteColorCss: _footnoteColor,
         highlightedVerseId: '8',
         highlightedVerseBackgroundCss: 'rgba(255, 235, 59, 0.45)',
+        paragraphMode: false, // Verse-list mode: check plain </span></p><p><span
       );
 
       final highlightStylePattern =
@@ -239,9 +240,16 @@ void main() {
 
   group('prose paragraphs', () {
     /// Standard prose paragraph — most common element in non-poetic books.
-    test('p style="p" renders as plain <p>', () {
-      final html = _render(
+    test('p style="p" renders as plain <p> in verse-list mode', () {
+      final html = renderChapterToHtml(
         '<p style="p"><v id="1" bcv="JHN.1.1"/>Text.<ve/></p>',
+        bodyColorCss: _bodyColor,
+        verseNumColorCss: _verseNumColor,
+        headingColorCss: _headingColor,
+        dHeadingColorCss: _dHeadingColor,
+        footnoteColorCss: _footnoteColor,
+        baseFontSizePx: _fontSize,
+        paragraphMode: false, // Verse-list mode: no inline style on <p>
       );
       expect(html, contains('<p>'));
       expect(html, contains('Text.'));
@@ -249,9 +257,16 @@ void main() {
 
     /// Continuation paragraph (m = margin) — used after lists or for
     /// unindented continuations.
-    test('p style="m" renders as plain <p>', () {
-      final html = _render(
+    test('p style="m" renders as plain <p> in verse-list mode', () {
+      final html = renderChapterToHtml(
         '<p style="m"><v id="1" bcv="NUM.13.4"/>Text.<ve/></p>',
+        bodyColorCss: _bodyColor,
+        verseNumColorCss: _verseNumColor,
+        headingColorCss: _headingColor,
+        dHeadingColorCss: _dHeadingColor,
+        footnoteColorCss: _footnoteColor,
+        baseFontSizePx: _fontSize,
+        paragraphMode: false, // Verse-list mode: no inline style on <p>
       );
       expect(html, contains('<p>'));
     });

@@ -40,6 +40,15 @@ dependencies:
   # sufficient. Use flutter_widget_from_html (the full package) only if media
   # element support is needed in the future.
   flutter_widget_from_html_core: ^0.17.2
+  # shared_preferences: cross-platform key-value persistence for user settings.
+  # Used by SettingsService (lib/services/settings_service.dart) to save font
+  # size, theme selection, verse format, display toggles, etc.  Added in Step 1.16.
+  shared_preferences: ^2.5.3
+  # flex_color_picker: HSV/swatch color picker dialog used on the theme
+  # selection screen so users can pick a custom accent color.  Provides both a
+  # curated swatch palette and a draggable HSV wheel — all in one widget.
+  # Added in Step 1.16.
+  flex_color_picker: ^3.5.1
 
 dev_dependencies:
   flutter_test:

@@ -22,6 +22,8 @@ import 'screens/home_screen.dart';
 import 'screens/book_selection_screen.dart';
 import 'screens/chapter_selection_screen.dart';
 import 'screens/reading_screen.dart';
+import 'screens/settings_screen.dart';
+import 'screens/theme_selection_screen.dart';
 
 // ---------------------------------------------------------------------------
 // Route generator
@@ -50,9 +52,15 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
 
     // ---- Book selection ----
     case AppRoutes.bookSelect:
+      // BookSelectArgs is optional — callers that don't need a specific tab
+      // (e.g. HomeScreen) can omit arguments entirely and land on the default
+      // Traditional tab (initialTab = 0).
+      final bookSelectArgs = settings.arguments is BookSelectArgs
+          ? settings.arguments as BookSelectArgs
+          : const BookSelectArgs();
       return MaterialPageRoute<void>(
         settings: settings,
-        builder: (_) => const BookSelectionScreen(),
+        builder: (_) => BookSelectionScreen(initialTab: bookSelectArgs.initialTab),
       );
 
     // ---- Chapter selection ----
@@ -94,6 +102,20 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
           chapter: readingArgs.chapter,
           initialVerse: readingArgs.initialVerse,
         ),
+      );
+
+    // ---- Settings screen ----
+    case AppRoutes.settings:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => const SettingsScreen(),
+      );
+
+    // ---- Theme selection screen ----
+    case AppRoutes.themeSelection:
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (_) => const ThemeSelectionScreen(),
       );
 
     // ---- Unknown route fallback ----
