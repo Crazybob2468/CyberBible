@@ -1429,6 +1429,19 @@ class _ReadingScreenState extends State<ReadingScreen> {
               child: HtmlWidget(
                 html,
                 key: _htmlWidgetKey,
+                // `textStyle` sets the Flutter-level base font size for ALL
+                // rendered text.  Without it, flutter_widget_from_html_core
+                // inherits the ambient Material theme size (typically 14 sp)
+                // and ignores the `body { font-size }` CSS rule for plain
+                // paragraph text.  Explicit inline styles (verse numbers,
+                // headings) already carry absolute px values computed from
+                // baseFontSizePx, so they continue to scale correctly.
+                // `line-height:1.65` keeps the same comfortable reading
+                // rhythm regardless of which font-size the user chose.
+                textStyle: TextStyle(
+                  fontSize: SettingsService.instance.fontSizePx,
+                  height: 1.65,
+                ),
                 customWidgetBuilder: _buildCustomHtmlWidget,
                 // Ensure the <div data-cbv="N"> block markers take up exactly
                 // zero vertical space so they don't introduce visual gaps.
