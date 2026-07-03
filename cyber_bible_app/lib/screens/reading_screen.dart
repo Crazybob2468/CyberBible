@@ -408,7 +408,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
       // If an initial verse was provided (e.g. navigation from BookmarksTab),
       // jump to it after a short delay to let layout complete.  The pending-
-      // jump retry system will keep trying for up to 2 s if HtmlWidget is
+      // jump retry system will keep trying for up to 5 s if HtmlWidget is
       // still building asynchronously.
       if (_initialJumpTarget != null) {
         WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -1165,19 +1165,24 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
     if (_pendingJumpRetryCount >= _maxPendingJumpRetries) {
       final fallbackVerse = _resolveNearestAvailableVerse(requestedVerse);
-      _clearPendingVerseJump();
       final isInitial = (_initialJumpTarget == requestedVerse);
       if (!isInitial && fallbackVerse != null) {
         final didJump = await _jumpToResolvedVerse(
           fallbackVerse,
           manualSelection: manualSelection,
         );
-        if (!didJump) {
-          _pendingJumpRetryCount = 0;
-          _schedulePendingJumpRetry();
+        if (didJump) {
+          _clearPendingVerseJump();
           return;
         }
-      } else if (isInitial) {
+        // Keep the original pending target so retries can continue if fallback
+        // jumping fails due to transient marker/layout timing.
+        _pendingJumpRetryCount = 0;
+        _schedulePendingJumpRetry();
+        return;
+      }
+
+      if (isInitial) {
         // For initial/bookmark jumps, prefer an estimated exact-verse scroll
         // before continuing retries.
         final didEstimatedJump = await _jumpToEstimatedVerse(
@@ -1194,6 +1199,10 @@ class _ReadingScreenState extends State<ReadingScreen> {
         _schedulePendingJumpRetry();
         return;
       }
+
+      // Non-initial jump with no meaningful fallback target left: clear state
+      // to avoid retry loops that can no longer make progress.
+      _clearPendingVerseJump();
       return;
     }
 
