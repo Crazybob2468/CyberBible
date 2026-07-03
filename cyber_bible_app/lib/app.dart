@@ -115,17 +115,6 @@ class _CyberBibleAppState extends State<CyberBibleApp> {
       // onGenerateRoute lets screens receive typed argument objects.
       locale: _resolveStartupLocale(),
       supportedLocales: _compiledUiLocales,
-      localeResolutionCallback: (deviceLocale, supportedLocales) {
-        // Prefer OS locale when the language is compiled into this build.
-        if (deviceLocale != null && _isCompiledLocale(deviceLocale)) {
-          return _compiledUiLocales.firstWhere(
-            (locale) => locale.languageCode == deviceLocale.languageCode,
-            orElse: () => const Locale('en'),
-          );
-        }
-        // Always provide deterministic English fallback.
-        return const Locale('en');
-      },
       initialRoute: AppRoutes.home,
       onGenerateRoute: onGenerateRoute,
     );

@@ -103,12 +103,10 @@ const Duration _pendingJumpRetryDelay = Duration(milliseconds: 50);
 
 /// Lookahead below the viewport top used to select the current verse.
 ///
-/// Instead of using the exact top pixel (which can show a verse that is
-/// barely peeking above the fold), we look this many pixels below the top
-/// edge to find the first verse that is genuinely visible in the reading
-/// area.  This accounts for the collapsed app-bar chrome (~56 dp) plus a
-/// small comfortable margin so the label always matches what the reader
-/// considers to be the topmost line of text.
+/// This is currently zero, so verse tracking uses the exact viewport top.
+///
+/// A positive value can be reintroduced later if field testing shows the
+/// current-verse label should intentionally lag behind tiny top-edge peeks.
 const double _topFullyVisibleInsetPx = 0.0;
 
 /// How far (px) the user must scroll away from a jump landing before the
@@ -631,20 +629,19 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
   /// Updates [_topVerse] from the current scroll offset and cached verse offsets.
   void _syncTopVerseFromScroll() {
-        // While the post-jump lock is active, preserve the landed verse label so
-        // a highlight rebuild cannot flip it back to the verse above.
-        if (_jumpLockedVerse != null && _scrollController.hasClients) {
-          final drift =
-              (_scrollController.offset - _jumpLockOriginOffset).abs();
-          if (drift < _jumpLockScrollThresholdPx) {
-            if (_topVerse != _jumpLockedVerse) {
-              setState(() => _topVerse = _jumpLockedVerse);
-            }
-            return;
-          }
-          // User scrolled away — release the lock and resume normal tracking.
-          _jumpLockedVerse = null;
+    // While the post-jump lock is active, preserve the landed verse label so
+    // a highlight rebuild cannot flip it back to the verse above.
+    if (_jumpLockedVerse != null && _scrollController.hasClients) {
+      final drift = (_scrollController.offset - _jumpLockOriginOffset).abs();
+      if (drift < _jumpLockScrollThresholdPx) {
+        if (_topVerse != _jumpLockedVerse) {
+          setState(() => _topVerse = _jumpLockedVerse);
         }
+        return;
+      }
+      // User scrolled away — release the lock and resume normal tracking.
+      _jumpLockedVerse = null;
+    }
     if (_verseOrder.isEmpty) return;
 
     if (_verseTopOffsets.isEmpty) {
@@ -1256,14 +1253,14 @@ class _ReadingScreenState extends State<ReadingScreen> {
     if (nextOffset <= prevOffset) return null;
 
     double total = 0.0;
-    for (int i = prevIndex + 1; i <= nextIndex; i++) {
+    for (int i = prevIndex; i < nextIndex; i++) {
       final text = (_verses != null && i < _verses!.length) ? _verses![i].textPlain : '';
       total += text.isEmpty ? 30.0 : text.length.toDouble();
     }
     if (total <= 0) return null;
 
     double beforeTarget = 0.0;
-    for (int i = prevIndex + 1; i < targetIndex; i++) {
+    for (int i = prevIndex; i < targetIndex; i++) {
       final text = (_verses != null && i < _verses!.length) ? _verses![i].textPlain : '';
       beforeTarget += text.isEmpty ? 30.0 : text.length.toDouble();
     }
