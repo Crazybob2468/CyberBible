@@ -123,6 +123,10 @@ void main() {
       expect(segmented.segments[0].tooltip, 'Light mode');
       expect(segmented.segments[1].tooltip, 'Follow system mode');
       expect(segmented.segments[2].tooltip, 'Dark mode');
+
+      // Ensure icon-first segmented control keeps Material 48dp tap target.
+      final minSize = segmented.style?.minimumSize?.resolve(<WidgetState>{});
+      expect(minSize?.height, 48);
     });
   });
 }

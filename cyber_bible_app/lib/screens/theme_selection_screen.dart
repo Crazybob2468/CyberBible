@@ -1220,7 +1220,7 @@ class _AccentPickerSheetState extends State<_AccentPickerSheet> {
             await widget.onThemeModeChanged!(sel.first);
           },
           style: ButtonStyle(
-            minimumSize: WidgetStateProperty.all(const Size(0, 44)),
+            minimumSize: WidgetStateProperty.all(const Size(0, 48)),
           ),
         ),
         const SizedBox(height: 8),

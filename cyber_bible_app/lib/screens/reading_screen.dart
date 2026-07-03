@@ -94,7 +94,7 @@ const int _maxScrollRestoreRetries = 8;
 
 /// Maximum retries while waiting for an exact jump target marker to mount.
 ///
-/// 40 × 50 ms = 2 s — enough to cover async HtmlWidget builds on large chapters
+/// 100 × 50 ms = 5 s — enough to cover async HtmlWidget builds on large chapters
 /// (e.g. navigating to a verse from Bookmarks on a cold route).
 const int _maxPendingJumpRetries = 100;
 
@@ -1316,7 +1316,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
       // Markers are now available — execute immediately.
       final target = _initialJumpTarget!;
       _initialJumpTarget = null;
-      _jumpToVerseAnchor(target, manualSelection: false);
+      unawaited(_jumpToVerseAnchor(target, manualSelection: false));
       return;
     }
     // Re-queue so the retry loop picks it up.
