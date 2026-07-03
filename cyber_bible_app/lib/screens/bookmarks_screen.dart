@@ -352,20 +352,18 @@ class _SortHeader extends StatelessWidget {
           Semantics(
             label: 'Sort order: $label. Tap to toggle.',
             button: true,
-            child: TextButton.icon(
-              onPressed: onToggle,
-              icon: Icon(
-                sortOrder == BookmarkSortOrder.recentFirst
-                    ? Icons.access_time_rounded
-                    : Icons.menu_book_rounded,
-                size: 18,
-              ),
-              label: Text(label),
-              style: TextButton.styleFrom(
-                foregroundColor: colorScheme.primary,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                minimumSize: const Size(48, 48),
+            child: Tooltip(
+              message: 'Sort: $label',
+              child: IconButton(
+                onPressed: onToggle,
+                icon: Icon(
+                  sortOrder == BookmarkSortOrder.recentFirst
+                      ? Icons.access_time_rounded
+                      : Icons.menu_book_rounded,
+                  size: 20,
+                  color: colorScheme.primary,
+                ),
+                tooltip: 'Sort: $label',
               ),
             ),
           ),

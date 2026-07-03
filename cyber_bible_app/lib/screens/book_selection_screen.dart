@@ -142,10 +142,34 @@ class _BookSelectionScreenState extends State<BookSelectionScreen>
         // with the page on smaller screens.
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: 'Traditional'),
-            Tab(text: 'Alphabetical'),
-            Tab(text: 'Bookmarks'),
+          tabs: [
+            Tab(
+              icon: Tooltip(
+                message: 'Traditional order',
+                child: Semantics(
+                  label: 'Traditional order tab',
+                  child: Icon(Icons.auto_stories_rounded),
+                ),
+              ),
+            ),
+            Tab(
+              icon: Tooltip(
+                message: 'Alphabetical order',
+                child: Semantics(
+                  label: 'Alphabetical order tab',
+                  child: Icon(Icons.sort_by_alpha_rounded),
+                ),
+              ),
+            ),
+            Tab(
+              icon: Tooltip(
+                message: 'Bookmarks',
+                child: Semantics(
+                  label: 'Bookmarks tab',
+                  child: Icon(Icons.bookmark_outline_rounded),
+                ),
+              ),
+            ),
           ],
         ),
       ),

@@ -109,15 +109,29 @@ Step 1.16 ✅ COMPLETE. The session after Step 1.16 resolved four user-reported 
 `customWidgetBuilder` in `flutter_widget_from_html_core` ALWAYS creates `WidgetBit.block()` — no CSS override is possible. The only correct approach for verse-position markers is `<div data-cbv="N">` placed as a **block sibling before** each `<p>`, never inside one.
 
 ### Key numbers
-- **240 tests passing**, `dart analyze` → No issues.
+- **243 tests passing**, `dart analyze` → No issues.
 
-Next: Step 1.16.5 — Verse-jump accuracy fix, icon-first UI audit, and OS default language detection.
+Next: Step 1.17 — Internationalization setup.
 
 ---
 
-**Upcoming: Step 1.16.5 — Verse-jump accuracy fix + icon-first UI + OS language**
+**Step 1.16.5 ✅ COMPLETE — Verse-jump accuracy fix + icon-first UI + OS language**
 
 This step addresses an off-by-verse bug reported by a field tester, establishes an icon-first UI design principle, and lays the groundwork for runtime OS locale detection ahead of the full internationalization work in Step 1.17.
+
+### Implementation progress (current)
+
+- Verse jump/current-verse tracking in `reading_screen.dart` is now stable in field validation, including bookmark deep-link jumps and larger-font scenarios.
+- Temporary debug instrumentation used during field triage has been fully removed.
+- Icon-first controls are now implemented on high-traffic surfaces:
+  - `settings_screen.dart`: verse-format segmented control converted to icon-first with tooltips.
+  - `theme_selection_screen.dart`: brightness segmented control converted to icon-first with tooltips and selected-mode caption.
+  - `book_selection_screen.dart`: book order tabs converted to icon-only tabs with `Tooltip` + `Semantics`.
+  - `reading_screen.dart`: quick-nav controls tightened to icon-first labels, with explicit tooltip and semantics metadata.
+  - `reading_screen.dart`: book/chapter quick-nav sheet order tabs (traditional/alphabetical) converted to icon-only tabs with `Tooltip` + `Semantics`.
+  - `bookmarks_screen.dart`: sort toggle converted to icon-first control with tooltip and semantics label.
+- New regression coverage added: `test/screens/icon_first_controls_test.dart` validates icon-first controls and accessibility metadata: book-selection tab tooltips + semantics labels, settings verse-format icon options + segment tooltips, and theme accent-sheet brightness icon options + segment tooltips.
+- Validation after these updates: `flutter analyze` reported no issues and `flutter test` passed all **243 tests**.
 
 ### Bug fix: Verse navigation lands on wrong verse
 
