@@ -1201,18 +1201,18 @@ class _AccentPickerSheetState extends State<_AccentPickerSheet> {
           segments: const [
             ButtonSegment(
               value: ThemeMode.light,
-              label: Text('Light'),
               icon: Icon(Icons.light_mode_rounded),
+              tooltip: 'Light mode',
             ),
             ButtonSegment(
               value: ThemeMode.system,
-              label: Text('System'),
               icon: Icon(Icons.brightness_auto_rounded),
+              tooltip: 'Follow system mode',
             ),
             ButtonSegment(
               value: ThemeMode.dark,
-              label: Text('Dark'),
               icon: Icon(Icons.dark_mode_rounded),
+              tooltip: 'Dark mode',
             ),
           ],
           selected: {mode},
@@ -1220,7 +1220,19 @@ class _AccentPickerSheetState extends State<_AccentPickerSheet> {
             await widget.onThemeModeChanged!(sel.first);
           },
           style: ButtonStyle(
-            minimumSize: WidgetStateProperty.all(const Size(0, 44)),
+            minimumSize: WidgetStateProperty.all(const Size(0, 48)),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          mode == ThemeMode.light
+              ? 'Light mode'
+              : mode == ThemeMode.dark
+                  ? 'Dark mode'
+                  : 'Follow system mode',
+          style: TextStyle(
+            fontSize: 12,
+            color: cs.onSurfaceVariant,
           ),
         ),
       ],

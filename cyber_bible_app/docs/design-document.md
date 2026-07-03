@@ -96,6 +96,7 @@ Main parts and sub-parts:
 - Color scheme selection
 - Display options (words of Jesus in red or not, show verse numbers or not, show illustrations or not, etc.)
 - **Verse format mode**: users may choose between *paragraph/prose mode* (text flows as natural paragraphs and poetry stanzas, matching the original USFX layout — verse numbers appear as small inline superscripts) and *verse-list mode* (each verse starts on a new line, making individual verses easy to locate and reference). Default is paragraph/prose mode. This setting is stored with the other reading preferences and applies to all translations.
+- **Icon-first UI principle**: Use icons rather than text labels wherever the meaning is internationally clear and unambiguous. This minimizes the localization burden (fewer strings to translate across ~100+ target languages) and makes the app immediately usable for speakers of any language. Text labels should still be used when an icon alone would be unclear or ambiguous, or when a label significantly aids discoverability. Every icon-only interactive control must have a `tooltip:` or `Semantics(label: …)` for screen-reader accessibility.
 - Play Scripture audio in parallel with primary pane text
 - Search options
 - Translation picker for currently displayed Bibles
@@ -133,6 +134,18 @@ Main parts and sub-parts:
 - Not included in Bible module, but indexed to Scripture
 
 ### Scripture on a Picture Creator (future)
+
+### UI Language Architecture
+
+The default Cyber Bible UI language is the device OS locale, not hardcoded English.
+
+- **English always compiled in** — English ARB files are included at build time and serve as the permanent fallback. This is practical because the core development team is English-speaking.
+- **Target ~100+ languages** — use Android's supported language set as the reference for coverage goals.
+- **Downloadable UI language modules** — languages other than English are delivered as on-demand downloadable modules (not compiled into the APK) to keep the initial install size manageable. This is the same module strategy used for Bible translations.
+- **Module pairing strategy** — a UI language module can be bundled or suggested alongside a Bible translation in the same language, or alongside the appropriate language of wider communication for the region where that language is spoken.
+- **Auto-download trigger** — on first launch, if the OS locale is not English, the app should offer to download (or automatically begin downloading) the matching UI language module.
+- **OS locale default** — at startup, read the device locale (via Flutter's `WidgetsBinding.instance.platformDispatcher.locale`) and apply the matching UI language if available; otherwise fall back to English.
+- **Audio Bible caching note (Phase 5)** — audio files follow the same philosophy: chapter-by-chapter downloads with cache management that can offload stored chapters when device storage is low. This is a deliberate trade-off between offline-first goals and practical storage limits.
 
 ### Installers
 - By platform; separate for Windows, Mac, and Linux

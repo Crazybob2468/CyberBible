@@ -348,13 +348,13 @@ class _VerseFormatTile extends StatelessWidget {
             segments: const [
               ButtonSegment<bool>(
                 value: true,
-                label: Text('Paragraph'),
                 icon: Icon(Icons.menu_book_rounded),
+                tooltip: 'Paragraph mode',
               ),
               ButtonSegment<bool>(
                 value: false,
-                label: Text('Verse List'),
                 icon: Icon(Icons.format_list_bulleted_rounded),
+                tooltip: 'Verse-list mode',
               ),
             ],
             selected: {isParagraph},

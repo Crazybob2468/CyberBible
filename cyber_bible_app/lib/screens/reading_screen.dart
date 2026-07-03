@@ -20,7 +20,8 @@
 
 import 'dart:async';
 
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, kIsWeb, TargetPlatform;
+import 'package:flutter/foundation.dart'
+  show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart'; // RenderAbstractViewport
 import 'package:flutter/services.dart'; // SemanticsService, SystemNavigator
@@ -91,10 +92,32 @@ const int _maxMarkerCollectRetries = 12;
 /// Frame retries used to re-apply scroll offset while async HTML layout settles.
 const int _maxScrollRestoreRetries = 8;
 
-/// Minimum visible distance from viewport top before a verse is treated as
-/// the active top verse in the sticky quick-nav header.
-const double _topVerseViewportThresholdPx = 60.0;
+/// Maximum retries while waiting for an exact jump target marker to mount.
+///
+/// 100 × 50 ms = 5 s — enough to cover async HtmlWidget builds on large chapters
+/// (e.g. navigating to a verse from Bookmarks on a cold route).
+const int _maxPendingJumpRetries = 100;
 
+/// Delay between pending-jump retries so each pass gets a fresh layout frame.
+const Duration _pendingJumpRetryDelay = Duration(milliseconds: 50);
+
+/// Lookahead below the viewport top used to select the current verse.
+///
+/// This is currently zero, so verse tracking uses the exact viewport top.
+///
+/// A positive value can be reintroduced later if field testing shows the
+/// current-verse label should intentionally lag behind tiny top-edge peeks.
+const double _topFullyVisibleInsetPx = 0.0;
+
+/// How far (px) the user must scroll away from a jump landing before the
+/// post-jump verse lock is released and normal tracking resumes.
+const double _jumpLockScrollThresholdPx = 30.0;
+
+/// Fractional tolerance near a verse start used by interpolation.
+///
+/// If the top edge is within this tiny fraction of a verse's estimated start,
+/// treat that verse as fully visible; otherwise advance to the next verse.
+const double _fullyVisibleStartTolerance = 0.01;
 // ---------------------------------------------------------------------------
 // Main screen widget
 // ---------------------------------------------------------------------------
@@ -200,6 +223,31 @@ class _ReadingScreenState extends State<ReadingScreen> {
   /// Prevents queuing duplicate marker-collection callbacks while scrolling.
   bool _markerCollectionScheduled = false;
 
+  /// Verse ID requested by quick-nav but not yet jumpable because marker
+  /// offsets are still being collected after async HTML layout.
+  String? _pendingJumpVerseId;
+
+  /// Whether the pending jump should be recorded in browser history.
+  bool _pendingJumpManualSelection = false;
+
+  /// Retry counter for pending jump marker waits.
+  int _pendingJumpRetryCount = 0;
+
+  /// Prevents duplicate pending-jump retry callbacks in the same frame.
+  bool _pendingJumpRetryScheduled = false;
+
+  /// Preserved initialVerse target so a cold-route bookmark jump can be
+  /// re-queued if the first attempt exhausts retries before async layout
+  /// finishes.  Cleared after the first successful jump.
+  String? _initialJumpTarget;
+
+  /// Verse to hold the sticky label at immediately after a programmatic jump.
+  /// Released once the user scrolls [_jumpLockScrollThresholdPx] from landing.
+  String? _jumpLockedVerse;
+
+  /// Scroll offset at the moment [_jumpLockedVerse] was set.
+  double _jumpLockOriginOffset = 0.0;
+
   // ---- Chapter navigation state ----
 
   /// Whether the chapter navigation bar (Previous / Next) is currently visible.
@@ -297,6 +345,13 @@ class _ReadingScreenState extends State<ReadingScreen> {
   /// Loads chapter USFX + verse list and prepares rendered HTML.
   Future<void> _loadChapter() async {
     final generation = ++_loadGeneration;
+    _clearPendingVerseJump();
+    // Preserve widget.initialVerse across the async load so that if the
+    // first jump attempt exhausts its retry window (async HtmlWidget build),
+    // _scheduleInitialJumpIfNeeded() can re-queue it once markers arrive.
+    _initialJumpTarget = widget.initialVerse?.isNotEmpty == true
+        ? widget.initialVerse
+        : null;
 
     setState(() {
       _errorMessage = null;
@@ -352,13 +407,15 @@ class _ReadingScreenState extends State<ReadingScreen> {
       _rebuildHtml();
 
       // If an initial verse was provided (e.g. navigation from BookmarksTab),
-      // jump to it after a short delay to let layout complete.
-      if (widget.initialVerse != null && widget.initialVerse!.isNotEmpty) {
+      // jump to it after a short delay to let layout complete.  The pending-
+      // jump retry system will keep trying for up to 5 s if HtmlWidget is
+      // still building asynchronously.
+      if (_initialJumpTarget != null) {
         WidgetsBinding.instance.addPostFrameCallback((_) async {
           if (!mounted) return;
           await Future<void>.delayed(const Duration(milliseconds: 300));
           if (mounted) {
-            await _jumpToVerse(widget.initialVerse!, manualSelection: false);
+            await _jumpToVerse(_initialJumpTarget!, manualSelection: false);
           }
         });
       }
@@ -378,6 +435,10 @@ class _ReadingScreenState extends State<ReadingScreen> {
   /// Rebuilds themed HTML from [_contentUsfx] and active color scheme.
   void _rebuildHtml() {
     if (_contentUsfx == null) return;
+
+    // HTML rebuild invalidates marker render objects; force recollection from
+    // the new widget tree so quick-nav never uses stale offsets.
+    _resetVerseMarkerState();
 
     final colorScheme = Theme.of(context).colorScheme;
     final settings = SettingsService.instance;
@@ -408,6 +469,10 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
     setState(() => _html = html);
     _scheduleMarkerCollection(resetRetryCounter: true);
+    if (_pendingJumpVerseId != null) {
+      // Re-attempt an already-requested jump once fresh marker collection runs.
+      _schedulePendingJumpRetry();
+    }
     // After layout completes, check whether the chapter fits entirely on screen
     // and show the nav bar immediately if so.  Short chapters never generate a
     // scroll event, which is the normal trigger for revealing the bar.
@@ -468,6 +533,12 @@ class _ReadingScreenState extends State<ReadingScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scrollController.hasClients) return;
 
+      // Do not fight active gesture/ballistic scrolling. This prevents the
+      // post-jump highlight rebuild from feeling like the view is locked.
+      if (_scrollController.position.isScrollingNotifier.value) {
+        return;
+      }
+
       final maxOffset = _scrollController.position.maxScrollExtent;
       final clampedTarget = targetOffset.clamp(0.0, maxOffset);
       final currentOffset = _scrollController.offset;
@@ -527,6 +598,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
     if (collected.isEmpty) {
       _retryMarkerCollection();
+      _schedulePendingJumpRetry();
       return;
     }
 
@@ -544,6 +616,8 @@ class _ReadingScreenState extends State<ReadingScreen> {
     }
 
     _syncTopVerseFromScroll();
+    _schedulePendingJumpRetry();
+    _scheduleInitialJumpIfNeeded();
   }
 
   /// Retries marker collection while HtmlWidget is still asynchronously building.
@@ -555,26 +629,75 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
   /// Updates [_topVerse] from the current scroll offset and cached verse offsets.
   void _syncTopVerseFromScroll() {
-    if (_verseTopOffsets.isEmpty || _verseOrder.isEmpty) return;
+    // While the post-jump lock is active, preserve the landed verse label so
+    // a highlight rebuild cannot flip it back to the verse above.
+    if (_jumpLockedVerse != null && _scrollController.hasClients) {
+      final drift = (_scrollController.offset - _jumpLockOriginOffset).abs();
+      if (drift < _jumpLockScrollThresholdPx) {
+        if (_topVerse != _jumpLockedVerse) {
+          setState(() => _topVerse = _jumpLockedVerse);
+        }
+        return;
+      }
+      // User scrolled away — release the lock and resume normal tracking.
+      _jumpLockedVerse = null;
+    }
+    if (_verseOrder.isEmpty) return;
+
+    if (_verseTopOffsets.isEmpty) {
+      // Without marker offsets we cannot compute an exact top verse.
+      // Preserve the current label instead of snapping to an incorrect value.
+      return;
+    }
 
     final currentOffset = _scrollController.hasClients ? _scrollController.offset : 0.0;
-    String? top;
-    String? firstAfterTop;
+    final fullyVisibleTop = currentOffset + _topFullyVisibleInsetPx;
+
+    String? lastBeforeTop;
+    String? firstFullyVisible;
 
     for (final verse in _verseOrder) {
       final verseOffset = _verseTopOffsets[verse];
       if (verseOffset == null) continue;
-      // Require verse to be at least 60px into the viewport to count as "top".
-      // This prevents a barely-visible verse at the top from stealing focus.
-      if (verseOffset <= currentOffset + _topVerseViewportThresholdPx) {
-        top = verse;
-      } else {
-        firstAfterTop ??= verse;
-        break;
+
+      if (verseOffset < fullyVisibleTop) {
+        lastBeforeTop = verse;
+        continue;
+      }
+
+      firstFullyVisible = verse;
+      break;
+    }
+
+    // Prefer the top-most fully visible verse. If none is fully visible yet,
+    // fall back to the last verse whose marker is above the viewport top.
+    String? top = firstFullyVisible ?? lastBeforeTop;
+
+    // Paragraph mode marker coverage is sparse. Interpolate between adjacent
+    // known markers so long red-letter spans (for example John 3:11-21) do not
+    // collapse into a direct jump from verse 10 to verse 22.
+    final betweenIndex = _estimateVerseIndexBetweenMarkers(
+      currentOffset: currentOffset,
+      previousVerseId: lastBeforeTop,
+      nextVerseId: firstFullyVisible,
+    );
+    if (betweenIndex != null) {
+      // Between-marker interpolation should override sparse marker jumps
+      // (e.g. 10 -> 22) by supplying an index inside that gap.
+      top = _verseOrder[betweenIndex];
+    }
+
+    // Paragraph mode can have sparse marker coverage. If the reader has
+    // scrolled beyond the last known marker, estimate within the unresolved
+    // tail only (prevents both plateau and bottom-biased jumps).
+    final tailEstimatedIndex = _estimateTailVerseIndexAfterLastMarker(currentOffset);
+    if (tailEstimatedIndex != null) {
+      final exactTopIndex = _verseIndexById[top] ?? 0;
+      if (tailEstimatedIndex > exactTopIndex) {
+        top = _verseOrder[tailEstimatedIndex];
       }
     }
-    // If nothing is at/above the viewport top, prefer the first verse below it.
-    top ??= firstAfterTop;
+
     top ??= _topVerse;
     top ??= _verseOrder.firstWhere(
       (v) => _verseTopOffsets.containsKey(v),
@@ -584,6 +707,138 @@ class _ReadingScreenState extends State<ReadingScreen> {
     if (top != _topVerse) {
       setState(() => _topVerse = top);
     }
+  }
+
+  /// Estimates an in-between verse index when scrolling between two known
+  /// marker offsets that span multiple verses.
+  ///
+  /// Uses each verse's plain-text character length as a proxy for its rendered
+  /// height.  Longer verses (like red-letter speeches) occupy proportionally
+  /// more scroll range, producing a far more accurate estimate than a uniform
+  /// linear interpolation.
+  ///
+  /// IMPORTANT: this method returns the first *fully visible* verse index for
+  /// the current top edge position, not merely the verse containing the edge.
+  int? _estimateVerseIndexBetweenMarkers({
+    required double currentOffset,
+    required String? previousVerseId,
+    required String? nextVerseId,
+  }) {
+    if (previousVerseId == null || nextVerseId == null) return null;
+
+    final prevIndex = _verseIndexById[previousVerseId];
+    final nextIndex = _verseIndexById[nextVerseId];
+    final prevOffset = _verseTopOffsets[previousVerseId];
+    final nextOffset = _verseTopOffsets[nextVerseId];
+    if (prevIndex == null ||
+        nextIndex == null ||
+        prevOffset == null ||
+        nextOffset == null) {
+      return null;
+    }
+
+    final gap = nextIndex - prevIndex;
+    if (gap <= 1) return null;
+    if (nextOffset <= prevOffset) return null;
+
+    // We are inside the interval after `previousVerseId` has crossed above the
+    // viewport top. To satisfy "first fully visible verse", never return the
+    // previous marker verse from this estimator.
+    final startIndex = prevIndex + 1;
+    if (startIndex >= nextIndex) return null;
+
+    // Fractional progress within this scroll span (0 = at previous marker,
+    // 1 = at next marker).
+    final progress =
+        ((currentOffset - prevOffset) / (nextOffset - prevOffset)).clamp(0.0, 1.0);
+
+    // Compute total text length for all verses in this range so we can
+    // distribute scroll space proportionally to rendered height.
+    double totalLength = 0.0;
+    for (int i = startIndex; i < nextIndex; i++) {
+      final text = (_verses != null && i < _verses!.length)
+          ? _verses![i].textPlain
+          : '';
+      totalLength += text.isEmpty ? 30.0 : text.length.toDouble();
+    }
+    if (totalLength == 0) return null;
+
+    // Walk cumulative fractions to find the verse that currently contains the
+    // viewport top edge, then advance to the next verse unless we're at the
+    // very start of the current verse.
+    double cumulative = 0.0;
+    double verseStart = 0.0;
+    for (int i = startIndex; i < nextIndex; i++) {
+      final text = (_verses != null && i < _verses!.length)
+          ? _verses![i].textPlain
+          : '';
+      cumulative += (text.isEmpty ? 30.0 : text.length.toDouble()) / totalLength;
+      if (progress < cumulative) {
+        // If we're basically at this verse start, it's fully visible.
+        if (progress <= verseStart + _fullyVisibleStartTolerance) {
+          return i.clamp(startIndex, nextIndex);
+        }
+        // Top edge is inside verse i, so first fully visible verse is i+1.
+        return (i + 1).clamp(startIndex, nextIndex);
+      }
+      verseStart = cumulative;
+    }
+
+    // At/after the end of the in-between span, the next marker verse is the
+    // first fully visible verse.
+    return nextIndex;
+  }
+
+  /// Estimates verse index only in the unresolved tail after the last known
+  /// marker offset.
+  ///
+  /// This avoids the old freeze-at-last-marker bug while keeping the sticky
+  /// label anchored near the top of the screen instead of drifting toward the
+  /// bottom of the viewport.
+  int? _estimateTailVerseIndexAfterLastMarker(double currentOffset) {
+    if (!_scrollController.hasClients ||
+        _verseOrder.isEmpty ||
+        _verseTopOffsets.isEmpty ||
+        _scrollController.position.maxScrollExtent <= 0.0) {
+      return null;
+    }
+
+    String? lastKnownVerse;
+    for (int i = _verseOrder.length - 1; i >= 0; i--) {
+      final candidate = _verseOrder[i];
+      if (_verseTopOffsets.containsKey(candidate)) {
+        lastKnownVerse = candidate;
+        break;
+      }
+    }
+    if (lastKnownVerse == null) return null;
+
+    final lastKnownIndex = _verseIndexById[lastKnownVerse] ?? 0;
+    final lastKnownOffset = _verseTopOffsets[lastKnownVerse] ?? 0.0;
+
+    // Use the estimator only after scrolling past the last known marker.
+    if (currentOffset <= lastKnownOffset + _topFullyVisibleInsetPx) {
+      return null;
+    }
+
+    final finalVerseIndex = _verseOrder.length - 1;
+    if (lastKnownIndex >= finalVerseIndex) {
+      return null;
+    }
+
+    final maxOffset = _scrollController.position.maxScrollExtent;
+    if (maxOffset <= lastKnownOffset) {
+      return null;
+    }
+
+    final tailProgress =
+        ((currentOffset - lastKnownOffset) / (maxOffset - lastKnownOffset))
+            .clamp(0.0, 1.0);
+    final unresolvedSpan = finalVerseIndex - lastKnownIndex;
+    final estimated =
+        (lastKnownIndex + (tailProgress * unresolvedSpan).floor())
+            .clamp(lastKnownIndex, finalVerseIndex);
+    return estimated;
   }
 
   // ---- Quick navigation actions ----
@@ -701,36 +956,137 @@ class _ReadingScreenState extends State<ReadingScreen> {
   }) async {
     if (_verseOrder.isEmpty) return;
 
-    if (_verseTopOffsets.isEmpty) {
-      _scheduleMarkerCollection(resetRetryCounter: true);
-      await Future<void>.delayed(const Duration(milliseconds: 24));
+    // First, try exact per-verse anchor navigation.
+    final jumpedViaAnchor = await _jumpToVerseAnchor(
+      requestedVerse,
+      manualSelection: manualSelection,
+    );
+    if (jumpedViaAnchor) {
+      _clearPendingVerseJump();
+      return;
     }
 
-    var resolvedVerse = _resolveNearestAvailableVerse(requestedVerse);
-    if (resolvedVerse == null) return;
-
-    // One additional refresh pass if the target marker is not cached yet.
-    if (_verseTopOffsets[resolvedVerse] == null) {
+    // Guard on exact target availability first. Async HtmlWidget layout can
+    // temporarily expose only a subset of markers; retry via post-frame passes
+    // instead of immediately falling back to a nearby verse.
+    if (_verseTopOffsets[requestedVerse] == null) {
+      _queuePendingVerseJump(
+        requestedVerse,
+        manualSelection: manualSelection,
+      );
       _scheduleMarkerCollection(resetRetryCounter: true);
-      await Future<void>.delayed(const Duration(milliseconds: 24));
-      resolvedVerse = _resolveNearestAvailableVerse(requestedVerse);
-      if (resolvedVerse == null || _verseTopOffsets[resolvedVerse] == null) {
-        return;
+      return;
+    }
+
+    final didJump = await _jumpToResolvedVerse(
+      requestedVerse,
+      manualSelection: manualSelection,
+    );
+    if (didJump) {
+      _clearPendingVerseJump();
+      return;
+    }
+
+    // Layout/scroll clients are not ready yet — retry once the next marker
+    // collection pass runs.
+    _queuePendingVerseJump(
+      requestedVerse,
+      manualSelection: manualSelection,
+    );
+    _scheduleMarkerCollection(resetRetryCounter: true);
+  }
+
+  /// Attempts an exact verse jump via HtmlWidget's internal anchor registry.
+  ///
+  /// Anchors are generated from `<sup id="vN">` in the renderer, so this path
+  /// remains exact even when paragraph-mode marker offsets are sparse.
+  Future<bool> _jumpToVerseAnchor(
+    String verseId, {
+    required bool manualSelection,
+  }) async {
+    final htmlState = _htmlWidgetKey.currentState;
+    if (htmlState == null) return false;
+
+    final anchored = await htmlState.scrollToAnchor('v$verseId');
+    if (!anchored) return false;
+
+    // If the outer scroll view is not attached yet, the jump did not execute
+    // in this frame. Keep pending state so retry loop can run again.
+    if (!_scrollController.hasClients) {
+      return false;
+    }
+
+    // Clear the preserved initial-jump target once we successfully land.
+    if (_initialJumpTarget == verseId) {
+      _initialJumpTarget = null;
+    }
+
+    // Keep the target slightly below the top edge for visual comfort.
+    if (_scrollController.hasClients) {
+      final adjustedOffset = (_scrollController.offset - _jumpTopPadding).clamp(
+        0.0,
+        _scrollController.position.maxScrollExtent,
+      );
+      if ((_scrollController.offset - adjustedOffset).abs() > 0.5) {
+        _scrollController.jumpTo(adjustedOffset);
       }
     }
 
-    final targetOffset = (_verseTopOffsets[resolvedVerse]! - _jumpTopPadding).clamp(
+    if (_topVerse != verseId) {
+      setState(() => _topVerse = verseId);
+    }
+
+    // Lock the label to the landed verse until the user scrolls away.
+    _jumpLockedVerse = verseId;
+    _jumpLockOriginOffset =
+        _scrollController.hasClients ? _scrollController.offset : 0.0;
+
+    // Verify that anchor scrolling actually moved near the requested verse.
+    // On some async-build timings, scrollToAnchor can return true before the
+    // final layout pass settles around the target.
+    final estimatedTargetOffset = _estimateScrollOffsetForVerse(verseId);
+    if (estimatedTargetOffset != null && _scrollController.hasClients) {
+      final afterOffset = _scrollController.offset;
+      final anchorError = (afterOffset - estimatedTargetOffset).abs();
+      if (anchorError > 220.0) {
+        return false;
+      }
+    }
+
+    _applyTemporaryVerseHighlight(verseId);
+    _announceVerseJump(verseId);
+
+    if (manualSelection) {
+      _recordManualVerseJumpInBrowserHistory(verseId);
+    }
+
+    return true;
+  }
+
+  /// Executes the actual scroll/highlight/announcement flow for a resolved
+  /// verse that already has a cached marker offset.
+  Future<bool> _jumpToResolvedVerse(
+    String resolvedVerse, {
+    required bool manualSelection,
+  }) async {
+    final verseOffset = _verseTopOffsets[resolvedVerse];
+    if (verseOffset == null) return false;
+
+    // If the sliver scroll view has not attached yet, postpone this jump.
+    if (!_scrollController.hasClients) {
+      return false;
+    }
+
+    final targetOffset = (verseOffset - _jumpTopPadding).clamp(
       0.0,
-      _scrollController.hasClients ? _scrollController.position.maxScrollExtent : 0.0,
+      _scrollController.position.maxScrollExtent,
     );
 
-    if (_scrollController.hasClients) {
-      await _scrollController.animateTo(
-        targetOffset,
-        duration: _verseJumpDuration,
-        curve: Curves.easeInOutCubic,
-      );
-    }
+    await _scrollController.animateTo(
+      targetOffset,
+      duration: _verseJumpDuration,
+      curve: Curves.easeInOutCubic,
+    );
 
     // Provisional update so the header never remains pinned to early verses
     // while marker collection catches up after a jump/highlight rebuild.
@@ -749,6 +1105,237 @@ class _ReadingScreenState extends State<ReadingScreen> {
     if (manualSelection) {
       _recordManualVerseJumpInBrowserHistory(resolvedVerse);
     }
+
+    return true;
+  }
+
+  /// Stores an unresolved jump request and starts retry scheduling.
+  void _queuePendingVerseJump(
+    String verseId, {
+    required bool manualSelection,
+  }) {
+    _pendingJumpVerseId = verseId;
+    _pendingJumpManualSelection = manualSelection;
+    _pendingJumpRetryCount = 0;
+    _schedulePendingJumpRetry();
+  }
+
+  /// Schedules one post-frame pending-jump retry pass.
+  void _schedulePendingJumpRetry() {
+    if (_pendingJumpRetryScheduled || _pendingJumpVerseId == null) return;
+    _pendingJumpRetryScheduled = true;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      _pendingJumpRetryScheduled = false;
+      if (!mounted || _pendingJumpVerseId == null) return;
+
+      await Future<void>.delayed(_pendingJumpRetryDelay);
+      if (!mounted || _pendingJumpVerseId == null) return;
+
+      await _retryPendingJump();
+    });
+  }
+
+  /// Retries queued jump requests while marker collection converges.
+  ///
+  /// Once retries are exhausted, this falls back to the nearest available
+  /// verse marker so quick-nav still lands in the expected local region.
+  Future<void> _retryPendingJump() async {
+    final requestedVerse = _pendingJumpVerseId;
+    if (requestedVerse == null) return;
+
+    final manualSelection = _pendingJumpManualSelection;
+
+    final jumpedViaAnchor = await _jumpToVerseAnchor(
+      requestedVerse,
+      manualSelection: manualSelection,
+    );
+    if (jumpedViaAnchor) {
+      _clearPendingVerseJump();
+      return;
+    }
+
+    if (_verseTopOffsets[requestedVerse] != null) {
+      final didJump = await _jumpToResolvedVerse(
+        requestedVerse,
+        manualSelection: manualSelection,
+      );
+      if (didJump) {
+        _clearPendingVerseJump();
+        return;
+      }
+      _pendingJumpRetryCount += 1;
+      _schedulePendingJumpRetry();
+      return;
+    }
+
+    if (_pendingJumpRetryCount >= _maxPendingJumpRetries) {
+      final fallbackVerse = _resolveNearestAvailableVerse(requestedVerse);
+      final isInitial = (_initialJumpTarget == requestedVerse);
+      if (!isInitial && fallbackVerse != null) {
+        final didJump = await _jumpToResolvedVerse(
+          fallbackVerse,
+          manualSelection: manualSelection,
+        );
+        if (didJump) {
+          _clearPendingVerseJump();
+          return;
+        }
+        // Keep the original pending target so retries can continue if fallback
+        // jumping fails due to transient marker/layout timing.
+        _pendingJumpRetryCount = 0;
+        _schedulePendingJumpRetry();
+        return;
+      }
+
+      if (isInitial) {
+        // For initial/bookmark jumps, prefer an estimated exact-verse scroll
+        // before continuing retries.
+        final didEstimatedJump = await _jumpToEstimatedVerse(
+          requestedVerse,
+          manualSelection: manualSelection,
+        );
+        if (didEstimatedJump) {
+          _clearPendingVerseJump();
+          return;
+        }
+        // Reset and re-queue so that once the async build eventually
+        // completes and anchors register, this jump will succeed.
+        _pendingJumpRetryCount = 0;
+        _schedulePendingJumpRetry();
+        return;
+      }
+
+      // Non-initial jump with no meaningful fallback target left: clear state
+      // to avoid retry loops that can no longer make progress.
+      _clearPendingVerseJump();
+      return;
+    }
+
+    _pendingJumpRetryCount += 1;
+
+    _scheduleMarkerCollection(resetRetryCounter: _pendingJumpRetryCount == 1);
+    _schedulePendingJumpRetry();
+  }
+
+  /// Clears all pending-jump state (used when jump succeeds or is invalidated).
+  void _clearPendingVerseJump() {
+    _pendingJumpVerseId = null;
+    _pendingJumpManualSelection = false;
+    _pendingJumpRetryCount = 0;
+  }
+
+  /// Estimates a scroll offset for [verseId] from surrounding marker offsets
+  /// and verse text lengths.
+  ///
+  /// Returns null when there is insufficient data to make a stable estimate.
+  double? _estimateScrollOffsetForVerse(String verseId) {
+    final targetIndex = _verseIndexById[verseId];
+    if (targetIndex == null) return null;
+
+    // Exact marker available.
+    final exact = _verseTopOffsets[verseId];
+    if (exact != null) return exact;
+
+    int? prevIndex;
+    int? nextIndex;
+    double? prevOffset;
+    double? nextOffset;
+
+    for (int i = targetIndex; i >= 0; i--) {
+      final id = _verseOrder[i];
+      final offset = _verseTopOffsets[id];
+      if (offset != null) {
+        prevIndex = i;
+        prevOffset = offset;
+        break;
+      }
+    }
+    for (int i = targetIndex + 1; i < _verseOrder.length; i++) {
+      final id = _verseOrder[i];
+      final offset = _verseTopOffsets[id];
+      if (offset != null) {
+        nextIndex = i;
+        nextOffset = offset;
+        break;
+      }
+    }
+
+    if (prevIndex == null || nextIndex == null || prevOffset == null || nextOffset == null) {
+      return null;
+    }
+    if (targetIndex <= prevIndex || targetIndex >= nextIndex) return null;
+    if (nextOffset <= prevOffset) return null;
+
+    double total = 0.0;
+    for (int i = prevIndex; i < nextIndex; i++) {
+      final text = (_verses != null && i < _verses!.length) ? _verses![i].textPlain : '';
+      total += text.isEmpty ? 30.0 : text.length.toDouble();
+    }
+    if (total <= 0) return null;
+
+    double beforeTarget = 0.0;
+    for (int i = prevIndex; i < targetIndex; i++) {
+      final text = (_verses != null && i < _verses!.length) ? _verses![i].textPlain : '';
+      beforeTarget += text.isEmpty ? 30.0 : text.length.toDouble();
+    }
+
+    final ratio = (beforeTarget / total).clamp(0.0, 1.0);
+    return prevOffset + ((nextOffset - prevOffset) * ratio);
+  }
+
+  /// Fallback verse jump using estimated offset when anchor timing fails.
+  Future<bool> _jumpToEstimatedVerse(
+    String verseId, {
+    required bool manualSelection,
+  }) async {
+    if (!_scrollController.hasClients) return false;
+    final estimated = _estimateScrollOffsetForVerse(verseId);
+    if (estimated == null) return false;
+
+    final targetOffset = (estimated - _jumpTopPadding).clamp(
+      0.0,
+      _scrollController.position.maxScrollExtent,
+    );
+
+    await _scrollController.animateTo(
+      targetOffset,
+      duration: _verseJumpDuration,
+      curve: Curves.easeInOutCubic,
+    );
+
+    if (_topVerse != verseId) {
+      setState(() => _topVerse = verseId);
+    }
+
+    _jumpLockedVerse = verseId;
+    _jumpLockOriginOffset = _scrollController.offset;
+
+    _applyTemporaryVerseHighlight(verseId);
+    _announceVerseJump(verseId);
+
+    if (manualSelection) {
+      _recordManualVerseJumpInBrowserHistory(verseId);
+    }
+
+    return true;
+  }
+
+  /// If an initialJumpTarget exists and no pending jump is queued, re-queues
+  /// the target jump.  Called from marker collection so a cold-route bookmark
+  /// jump succeeds even when async HTML layout outlasts the first retry window.
+  void _scheduleInitialJumpIfNeeded() {
+    if (_initialJumpTarget == null) return;
+    if (_pendingJumpVerseId != null) return;
+    if (_verseTopOffsets[_initialJumpTarget] != null) {
+      // Markers are now available — execute immediately.
+      final target = _initialJumpTarget!;
+      _initialJumpTarget = null;
+      unawaited(_jumpToVerseAnchor(target, manualSelection: false));
+      return;
+    }
+    // Re-queue so the retry loop picks it up.
+    _queuePendingVerseJump(_initialJumpTarget!, manualSelection: false);
   }
 
   /// Returns the exact requested verse when present, otherwise nearest by
@@ -1322,6 +1909,8 @@ class _ReadingScreenState extends State<ReadingScreen> {
             child: _QuickNavButton(
               icon: Icons.menu_book_rounded,
               label: '${widget.book.nameShort} ${widget.chapter}',
+              tooltip: 'Choose book and chapter',
+              semanticLabel: 'Book and chapter quick navigation',
               onPressed: _openBookChapterQuickNav,
             ),
           ),
@@ -1329,7 +1918,9 @@ class _ReadingScreenState extends State<ReadingScreen> {
           Expanded(
             child: _QuickNavButton(
               icon: Icons.format_list_numbered_rounded,
-              label: 'Verse $_currentVerseLabel',
+              label: _currentVerseLabel,
+              tooltip: 'Choose verse',
+              semanticLabel: 'Verse quick navigation',
               onPressed: _verses == null || _verses!.isEmpty
                   ? null
                   : _openVerseQuickNav,
@@ -1546,27 +2137,39 @@ class _ReadingScreenState extends State<ReadingScreen> {
 class _QuickNavButton extends StatelessWidget {
   final IconData icon;
   final String label;
+  final String tooltip;
+  final String semanticLabel;
   final VoidCallback? onPressed;
 
   const _QuickNavButton({
     required this.icon,
     required this.label,
+    required this.tooltip,
+    required this.semanticLabel,
     required this.onPressed,
   });
 
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, size: 18),
-      label: Text(
-        label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      style: OutlinedButton.styleFrom(
-        visualDensity: VisualDensity.compact,
-        alignment: Alignment.centerLeft,
+    return Semantics(
+      label: semanticLabel,
+      button: true,
+      enabled: onPressed != null,
+      child: Tooltip(
+        message: tooltip,
+        child: OutlinedButton.icon(
+          onPressed: onPressed,
+          icon: Icon(icon, size: 18),
+          label: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          style: OutlinedButton.styleFrom(
+            visualDensity: VisualDensity.compact,
+            alignment: Alignment.centerLeft,
+          ),
+        ),
       ),
     );
   }
@@ -1898,9 +2501,25 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
       children: [
         TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: 'Traditional'),
-            Tab(text: 'Alphabetical'),
+          tabs: [
+            Tab(
+              icon: Tooltip(
+                message: 'Traditional order',
+                child: Semantics(
+                  label: 'Traditional order books',
+                  child: const Icon(Icons.history_edu_rounded),
+                ),
+              ),
+            ),
+            Tab(
+              icon: Tooltip(
+                message: 'Alphabetical order',
+                child: Semantics(
+                  label: 'Alphabetical order books',
+                  child: const Icon(Icons.sort_by_alpha_rounded),
+                ),
+              ),
+            ),
           ],
         ),
         Expanded(
