@@ -111,7 +111,59 @@ Step 1.16 ✅ COMPLETE. The session after Step 1.16 resolved four user-reported 
 ### Key numbers
 - **240 tests passing**, `dart analyze` → No issues.
 
-Next: Step 1.17 — TBD (see roadmap below).
+Next: Step 1.16.5 — Verse-jump accuracy fix, icon-first UI audit, and OS default language detection.
+
+---
+
+**Upcoming: Step 1.16.5 — Verse-jump accuracy fix + icon-first UI + OS language**
+
+This step addresses an off-by-verse bug reported by a field tester, establishes an icon-first UI design principle, and lays the groundwork for runtime OS locale detection ahead of the full internationalization work in Step 1.17.
+
+### Bug fix: Verse navigation lands on wrong verse
+
+**Reported device:** Google Pixel 10, Android 16 (security update May 5, 2026).
+
+**Steps to reproduce:**
+1. Select Matthew → Chapter 20 → tap verse 11 in the quick-nav → lands on verse 13.
+2. Select John → Chapter 3 → tap verse 16 → lands on John 3:1 (top of chapter).
+3. Acts 14:21 navigates correctly — the bug is inconsistent.
+
+**Root cause hypothesis:** `_collectVerseMarkerOffsets()` accumulates `<div data-cbv="N">` render-object positions asynchronously as `HtmlWidget` lays out. If the user triggers a verse jump before all markers have been committed, or if a theme/settings rebuild clears markers mid-animation, `_jumpToVerse()` finds a partial or stale `_verseMarkerOffsets` map and scrolls to the nearest available offset (which may be the wrong verse). The "falls back to verse 1" symptom suggests the map is sometimes empty at jump time.
+
+**Fix plan:**
+- In `reading_screen.dart` → `_jumpToVerse()`: add a guard that checks whether the target verse ID exists in `_verseMarkerOffsets`. If not, wait for one additional post-frame callback to allow layout to settle, then retry (up to a small maximum). Log a `debugPrint` when a retry fires so the fix can be confirmed on device.
+- Ensure a `_rebuildHtml()` call (from theme or settings change) resets `_verseMarkerOffsets` and replays any pending jump target after the next collection cycle completes.
+- Add tests or a detailed code comment with a test plan for the retry logic.
+
+### Design principle: Icon-first UI
+
+Based on early tester feedback, the UI should minimize text labels in favour of internationally understood icons wherever meaning is clear. Text labels should still be used when an icon alone would be ambiguous, or when a label significantly aids discoverability.
+
+**Benefits:**
+- Reduces the number of strings that need translation (directly reduces localization effort across ~100+ target languages).
+- Makes the app immediately usable for speakers of any language without waiting for their UI language module to be downloaded.
+- Produces a cleaner, less cluttered visual design.
+
+**Accessibility requirement:** Every icon-only interactive control MUST have a `tooltip:` parameter or `Semantics(label: …)` wrapper so screen readers and hover text can explain the control. The gear icon already complies; verify all other controls added in this step.
+
+**Audit scope:** Review all existing screens (home, book selection, chapter selection, reading, settings, theme selection, bookmarks) and replace any text-only controls with icons where the action is internationally clear. Implement the highest-impact substitutions.
+
+### Architecture decision: OS default language detection
+
+**Decision:** The default Cyber Bible UI language is the OS locale, not hardcoded English.
+
+**Implementation in this step (foundation only — full ARB extraction is Step 1.17):**
+- At app startup, read the device locale via `WidgetsBinding.instance.platformDispatcher.locale` (available before a `BuildContext` exists) or `Localizations.localeOf(context)` after MaterialApp initializes.
+- If a UI language module matching the device locale is available, use it; otherwise fall back to English.
+- English ARB files are compiled in at build time and serve as the permanent fallback.
+- This step records the architectural decision and ensures `MaterialApp` is configured for locale-driven string resolution so Step 1.17 does not require restructuring the app.
+
+**Language module architecture (future — Phase 3 implementation):**
+- Target approximately the 100+ languages supported by the Android OS.
+- UI language modules for non-English locales are downloadable on demand (not compiled into the APK) to keep initial install size manageable.
+- Module pairing strategy: a UI language module can be bundled or suggested alongside a Bible translation in the same language, or alongside the appropriate language of wider communication for the region.
+- On first launch, if the OS locale is not English, the app offers to download (or auto-begins downloading) the matching UI language module.
+- Audio Bible caching (Phase 5 planning note): audio follows the same philosophy — chapter-by-chapter downloads with cache management that can offload stored chapters when device storage is low.
 
 ---
 
@@ -637,6 +689,7 @@ The goal: open the app, pick a book and chapter, and read formatted Bible text.
 | 1.14 ✅ | **Bookmarks — data layer** | Create a `Bookmark` model and SQLite table. Methods: `addBookmark(reference)`, `removeBookmark(id)`, `getBookmarks()`. |
 | 1.15 ✅ | **Bookmarks — UI** | Add a way to bookmark the current location (long-press or button). Build a bookmarks list screen accessible from the home screen or menu. |
 | 1.16 ✅ | **Settings screen (font & theme)** | Build a settings screen with: font size slider; light/dark/system theme toggle; accent color picker (let users choose from a curated palette of seed colors that drive the Material 3 `ColorScheme` — e.g. the default calm blue, forest green, crimson, gold, purple, etc.); words-of-Christ color toggle (red or black); section headings toggle (show/hide `<s>` and `<d>` noncanonical text, per design doc); verse numbers toggle (show/hide inline verse number superscripts); **verse format toggle** (paragraph/prose mode — text flows as natural paragraphs with inline verse superscripts — vs. verse-list mode — each verse begins on its own line; default is paragraph/prose mode). Persist all settings with `shared_preferences`. The home screen branded gradient is fixed and unaffected by theme changes; all inner screens (book selection, chapter selection, reading) respond to the chosen theme. |
+| 1.16.5 | **Verse-jump accuracy + icon-first UI + OS language** | Fix the inconsistent scroll-to-verse bug (off-by-verse, reported on Pixel 10 / Android 16 for Matt 20:11, John 3:16). Audit existing screens and replace text-only controls with icons where meaning is universally clear (icon-first UI principle). Configure `MaterialApp` to use the OS locale as the default UI language (English compiled-in as fallback) — foundational plumbing for Step 1.17 full ARB extraction. |
 | 1.17 | **Internationalization setup** | Set up Flutter l10n with ARB files. Extract all hard-coded UI strings into localizable constants. Start with English. Add structure for additional languages. |
 
 ### Phase 2 — Study Features
