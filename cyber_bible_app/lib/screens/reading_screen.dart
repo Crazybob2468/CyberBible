@@ -803,10 +803,16 @@ class _ReadingScreenState extends State<ReadingScreen> {
       return null;
     }
 
-    final known = _verseOrder.where(_verseTopOffsets.containsKey).toList();
-    if (known.isEmpty) return null;
+    String? lastKnownVerse;
+    for (int i = _verseOrder.length - 1; i >= 0; i--) {
+      final candidate = _verseOrder[i];
+      if (_verseTopOffsets.containsKey(candidate)) {
+        lastKnownVerse = candidate;
+        break;
+      }
+    }
+    if (lastKnownVerse == null) return null;
 
-    final lastKnownVerse = known.last;
     final lastKnownIndex = _verseIndexById[lastKnownVerse] ?? 0;
     final lastKnownOffset = _verseTopOffsets[lastKnownVerse] ?? 0.0;
 

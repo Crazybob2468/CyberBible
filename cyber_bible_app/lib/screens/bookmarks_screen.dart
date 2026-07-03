@@ -348,21 +348,17 @@ class _SortHeader extends StatelessWidget {
                 ),
           ),
           const Spacer(),
-          // Sort toggle button — labeled for screen readers
-          Semantics(
-            label: 'Sort order: $label. Tap to toggle.',
-            button: true,
-            child: IconButton(
-              onPressed: onToggle,
-              icon: Icon(
-                sortOrder == BookmarkSortOrder.recentFirst
-                    ? Icons.access_time_rounded
-                    : Icons.menu_book_rounded,
-                size: 20,
-                color: colorScheme.primary,
-              ),
-              tooltip: 'Sort: $label',
+          // Sort toggle button; tooltip provides the a11y label and hint.
+          IconButton(
+            onPressed: onToggle,
+            icon: Icon(
+              sortOrder == BookmarkSortOrder.recentFirst
+                  ? Icons.access_time_rounded
+                  : Icons.menu_book_rounded,
+              size: 20,
+              color: colorScheme.primary,
             ),
+            tooltip: 'Sort: $label',
           ),
         ],
       ),
