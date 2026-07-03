@@ -76,7 +76,10 @@ class _CyberBibleAppState extends State<CyberBibleApp> {
   /// Resolves the startup UI locale from the OS locale with English fallback.
   Locale _resolveStartupLocale() {
     if (_isCompiledLocale(_startupLocale)) {
-      return _startupLocale;
+      return _compiledUiLocales.firstWhere(
+        (locale) => locale.languageCode == _startupLocale.languageCode,
+        orElse: () => const Locale('en'),
+      );
     }
     return const Locale('en');
   }
@@ -115,7 +118,10 @@ class _CyberBibleAppState extends State<CyberBibleApp> {
       localeResolutionCallback: (deviceLocale, supportedLocales) {
         // Prefer OS locale when the language is compiled into this build.
         if (deviceLocale != null && _isCompiledLocale(deviceLocale)) {
-          return deviceLocale;
+          return _compiledUiLocales.firstWhere(
+            (locale) => locale.languageCode == deviceLocale.languageCode,
+            orElse: () => const Locale('en'),
+          );
         }
         // Always provide deterministic English fallback.
         return const Locale('en');

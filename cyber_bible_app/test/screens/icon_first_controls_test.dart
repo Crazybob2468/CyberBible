@@ -107,7 +107,7 @@ void main() {
 
       // Open the first theme card. In the current layout this is the
       // Classic White card, which supports theme-mode controls.
-      await tester.tap(find.byType(InkWell).first);
+      await tester.tap(_findThemeCardByName('Classic White'));
       await tester.pumpAndSettle();
 
       // The accent sheet should expose icon-first brightness controls.
@@ -140,5 +140,16 @@ Finder _findTooltipMessage(String message) {
 Finder _findSemanticsLabel(String label) {
   return find.byWidgetPredicate(
     (widget) => widget is Semantics && widget.properties.label == label,
+  );
+}
+
+/// Finds a theme card semantics node by theme display name.
+Finder _findThemeCardByName(String themeName) {
+  return find.byWidgetPredicate(
+    (widget) {
+      if (widget is! Semantics) return false;
+      final label = widget.properties.label;
+      return label != null && label.startsWith('$themeName theme');
+    },
   );
 }

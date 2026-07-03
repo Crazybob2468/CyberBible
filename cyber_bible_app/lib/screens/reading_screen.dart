@@ -2142,6 +2142,7 @@ class _QuickNavButton extends StatelessWidget {
     return Semantics(
       label: semanticLabel,
       button: true,
+      enabled: onPressed != null,
       child: Tooltip(
         message: tooltip,
         child: OutlinedButton.icon(

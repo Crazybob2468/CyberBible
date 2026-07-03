@@ -109,7 +109,7 @@ Step 1.16 ✅ COMPLETE. The session after Step 1.16 resolved four user-reported 
 `customWidgetBuilder` in `flutter_widget_from_html_core` ALWAYS creates `WidgetBit.block()` — no CSS override is possible. The only correct approach for verse-position markers is `<div data-cbv="N">` placed as a **block sibling before** each `<p>`, never inside one.
 
 ### Key numbers
-- **243 tests passing**, `dart analyze` → No issues.
+- **245 tests passing**, `dart analyze` → No issues.
 
 Next: Step 1.17 — Internationalization setup.
 
@@ -131,7 +131,7 @@ This step addresses an off-by-verse bug reported by a field tester, establishes 
   - `reading_screen.dart`: book/chapter quick-nav sheet order tabs (traditional/alphabetical) converted to icon-only tabs with `Tooltip` + `Semantics`.
   - `bookmarks_screen.dart`: sort toggle converted to icon-first control with tooltip and semantics label.
 - New regression coverage added: `test/screens/icon_first_controls_test.dart` validates icon-first controls and accessibility metadata: book-selection tab tooltips + semantics labels, settings verse-format icon options + segment tooltips, and theme accent-sheet brightness icon options + segment tooltips.
-- Validation after these updates: `flutter analyze` reported no issues and `flutter test` passed all **243 tests**.
+- Validation after these updates: `flutter analyze` reported no issues and `flutter test` passed all **245 tests**.
 
 ### Bug fix: Verse navigation lands on wrong verse
 
