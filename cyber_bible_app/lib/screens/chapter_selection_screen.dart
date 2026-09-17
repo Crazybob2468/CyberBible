@@ -18,6 +18,7 @@
 //   Each tile shows only the chapter number — clean and scannable.
 
 import 'package:flutter/material.dart';
+import 'package:cyber_bible_app/l10n/localization_helpers.dart';
 
 import '../models/book.dart';
 import '../app_routes.dart';
@@ -141,8 +142,8 @@ class _ChapterSelectionScreenState extends State<ChapterSelectionScreen> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() =>
-            _errorMessage = 'Could not load chapters. Please try again.');
+        setState(() => _errorMessage =
+            appLocalizations(context).couldNotLoadChapters);
       }
     }
   }
@@ -216,6 +217,12 @@ class _ChapterSelectionScreenState extends State<ChapterSelectionScreen> {
 
   /// Builds the expanded header content: book name + testament label.
   Widget _buildExpandedHeader(ColorScheme colorScheme) {
+    final l10n = appLocalizations(context);
+    final testamentLabel = switch (widget.book.testament) {
+      Testament.ot => l10n.oldTestament,
+      Testament.nt => l10n.newTestament,
+      Testament.dc => l10n.deuterocanonApocrypha,
+    };
     return Container(
       // Match the SliverAppBar's background color.
       color: colorScheme.primaryContainer,
@@ -230,7 +237,7 @@ class _ChapterSelectionScreenState extends State<ChapterSelectionScreen> {
           // Testament label — small, slightly subdued.
           // Testament.label is the single source of truth (book.dart).
           Text(
-            widget.book.testament.label.toUpperCase(),
+            testamentLabel.toUpperCase(),
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
@@ -279,6 +286,7 @@ class _ChapterSelectionScreenState extends State<ChapterSelectionScreen> {
 
   /// Error card with message and a Retry button.
   Widget _buildErrorState(ColorScheme colorScheme) {
+    final l10n = appLocalizations(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -297,7 +305,7 @@ class _ChapterSelectionScreenState extends State<ChapterSelectionScreen> {
             FilledButton.icon(
               onPressed: _loadChapters,
               icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Retry'),
+              label: Text(l10n.retry),
             ),
           ],
         ),
@@ -362,11 +370,12 @@ class _ChapterTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = appLocalizations(context);
     return Semantics(
       // Announce "Chapter N" to screen readers instead of just the bare
       // number — gives assistive technology enough context to describe the
       // action without the user needing to infer it from surroundings.
-      label: 'Chapter $chapter',
+      label: l10n.chapterSelectionLabel(chapter),
       button: true,
       child: Material(
         // Rounded-square tile background.

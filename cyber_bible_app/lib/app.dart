@@ -9,6 +9,7 @@
 // respond to the chosen theme.
 
 import 'package:flutter/material.dart';
+import 'package:cyber_bible_app/l10n/app_localizations.dart';
 
 import 'models/app_theme_definition.dart';
 import 'routes.dart';
@@ -27,28 +28,64 @@ class CyberBibleApp extends StatefulWidget {
 }
 
 class _CyberBibleAppState extends State<CyberBibleApp> {
-  /// Device locale captured at app startup, before any BuildContext lookup.
-  ///
-  /// Step 1.16.5 architecture rule: UI language defaults to OS locale when a
-  /// matching UI language is available; otherwise we fall back to English.
-  ///
-  /// In this phase we only compile English strings, so non-English locales
-  /// intentionally resolve to English until Step 1.17+ wires real ARB files
-  /// and on-demand language module availability checks.
-  late final Locale _startupLocale;
-
   /// Locales compiled directly into this app build.
   ///
   /// Keep this list as the single source of truth for locale fallback logic.
-  /// Additional locales are added in Step 1.17 once ARB extraction begins.
+  /// English is the permanent fallback; the remaining entries are the
+  /// compiled UI-language modules available in this build.
   static const List<Locale> _compiledUiLocales = <Locale>[
     Locale('en'),
+    Locale('es'),
+    Locale('fr'),
+    Locale('de'),
+    Locale('it'),
+    Locale('pt'),
+    Locale('hi'),
+    Locale('zh'),
+    Locale('ar'),
+    Locale('bn'),
+    Locale('ja'),
+    Locale('ko'),
+    Locale('ru'),
+    Locale('tr'),
+    Locale('uk'),
+    Locale('vi'),
+    Locale('pl'),
+    Locale('nl'),
+    Locale('af'),
+    Locale('am'),
+    Locale('ca'),
+    Locale('cs'),
+    Locale('da'),
+    Locale('az'),
+    Locale('be'),
+    Locale('bg'),
+    Locale('bs'),
+    Locale('et'),
+    Locale('eu'),
+    Locale('fa'),
+    Locale('fi'),
+    Locale('fil'),
+    Locale('gl'),
+    Locale('gu'),
+    Locale('he'),
+    Locale('hr'),
+    Locale('hu'),
+    Locale('hy'),
+    Locale('id'),
+    Locale('is'),
+    Locale('ka'),
+    Locale('kk'),
+    Locale('lo'),
+    Locale('lt'),
+    Locale('lv'),
+    Locale('mk'),
+    Locale('ml'),
   ];
 
   @override
   void initState() {
     super.initState();
-    _startupLocale = WidgetsBinding.instance.platformDispatcher.locale;
     // Listen to SettingsService so this widget rebuilds when the user changes
     // a theme-level preference (theme ID, accent color, or theme mode).
     SettingsService.instance.addListener(_onSettingsChanged);
@@ -65,21 +102,21 @@ class _CyberBibleAppState extends State<CyberBibleApp> {
   void _onSettingsChanged() => setState(() {});
 
   /// Returns true when [candidate] is directly supported by this app build.
-  ///
-  /// Language-code matching is used for now because Step 1.17 only needs a
-  /// language-level split (e.g., `en`) before region/script variants are added.
   bool _isCompiledLocale(Locale candidate) {
     return _compiledUiLocales
         .any((locale) => locale.languageCode == candidate.languageCode);
   }
 
-  /// Resolves the startup UI locale from the OS locale with English fallback.
-  Locale _resolveStartupLocale() {
-    if (_isCompiledLocale(_startupLocale)) {
-      return _compiledUiLocales.firstWhere(
-        (locale) => locale.languageCode == _startupLocale.languageCode,
-        orElse: () => const Locale('en'),
-      );
+  /// Resolves the manually selected UI locale from the app's language settings.
+  ///
+  /// Returns null when system language is enabled so Flutter can observe and
+  /// resolve platform locale changes against [supportedLocales] at runtime.
+  Locale? _resolveActiveLocale() {
+    if (SettingsService.instance.useSystemLanguage) return null;
+
+    final code = SettingsService.instance.selectedLanguageCode;
+    if (_isCompiledLocale(Locale(code))) {
+      return Locale(code);
     }
     return const Locale('en');
   }
@@ -113,8 +150,9 @@ class _CyberBibleAppState extends State<CyberBibleApp> {
 
       // Named route configuration — all routes defined in routes.dart.
       // onGenerateRoute lets screens receive typed argument objects.
-      locale: _resolveStartupLocale(),
-      supportedLocales: _compiledUiLocales,
+      locale: _resolveActiveLocale(),
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
       initialRoute: AppRoutes.home,
       onGenerateRoute: onGenerateRoute,
     );

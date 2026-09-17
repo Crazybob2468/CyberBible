@@ -13,9 +13,11 @@
 // [ReadingScreen] listens to [SettingsService.instance].
 
 import 'package:flutter/material.dart';
+import 'package:cyber_bible_app/l10n/localization_helpers.dart';
 
 import '../app_routes.dart';
 import '../models/app_theme_definition.dart';
+import '../services/language_catalog.dart';
 import '../services/settings_service.dart';
 
 // ---------------------------------------------------------------------------
@@ -64,27 +66,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final l10n = appLocalizations(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings'),
+        title: Text(l10n.settingsTitle),
         // Back arrow provided automatically by Navigator.
       ),
-      body: ListView(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(vertical: 8),
-        children: [
+        child: Column(
+          children: [
+
+          // ----------------------------------------------------------------
+          // Language settings
+          // ----------------------------------------------------------------
+          _SectionHeader(label: l10n.languageSection, colorScheme: cs),
+          _LanguageTile(colorScheme: cs),
+          const Divider(height: 1),
 
           // ----------------------------------------------------------------
           // Theme navigation tile — opens the dedicated theme-selection page.
           // ----------------------------------------------------------------
-          _SectionHeader(label: 'Appearance', colorScheme: cs),
+          _SectionHeader(label: l10n.appearance, colorScheme: cs),
           _ThemeNavigationTile(colorScheme: cs),
           const Divider(height: 1),
 
           // ----------------------------------------------------------------
           // Font size
           // ----------------------------------------------------------------
-          _SectionHeader(label: 'Text', colorScheme: cs),
+          _SectionHeader(label: l10n.textSection, colorScheme: cs),
           _FontSizeTile(
             fontSizePx: _fontSizePx,
             colorScheme: cs,
@@ -96,38 +107,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // ----------------------------------------------------------------
           // Verse format toggle
           // ----------------------------------------------------------------
-          _SectionHeader(label: 'Reading Format', colorScheme: cs),
+          _SectionHeader(label: l10n.readingFormatSection, colorScheme: cs),
           _VerseFormatTile(colorScheme: cs),
           const Divider(height: 1),
 
           // ----------------------------------------------------------------
           // Display toggles — verse numbers, headings, words-of-Christ
           // ----------------------------------------------------------------
-          _SectionHeader(label: 'Display', colorScheme: cs),
+          _SectionHeader(label: l10n.displaySection, colorScheme: cs),
           _BoolSettingTile(
             icon: Icons.format_list_numbered_rounded,
-            title: 'Verse Numbers',
-            subtitle: 'Show verse number superscripts in the reading screen.',
+            title: l10n.verseNumbers,
+            subtitle: l10n.showVerseNumbersSubtitle,
             value: SettingsService.instance.showVerseNumbers,
             onChanged: (v) => SettingsService.instance.setShowVerseNumbers(v),
           ),
           _BoolSettingTile(
             icon: Icons.title_rounded,
-            title: 'Section Headings',
-            subtitle: 'Show section and Psalm headings between passages.',
+            title: l10n.sectionHeadings,
+            subtitle: l10n.showSectionHeadingsSubtitle,
             value: SettingsService.instance.showSectionHeadings,
             onChanged: (v) => SettingsService.instance.setShowSectionHeadings(v),
           ),
           _BoolSettingTile(
             icon: Icons.format_color_text_rounded,
-            title: 'Red-Letter Text',
-            subtitle:
-                "Show Jesus' words in red. Disable for a single text color.",
+            title: l10n.redLetterText,
+            subtitle: l10n.wordsOfChristSubtitle,
             value: SettingsService.instance.wordsOfChristRed,
             onChanged: (v) => SettingsService.instance.setWordsOfChristRed(v),
           ),
           const SizedBox(height: 16),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -187,12 +198,157 @@ class _ThemeNavigationTile extends StatelessWidget {
     final themeId = SettingsService.instance.selectedThemeId;
     final themeName = AppThemeCatalog.byId(themeId).name;
 
+    final l10n = appLocalizations(context);
+
     return ListTile(
       leading: Icon(Icons.palette_rounded, color: colorScheme.primary),
-      title: const Text('Theme'),
+      title: Text(l10n.theme),
       subtitle: Text(themeName),
       trailing: const Icon(Icons.chevron_right_rounded),
       onTap: () => Navigator.pushNamed(context, AppRoutes.themeSelection),
+    );
+  }
+}
+
+/// Language settings tile.
+///
+/// Exposes the primary language controls for this phase: use system language
+/// and a manual app-language picker. The app currently supports English and
+/// Spanish in the UI layer, and the system default is preferred when enabled.
+class _LanguageTile extends StatelessWidget {
+  final ColorScheme colorScheme;
+
+  const _LanguageTile({required this.colorScheme});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = appLocalizations(context);
+    final currentCode = SettingsService.instance.effectiveLanguageCode;
+    final currentName = SettingsService.instance.languageDisplayName(currentCode);
+    final useSystem = SettingsService.instance.useSystemLanguage;
+
+    return Column(
+      children: [
+        SwitchListTile.adaptive(
+          value: useSystem,
+          onChanged: (value) async {
+            await SettingsService.instance.setUseSystemLanguage(value);
+          },
+          title: Text(l10n.useSystemLanguage),
+          subtitle: Text(l10n.useSystemLanguageSubtitle),
+          secondary: Icon(Icons.language_rounded, color: colorScheme.primary),
+        ),
+        ListTile(
+          leading: Icon(Icons.translate_rounded, color: colorScheme.primary),
+          title: Text(l10n.appLanguage),
+          subtitle: Text(currentName),
+          trailing: const Icon(Icons.chevron_right_rounded),
+          onTap: () async {
+            final choice = await _showLanguagePicker(context);
+            if (choice == null) return;
+            await SettingsService.instance.setUseSystemLanguage(false);
+            await SettingsService.instance.setSelectedLanguageCode(choice);
+          },
+        ),
+      ],
+    );
+  }
+
+  /// Shows the picker used to override the language manually.
+  Future<String?> _showLanguagePicker(BuildContext context) async {
+    return showDialog<String>(
+      context: context,
+      builder: (_) => const _LanguagePickerDialog(),
+    );
+  }
+}
+
+/// Stateful dialog for searching and selecting a local language module.
+class _LanguagePickerDialog extends StatefulWidget {
+  const _LanguagePickerDialog();
+
+  @override
+  State<_LanguagePickerDialog> createState() => _LanguagePickerDialogState();
+}
+
+class _LanguagePickerDialogState extends State<_LanguagePickerDialog> {
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = appLocalizations(context);
+    final filtered = androidLanguageCatalog
+        .where((entry) => entry.matches(_searchController.text))
+        .toList();
+
+    return AlertDialog(
+      title: Text(l10n.chooseLanguage),
+      content: SizedBox(
+        width: 420,
+        height: 520,
+        child: Column(
+          children: [
+            Text(
+              l10n.languageCatalogDescription,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _searchController,
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: l10n.languageSearchHint,
+                prefixIcon: const Icon(Icons.search_rounded),
+                border: const OutlineInputBorder(),
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: filtered.isEmpty
+                  ? Center(child: Text(l10n.languageNoMatches))
+                  : ListView.builder(
+                      itemCount: filtered.length,
+                      itemBuilder: (context, index) {
+                        final entry = filtered[index];
+                        final installed =
+                            entry.state == LanguageModuleState.installed;
+                        return ListTile(
+                          enabled: installed,
+                          leading: Icon(
+                            installed
+                                ? Icons.download_done_rounded
+                                : Icons.language_rounded,
+                          ),
+                          title: Text(entry.nativeName),
+                          subtitle: Text(
+                            '${entry.englishName} • ${entry.code} • '
+                            '${installed
+                                ? l10n.languageModuleInstalled
+                                : l10n.languageModulePending}',
+                          ),
+                          onTap: installed
+                              ? () => Navigator.pop(context, entry.code)
+                              : null,
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.cancel),
+        ),
+      ],
     );
   }
 }
@@ -227,6 +383,7 @@ class _FontSizeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = appLocalizations(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
@@ -238,15 +395,18 @@ class _FontSizeTile extends StatelessWidget {
               Icon(Icons.text_fields_rounded,
                   color: colorScheme.primary, size: 20),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Font Size',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                  l10n.fontSize,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
               // Display the current value (e.g. "17 px").
               Text(
-                '${fontSizePx.round()} px',
+                l10n.fontSizePixels(fontSizePx.round()),
                 style: TextStyle(
                   fontSize: 13,
                   color: colorScheme.onSurfaceVariant,
@@ -258,15 +418,15 @@ class _FontSizeTile extends StatelessWidget {
 
           // Slider — min 12, max 28, step 1.
           Semantics(
-            label: 'Font size slider',
-            value: '${fontSizePx.round()} pixels',
-            hint: 'Swipe to adjust from 12 to 28',
+            label: l10n.fontSizeSlider,
+            value: l10n.fontSizePixels(fontSizePx.round()),
+            hint: l10n.fontSizeSliderHint,
             child: Slider(
               value: fontSizePx,
               min: 12,
               max: 28,
               divisions: 16, // 1 px steps
-              label: '${fontSizePx.round()} px',
+              label: l10n.fontSizePixels(fontSizePx.round()),
               onChanged: onChanged,
               onChangeEnd: onChangeEnd,
             ),
@@ -281,8 +441,7 @@ class _FontSizeTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              // A short representative verse for the preview.
-              '"In the beginning God created the heavens and the earth." — Gen 1:1',
+              l10n.fontPreview,
               style: TextStyle(
                 fontSize: fontSizePx,
                 height: 1.6,
@@ -310,6 +469,7 @@ class _VerseFormatTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isParagraph = SettingsService.instance.paragraphMode;
+    final l10n = appLocalizations(context);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -322,19 +482,21 @@ class _VerseFormatTile extends StatelessWidget {
               Icon(Icons.article_rounded, // verse/paragraph layout icon
                   color: colorScheme.primary, size: 20),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Verse Format',
-                      style:
-                          TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
+                      l10n.verseFormatTitle,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     SizedBox(height: 2),
                     Text(
-                      'Choose how scripture text is laid out.',
-                      style: TextStyle(fontSize: 12),
+                      l10n.verseFormatSubtitle,
+                      style: const TextStyle(fontSize: 12),
                     ),
                   ],
                 ),
@@ -345,18 +507,25 @@ class _VerseFormatTile extends StatelessWidget {
 
           // Segmented button — two exclusive options.
           SegmentedButton<bool>(
-            segments: const [
+            segments: [
               ButtonSegment<bool>(
                 value: true,
                 icon: Icon(Icons.menu_book_rounded),
-                tooltip: 'Paragraph mode',
+                label: Text(l10n.paragraphMode),
+                tooltip: l10n.paragraphModeTooltip,
               ),
               ButtonSegment<bool>(
                 value: false,
                 icon: Icon(Icons.format_list_bulleted_rounded),
-                tooltip: 'Verse-list mode',
+                label: Text(l10n.verseListMode),
+                tooltip: l10n.verseListModeTooltip,
               ),
             ],
+            selectedIcon: Icon(
+              isParagraph
+                  ? Icons.menu_book_rounded
+                  : Icons.format_list_bulleted_rounded,
+            ),
             selected: {isParagraph},
             onSelectionChanged: (selection) =>
                 SettingsService.instance.setParagraphMode(selection.first),
@@ -372,11 +541,9 @@ class _VerseFormatTile extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(left: 4),
             child: Text(
-              isParagraph
-                  ? 'Text flows continuously with indented paragraphs, '
-                      'like a printed Bible.'
-                  : 'Each scripture paragraph begins on its own line, '
-                      'making verse groups easy to spot.',
+                isParagraph
+                  ? l10n.paragraphModeDescription
+                  : l10n.verseListModeDescription,
               style: TextStyle(
                 fontSize: 12,
                 color: colorScheme.onSurfaceVariant,

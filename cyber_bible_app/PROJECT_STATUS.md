@@ -82,7 +82,7 @@ cyber_bible_app/
 
 ## Current Status
 
-**Phase 1 — Post-Step-1.16 Visual Polish (gear icon fix, paragraph mode, dark themes)**
+**Phase 1 — Step 1.17 Internationalization foundation**
 
 Step 1.16 ✅ COMPLETE. The session after Step 1.16 resolved four user-reported issues and completed the paragraph-mode rendering overhaul across multiple sessions.
 
@@ -109,9 +109,113 @@ Step 1.16 ✅ COMPLETE. The session after Step 1.16 resolved four user-reported 
 `customWidgetBuilder` in `flutter_widget_from_html_core` ALWAYS creates `WidgetBit.block()` — no CSS override is possible. The only correct approach for verse-position markers is `<div data-cbv="N">` placed as a **block sibling before** each `<p>`, never inside one.
 
 ### Key numbers
-- **245 tests passing**, `dart analyze` → No issues.
+- **264 tests passing**, `dart analyze` → No issues.
 
-Next: Step 1.17 — Internationalization setup.
+Step 1.17 localization foundation is implemented below. The current compiled
+localization batch includes thirty-eight UI modules; the remaining work is the
+future downloadable UI-language module flow and the final sweep of any strings
+not yet extracted from lower-priority surfaces.
+
+---
+
+**Step 1.17 ✅ FOUNDATION COMPLETE — Flutter localization, OS default, and override**
+
+### What was built
+
+- Added Flutter l10n generation with `l10n.yaml`, English and Spanish ARB files,
+  generated `AppLocalizations`, `flutter_localizations`, and `intl`.
+- Wired `MaterialApp` to generated delegates and supported locales.
+- Added persisted language settings to `SettingsService`: use system language,
+  manual language override, effective locale, and display-name helpers.
+- Added the Settings language section with a system-language toggle, current
+  language summary, and manual language picker.
+- Localized the app shell, routes, home screen, book selection, and the main
+  theme/bookmark/reading UI foundations with English fallback behavior.
+- Added a localization fallback helper so isolated widgets and tests remain usable
+  when no localization scope has been installed. The fallback implementation
+  lives in the non-generated `lib/l10n/localization_helpers.dart` file so running
+  `flutter gen-l10n` cannot overwrite it.
+- Preserved icon-first controls and their tooltip/semantics metadata while making
+  selected segmented-control icons render consistently across Flutter versions.
+- Addressed review feedback by delegating system-locale selection to Flutter at
+  runtime, making unsupported isolated locales fall back to English safely, and
+  resolving the language summary from the full platform locale preference list.
+- Completed the visible app-string extraction sweep across bookmarks, reading,
+  settings, theme selection, home, and book-selection surfaces. Bible text and
+  user-created bookmark text remain runtime content and are intentionally not
+  placed in UI ARB files.
+- Added a local Android/CLDR language catalog with native names, searchable
+  aliases, installed-module status, and machine-translation-pending status.
+- Replaced the two-item language dialog with a searchable language picker. The
+  picker lists the broader local language roadmap while allowing selection only
+  for bundled modules currently available offline.
+- Added a versioned local language-module contract with provenance metadata,
+  installed-module discovery, first-supported-platform-locale selection, and
+  English fallback.
+- Added complete AI-generated ARB modules for German, Italian, Portuguese, Hindi,
+  Simplified Chinese, Arabic, Bengali, Japanese, Korean, Russian, Turkish,
+  Ukrainian, Vietnamese, Polish, Dutch, Afrikaans, Amharic, Catalan, Czech, and
+  Danish, Azerbaijani, Belarusian, Bulgarian, Bosnian, Estonian, Basque,
+  Persian, Finnish, Filipino, Galician, Gujarati, Hebrew, Croatian, Hungarian,
+  Armenian, Indonesian, Icelandic, Georgian, Kazakh, Lao, Lithuanian, Latvian,
+  Macedonian, and Malayalam, with the complete current English UI key set and
+  matching ICU placeholders.
+- Registered the bulk locales with Flutter l10n, the app locale resolver, the
+  local language catalog, and the installed-module metadata.
+
+### Architecture decisions
+
+- The OS locale is the default whenever a matching compiled UI locale exists.
+- English is the permanent fallback when the OS locale is unsupported or a
+  language module is unavailable.
+- A manual language choice is persisted and overrides the OS until the user
+  re-enables the system-language setting.
+- The current compiled locales are English, Spanish, French, German, Italian,
+  Portuguese, Hindi, Simplified Chinese, Arabic, Bengali, Japanese, Korean,
+  Russian, Turkish, Ukrainian, Vietnamese, Polish, Dutch, Afrikaans, Amharic,
+  Catalan, Czech, Danish, Azerbaijani, Belarusian, Bulgarian, Bosnian,
+  Estonian, Basque, Persian, Finnish, Filipino, Galician, Gujarati, Hebrew,
+  Croatian, Hungarian, Armenian, Indonesian, Icelandic, Georgian, Kazakh, Lao,
+  Lithuanian, Latvian, Macedonian, and Malayalam: **47 installed UI modules**.
+  The
+  structure remains ready for additional local AI-generated UI-language modules
+  without changing screen code.
+- The local catalog remains broader than the currently bundled translation
+  modules. AI-generated language modules can be added one at a time without
+  changing the catalog or settings UI.
+- French, German, Italian, Portuguese, Hindi, Simplified Chinese, Arabic,
+  Bengali, Japanese, Korean, Russian, Turkish, Ukrainian, Vietnamese, Polish,
+  Dutch, Afrikaans, Amharic, Catalan, Czech, Danish, Azerbaijani, Belarusian,
+  Bulgarian, Bosnian, Estonian, Basque, Persian, Finnish, Filipino, Galician,
+  Gujarati, Hebrew, Croatian, Hungarian, Armenian, Indonesian, Icelandic,
+  Georgian, Kazakh, Lao, Lithuanian, Latvian, Macedonian, and Malayalam are
+  complete AI-generated modules
+  selectable both as manual overrides and through OS locale preference matching.
+
+### Validation
+
+- `flutter gen-l10n` completed successfully.
+- `flutter test` passes all **264 tests**.
+- `flutter analyze` reports **No issues found**.
+- `flutter run -d macos --no-pub` built and launched successfully.
+- The icon-control regression suite includes a 200% text-scale test for settings
+  and theme selection; all 4 focused tests pass.
+- The current Flutter toolchain migrates the macOS Runner deployment target from
+  10.15 to 12.0 and regenerates that value during macOS builds. The committed
+  Xcode metadata reflects the accepted macOS 12 minimum rather than a manual
+  localization change. macOS 10.15 and 11 are not supported by this build.
+
+### Remaining work
+
+- Implement first-launch/default-language download status and optional additional
+  UI-language module downloads once the product defines the module catalog URL,
+  manifest/schema, versioning, signature/integrity policy, and local storage
+  contract. No such network or package contract exists in this repository yet.
+- Generate and add the remaining AI-translated modules represented by the local
+  catalog; pending entries remain visible but disabled until their complete
+  string bundle is present.
+
+Next: define the downloadable UI-language module catalog and storage contract.
 
 ---
 

@@ -129,6 +129,33 @@ void main() {
       expect(minSize?.height, 48);
     });
   });
+
+  // -------------------------------------------------------------------------
+  // Dynamic text accessibility
+  // -------------------------------------------------------------------------
+
+  group('Settings and theme screens dynamic text', () {
+    testWidgets('render at 200 percent text scale without exceptions',
+        (tester) async {
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(textScaler: TextScaler.linear(2.0)),
+          child: const MaterialApp(home: SettingsScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+
+      await tester.pumpWidget(
+        MediaQuery(
+          data: const MediaQueryData(textScaler: TextScaler.linear(2.0)),
+          child: const MaterialApp(home: ThemeSelectionScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+  });
 }
 
 /// Finds a Tooltip widget with an exact message string.
