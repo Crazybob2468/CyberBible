@@ -62,19 +62,12 @@ class _CyberBibleAppState extends State<CyberBibleApp> {
         .any((locale) => locale.languageCode == candidate.languageCode);
   }
 
-  /// Resolves the active UI locale from the app's language settings.
+  /// Resolves the manually selected UI locale from the app's language settings.
   ///
-  /// This follows the Phase 1.17 rule: by default, use the OS locale when the
-  /// system-language toggle is enabled; otherwise use the stored manual override.
-  /// English is the permanent fallback if no supported locale matches.
-  Locale _resolveActiveLocale() {
-    if (SettingsService.instance.useSystemLanguage) {
-      final code = SettingsService.instance.effectiveLanguageCode;
-      if (_isCompiledLocale(Locale(code))) {
-        return Locale(code);
-      }
-      return const Locale('en');
-    }
+  /// Returns null when system language is enabled so Flutter can observe and
+  /// resolve platform locale changes against [supportedLocales] at runtime.
+  Locale? _resolveActiveLocale() {
+    if (SettingsService.instance.useSystemLanguage) return null;
 
     final code = SettingsService.instance.selectedLanguageCode;
     if (_isCompiledLocale(Locale(code))) {

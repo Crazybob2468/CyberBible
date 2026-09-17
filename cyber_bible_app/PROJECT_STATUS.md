@@ -136,6 +136,8 @@ yet extracted from lower-priority surfaces.
   `flutter gen-l10n` cannot overwrite it.
 - Preserved icon-first controls and their tooltip/semantics metadata while making
   selected segmented-control icons render consistently across Flutter versions.
+- Addressed review feedback by delegating system-locale selection to Flutter at
+  runtime and making unsupported isolated locales fall back to English safely.
 - Completed the visible app-string extraction sweep across bookmarks, reading,
   settings, theme selection, home, and book-selection surfaces. Bible text and
   user-created bookmark text remain runtime content and are intentionally not
@@ -154,7 +156,7 @@ yet extracted from lower-priority surfaces.
 ### Validation
 
 - `flutter gen-l10n` completed successfully.
-- `flutter test` passes all **249 tests**.
+- `flutter test` passes all **250 tests**.
 - `flutter analyze` reports **No issues found**.
 - `flutter run -d macos --no-pub` built and launched successfully.
 - The icon-control regression suite includes a 200% text-scale test for settings

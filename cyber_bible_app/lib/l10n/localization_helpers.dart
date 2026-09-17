@@ -10,6 +10,11 @@ AppLocalizations appLocalizations(BuildContext context) {
     return localized;
   }
 
-  final locale = Localizations.maybeLocaleOf(context) ?? const Locale('en');
+  final requestedLocale = Localizations.maybeLocaleOf(context);
+  final locale = AppLocalizations.supportedLocales.any(
+    (supported) => supported.languageCode == requestedLocale?.languageCode,
+  )
+      ? requestedLocale!
+      : const Locale('en');
   return lookupAppLocalizations(locale);
 }
