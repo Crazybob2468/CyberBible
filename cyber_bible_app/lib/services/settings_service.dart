@@ -40,6 +40,12 @@ const _kAccentPrefix = 'accent_';
 /// Key for ThemeMode: 0 = system, 1 = light, 2 = dark.
 const _kThemeMode = 'theme_mode';
 
+/// Key for whether the UI should follow the device OS language at runtime.
+const _kUseSystemLanguage = 'use_system_language';
+
+/// Key for the manually selected UI language code (e.g. 'en', 'es').
+const _kSelectedLanguageCode = 'selected_language_code';
+
 /// Key for verse body font size (double).
 const _kFontSizePx = 'font_size_px';
 
@@ -61,6 +67,12 @@ const _kParagraphMode = 'paragraph_mode';
 
 /// Default theme shown on a fresh install.
 const _defaultThemeId = 'classic_white';
+
+/// Default UI language code used when no explicit choice is made.
+const String _defaultLanguageCode = 'en';
+
+/// Languages supported by the UI layer in this build.
+const List<String> _supportedLanguageCodes = <String>['en', 'es'];
 
 /// Default per-theme accent colors (ARGB int) keyed by theme ID.
 ///
@@ -196,6 +208,57 @@ class SettingsService extends ChangeNotifier {
             : 0;
     await _p.setInt(_kThemeMode, index);
     notifyListeners();
+  }
+
+  // ---- UI language ----
+
+  /// Whether the app should follow the OS locale instead of a user override.
+  bool get useSystemLanguage => _p.getBool(_kUseSystemLanguage) ?? true;
+
+  /// Updates the use-system-language preference and notifies listeners.
+  Future<void> setUseSystemLanguage(bool value) async {
+    await _p.setBool(_kUseSystemLanguage, value);
+    notifyListeners();
+  }
+
+  /// The currently selected UI language code.
+  ///
+  /// Stored values are restricted to the UI's supported locale list, with a
+  /// fallback to English if nothing has been chosen yet.
+  String get selectedLanguageCode {
+    final stored = _p.getString(_kSelectedLanguageCode) ?? _defaultLanguageCode;
+    return _supportedLanguageCodes.contains(stored) ? stored : _defaultLanguageCode;
+  }
+
+  /// Sets the manual UI language override and notifies listeners.
+  Future<void> setSelectedLanguageCode(String code) async {
+    final safeCode = _supportedLanguageCodes.contains(code)
+        ? code
+        : _defaultLanguageCode;
+    await _p.setString(_kSelectedLanguageCode, safeCode);
+    notifyListeners();
+  }
+
+  /// Returns the effective UI language code after applying the system/default
+  /// rules.
+  String get effectiveLanguageCode {
+    if (useSystemLanguage) {
+      final systemLanguage = WidgetsBinding.instance.platformDispatcher.locale.languageCode;
+      final supported = _supportedLanguageCodes.contains(systemLanguage)
+          ? systemLanguage
+          : _defaultLanguageCode;
+      return supported;
+    }
+    return selectedLanguageCode;
+  }
+
+  /// Returns the human-readable label for a supported UI language code.
+  String languageDisplayName(String code) {
+    const names = <String, String>{
+      'en': 'English',
+      'es': 'Español',
+    };
+    return names[code] ?? 'English';
   }
 
   // ---- Font size ----

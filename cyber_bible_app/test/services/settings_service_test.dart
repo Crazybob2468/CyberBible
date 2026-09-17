@@ -65,6 +65,14 @@ void main() {
       expect(SettingsService.instance.themeMode, ThemeMode.system);
     });
 
+    test('useSystemLanguage defaults to true', () {
+      expect(SettingsService.instance.useSystemLanguage, true);
+    });
+
+    test('selectedLanguageCode defaults to en', () {
+      expect(SettingsService.instance.selectedLanguageCode, 'en');
+    });
+
     test('accentColor returns correct default for classic_white', () {
       expect(
         SettingsService.instance.accentColor('classic_white'),
@@ -234,6 +242,28 @@ void main() {
     });
   });
 
+  group('language settings', () {
+    test('stores useSystemLanguage and notifies listeners', () async {
+      var notified = false;
+      SettingsService.instance.addListener(() => notified = true);
+
+      await SettingsService.instance.setUseSystemLanguage(false);
+
+      expect(SettingsService.instance.useSystemLanguage, false);
+      expect(notified, true);
+    });
+
+    test('stores selectedLanguageCode and notifies listeners', () async {
+      var notified = false;
+      SettingsService.instance.addListener(() => notified = true);
+
+      await SettingsService.instance.setSelectedLanguageCode('es');
+
+      expect(SettingsService.instance.selectedLanguageCode, 'es');
+      expect(notified, true);
+    });
+  });
+
   group('setAccentColor', () {
     test('stores a custom accent and notifies listeners', () async {
       var notified = false;
@@ -282,6 +312,8 @@ void main() {
       await SettingsService.instance.setSelectedThemeId('aurora');
       await SettingsService.instance.setFontSizePx(24.0);
       await SettingsService.instance.setParagraphMode(false);
+      await SettingsService.instance.setUseSystemLanguage(false);
+      await SettingsService.instance.setSelectedLanguageCode('es');
 
       // Simulate restarting the service (new process).
       // The mock keeps its in-memory store, so SharedPreferences still has the
@@ -292,6 +324,8 @@ void main() {
       expect(SettingsService.instance.selectedThemeId, 'aurora');
       expect(SettingsService.instance.fontSizePx, 24.0);
       expect(SettingsService.instance.paragraphMode, false);
+      expect(SettingsService.instance.useSystemLanguage, false);
+      expect(SettingsService.instance.selectedLanguageCode, 'es');
     });
   });
 }

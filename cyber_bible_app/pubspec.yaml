@@ -12,6 +12,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.20.2
   xml: ^6.5.0
   # sqflite: runtime SQLite access for reading the bundled Bible database.
   # Added in Step 1.6 so the dependency is ready for the app DB reader layer
@@ -72,6 +75,7 @@ dev_dependencies:
   # path is declared in dependencies (above) and is also used by the build tool.
 
 flutter:
+  generate: true
   uses-material-design: true
 
   assets:

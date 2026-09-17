@@ -26,6 +26,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart'; // RenderAbstractViewport
 import 'package:flutter/services.dart'; // SemanticsService, SystemNavigator
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
+import 'package:cyber_bible_app/l10n/localization_helpers.dart';
 
 import '../app_routes.dart';
 import '../models/book.dart';
@@ -344,6 +345,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
   /// Loads chapter USFX + verse list and prepares rendered HTML.
   Future<void> _loadChapter() async {
+    final l10n = appLocalizations(context);
     final generation = ++_loadGeneration;
     _clearPendingVerseJump();
     // Preserve widget.initialVerse across the async load so that if the
@@ -424,7 +426,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
         setState(() {
           _contentUsfx = null;
           _verses = null;
-          _errorMessage = 'Could not load the chapter. Please try again.';
+          _errorMessage = l10n.couldNotLoadChapter;
         });
       }
     }
@@ -877,9 +879,10 @@ class _ReadingScreenState extends State<ReadingScreen> {
     }
 
     if (mounted) {
+      final l10n = appLocalizations(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Bookmark saved'),
+        SnackBar(
+          content: Text(l10n.bookmarkSaved),
           duration: Duration(seconds: 2),
         ),
       );
@@ -1793,6 +1796,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
   /// Builds collapsible top app bar plus sticky quick-nav controls.
   SliverAppBar _buildSliverAppBar(ColorScheme colorScheme) {
+    final l10n = appLocalizations(context);
     return SliverAppBar(
       expandedHeight: _expandedHeight,
       pinned: true,
@@ -1811,7 +1815,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
       actions: [
         IconButton(
           icon: const Icon(Icons.home_rounded),
-          tooltip: 'Home',
+          tooltip: l10n.home,
           onPressed: () => Navigator.pushNamedAndRemoveUntil(
             context,
             AppRoutes.home,
@@ -1822,7 +1826,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
         // Bookmarks tab pre-selected (index 2).
         IconButton(
           icon: const Icon(Icons.bookmarks_rounded),
-          tooltip: 'Bookmarks',
+          tooltip: l10n.bookmarks,
           onPressed: () => Navigator.pushNamed(
             context,
             AppRoutes.bookSelect,
@@ -1832,13 +1836,13 @@ class _ReadingScreenState extends State<ReadingScreen> {
         // Add bookmark icon — opens the add-bookmark bottom sheet.
         IconButton(
           icon: const Icon(Icons.bookmark_add_rounded),
-          tooltip: 'Add bookmark',
+          tooltip: l10n.addBookmarkTooltip,
           onPressed: _openAddBookmarkSheet,
         ),
         // Settings icon — opens the settings screen.
         IconButton(
           icon: const Icon(Icons.settings_rounded),
-          tooltip: 'Settings',
+          tooltip: l10n.settingsTooltip,
           onPressed: () => Navigator.pushNamed(context, AppRoutes.settings),
         ),
       ],
@@ -1855,6 +1859,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
   /// Expanded header content (testament, book title, chapter title).
   Widget _buildExpandedHeader(ColorScheme colorScheme) {
+    final l10n = appLocalizations(context);
     return Container(
       color: colorScheme.primaryContainer,
       // Reserve vertical space so the expanded title block never sits under
@@ -1886,7 +1891,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
           ),
           const SizedBox(height: 2),
           Text(
-            'Chapter ${widget.chapter}',
+            l10n.chapterLabel(widget.chapter),
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -1900,6 +1905,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
   /// Sticky quick-nav row shown in both expanded and collapsed app-bar states.
   Widget _buildQuickNavBar(ColorScheme colorScheme) {
+    final l10n = appLocalizations(context);
     return Container(
       color: colorScheme.primaryContainer,
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
@@ -1909,8 +1915,8 @@ class _ReadingScreenState extends State<ReadingScreen> {
             child: _QuickNavButton(
               icon: Icons.menu_book_rounded,
               label: '${widget.book.nameShort} ${widget.chapter}',
-              tooltip: 'Choose book and chapter',
-              semanticLabel: 'Book and chapter quick navigation',
+              tooltip: l10n.chooseBookChapter,
+              semanticLabel: l10n.bookChapterQuickNavigation,
               onPressed: _openBookChapterQuickNav,
             ),
           ),
@@ -1919,8 +1925,8 @@ class _ReadingScreenState extends State<ReadingScreen> {
             child: _QuickNavButton(
               icon: Icons.format_list_numbered_rounded,
               label: _currentVerseLabel,
-              tooltip: 'Choose verse',
-              semanticLabel: 'Verse quick navigation',
+              tooltip: l10n.chooseVerse,
+              semanticLabel: l10n.verseQuickNavigation,
               onPressed: _verses == null || _verses!.isEmpty
                   ? null
                   : _openVerseQuickNav,
@@ -1979,6 +1985,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
   /// Error state for transient chapter load/render failures.
   Widget _buildErrorState(ColorScheme colorScheme) {
+    final l10n = appLocalizations(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -1996,7 +2003,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
             FilledButton.icon(
               onPressed: _loadChapter,
               icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Retry'),
+              label: Text(l10n.retry),
             ),
           ],
         ),
@@ -2065,7 +2072,8 @@ class _ReadingScreenState extends State<ReadingScreen> {
                   children: _verses!
                       .map(
                         (v) => Semantics(
-                          label: 'Verse ${v.verse}: ${v.textPlain}',
+                            label: appLocalizations(context)
+                                .verseWithText(v.textPlain, v.verse),
                           excludeSemantics: true,
                           child: const SizedBox.shrink(),
                         ),
@@ -2268,7 +2276,8 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
       _scrollCurrentBookIntoView(books);
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = 'Could not load books. Please try again.');
+        setState(() =>
+          _error = appLocalizations(context).couldNotLoadBooks);
     }
   }
 
@@ -2291,7 +2300,7 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
       if (!mounted) return;
       setState(() {
         _loadingChapters = false;
-        _error = 'Could not load chapters. Please try again.';
+        _error = appLocalizations(context).couldNotLoadChapters;
       });
     }
   }
@@ -2402,6 +2411,7 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = appLocalizations(context);
     final maxHeight = MediaQuery.of(context).size.height * 0.88;
 
     return SizedBox(
@@ -2424,7 +2434,7 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
               children: [
                 if (_selectedBook != null)
                   IconButton(
-                    tooltip: 'Back to books',
+                    tooltip: l10n.backToBooks,
                     icon: const Icon(Icons.arrow_back_rounded),
                     onPressed: () {
                       setState(() {
@@ -2441,8 +2451,8 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
                 Expanded(
                   child: Text(
                     _selectedBook == null
-                        ? 'Select Book'
-                        : 'Select Chapter (${_selectedBook!.nameShort})',
+                        ? l10n.selectBookTitle
+                        : l10n.selectChapterTitle(_selectedBook!.nameShort),
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -2459,6 +2469,7 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
   }
 
   Widget _buildBody(ThemeData theme) {
+    final l10n = appLocalizations(context);
     if (_books == null && _error == null) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -2475,7 +2486,7 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
               FilledButton.icon(
                 onPressed: _selectedBook == null ? _loadBooks : () => _selectBook(_selectedBook!),
                 icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Retry'),
+                label: Text(l10n.retry),
               ),
             ],
           ),
@@ -2496,6 +2507,7 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
 
   Widget _buildBooksPicker(ThemeData theme) {
     final books = _books!;
+    final l10n = appLocalizations(context);
 
     return Column(
       children: [
@@ -2504,18 +2516,18 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
           tabs: [
             Tab(
               icon: Tooltip(
-                message: 'Traditional order',
+                message: l10n.traditionalOrder,
                 child: Semantics(
-                  label: 'Traditional order books',
+                  label: l10n.traditionalOrderBooks,
                   child: const Icon(Icons.history_edu_rounded),
                 ),
               ),
             ),
             Tab(
               icon: Tooltip(
-                message: 'Alphabetical order',
+                message: l10n.alphabeticalOrder,
                 child: Semantics(
-                  label: 'Alphabetical order books',
+                  label: l10n.alphabeticalOrderBooks,
                   child: const Icon(Icons.sort_by_alpha_rounded),
                 ),
               ),
@@ -2614,12 +2626,13 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
       itemCount: chapters.length,
       itemBuilder: (context, index) {
         final chapter = chapters[index];
+        final l10n = appLocalizations(context);
         // Semantics wrapper announces "Chapter N" so screen readers give full
         // context, not just the bare number "1".  button: true + ExcludeSemantics
         // on the inner text mirrors the _ChapterTile pattern used on the main
         // chapter-selection screen.
         return Semantics(
-          label: 'Chapter $chapter',
+          label: l10n.chapterSelectionLabel(chapter),
           button: true,
           child: Material(
             color: theme.colorScheme.primaryContainer,
@@ -2717,6 +2730,7 @@ class _VerseWheelPickerSheetState extends State<_VerseWheelPickerSheet> {
   @override
   Widget build(BuildContext context) {
     final maxHeight = MediaQuery.of(context).size.height * 0.55;
+    final l10n = appLocalizations(context);
 
     return SizedBox(
       height: maxHeight,
@@ -2724,7 +2738,7 @@ class _VerseWheelPickerSheetState extends State<_VerseWheelPickerSheet> {
         children: [
           const SizedBox(height: 8),
           Text(
-            'Select Verse',
+            l10n.selectVerse,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
@@ -2741,7 +2755,7 @@ class _VerseWheelPickerSheetState extends State<_VerseWheelPickerSheet> {
                   final verse = widget.verses[index];
                   return Center(
                     child: Text(
-                      'Verse ${verse.verse}',
+                      l10n.verseSelectionLabel(verse.verse),
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                   );
@@ -2757,7 +2771,7 @@ class _VerseWheelPickerSheetState extends State<_VerseWheelPickerSheet> {
                 onPressed: () {
                   Navigator.pop(context, widget.verses[_selectedIndex].verse);
                 },
-                child: const Text('Go to Verse'),
+                child: Text(l10n.goToVerse),
               ),
             ),
           ),
@@ -2778,6 +2792,7 @@ class _VerseListPickerSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final maxHeight = MediaQuery.of(context).size.height * 0.72;
     final theme = Theme.of(context);
+    final l10n = appLocalizations(context);
 
     return SizedBox(
       height: maxHeight,
@@ -2785,7 +2800,7 @@ class _VerseListPickerSheet extends StatelessWidget {
         children: [
           const SizedBox(height: 8),
           Text(
-            'Select Verse',
+            l10n.selectVerse,
             style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
@@ -2796,7 +2811,7 @@ class _VerseListPickerSheet extends StatelessWidget {
                 final verse = verses[index];
                 final isCurrent = verse.verse == currentVerse;
                 return ListTile(
-                  title: Text('Verse ${verse.verse}'),
+                  title: Text(l10n.verseSelectionLabel(verse.verse)),
                   subtitle: Text(
                     verse.textPlain,
                     maxLines: 1,
@@ -2953,9 +2968,10 @@ class _AddBookmarkSheetState extends State<AddBookmarkSheet> {
       }
     } catch (e) {
       if (mounted) {
+        final l10n = appLocalizations(context);
         setState(() => _saving = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not save bookmark.')),
+          SnackBar(content: Text(l10n.couldNotSaveBookmark)),
         );
       }
     }
@@ -2967,10 +2983,11 @@ class _AddBookmarkSheetState extends State<AddBookmarkSheet> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final l10n = appLocalizations(context);
 
     // Display label for the current verse selection.
     final verseLabel = _selectedVerse.isEmpty
-        ? 'Full chapter: ${widget.book.nameShort} ${widget.chapter}'
+      ? l10n.fullChapterReference(widget.book.nameShort, widget.chapter)
         : '${widget.book.nameShort} ${widget.chapter}:$_selectedVerse';
 
     return Padding(
@@ -2998,7 +3015,7 @@ class _AddBookmarkSheetState extends State<AddBookmarkSheet> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Add Bookmark',
+                l10n.addBookmark,
                 style: textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -3046,11 +3063,11 @@ class _AddBookmarkSheetState extends State<AddBookmarkSheet> {
               if (_selectedVerse.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Semantics(
-                  label: 'Switch to full chapter bookmark',
+                  label: l10n.switchToFullChapter,
                   button: true,
                   child: ActionChip(
                     avatar: const Icon(Icons.layers_rounded, size: 16),
-                    label: const Text('Full chapter'),
+                    label: Text(l10n.fullChapter),
                     onPressed: () => setState(() => _selectedVerse = ''),
                     visualDensity: VisualDensity.compact,
                     materialTapTargetSize: MaterialTapTargetSize.padded,
@@ -3064,8 +3081,8 @@ class _AddBookmarkSheetState extends State<AddBookmarkSheet> {
               TextField(
                 controller: _labelController,
                 decoration: InputDecoration(
-                  labelText: 'Label (optional)',
-                  hintText: 'Memorize',
+                  labelText: l10n.labelOptional,
+                  hintText: l10n.memorizeHint,
                   border: const OutlineInputBorder(),
                   contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16, vertical: 12),
@@ -3082,8 +3099,8 @@ class _AddBookmarkSheetState extends State<AddBookmarkSheet> {
               TextField(
                 controller: _notesController,
                 decoration: InputDecoration(
-                  labelText: 'Notes (optional)',
-                  hintText: 'Add a note...',
+                  labelText: l10n.notesOptional,
+                  hintText: l10n.addNoteHint,
                   border: const OutlineInputBorder(),
                   contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16, vertical: 12),
@@ -3103,19 +3120,19 @@ class _AddBookmarkSheetState extends State<AddBookmarkSheet> {
                 children: [
                   // Cancel
                   Semantics(
-                    label: 'Cancel, close bookmark sheet',
+                    label: l10n.bookmarkSheetCancel,
                     button: true,
                     child: TextButton(
                       onPressed: _saving
                           ? null
                           : () => Navigator.pop(context, false),
-                      child: const Text('Cancel'),
+                      child: Text(l10n.cancel),
                     ),
                   ),
                   const SizedBox(width: 12),
                   // Save
                   Semantics(
-                    label: 'Save bookmark',
+                    label: l10n.saveBookmarkSemantics,
                     button: true,
                     child: FilledButton(
                       onPressed: _saving ? null : _save,
@@ -3126,7 +3143,7 @@ class _AddBookmarkSheetState extends State<AddBookmarkSheet> {
                               child: CircularProgressIndicator(
                                   strokeWidth: 2),
                             )
-                          : const Text('Save'),
+                          : Text(l10n.save),
                     ),
                   ),
                 ],

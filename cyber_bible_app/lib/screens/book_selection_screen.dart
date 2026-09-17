@@ -19,6 +19,7 @@
 // route `AppRoutes.chapters`.
 
 import 'package:flutter/material.dart';
+import 'package:cyber_bible_app/l10n/localization_helpers.dart';
 
 import '../models/book.dart';
 import '../app_routes.dart';
@@ -115,7 +116,8 @@ class _BookSelectionScreenState extends State<BookSelectionScreen>
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _errorMessage = 'Could not load the books list. Please try again.');
+        setState(() =>
+            _errorMessage = appLocalizations(context).couldNotLoadBooks);
       }
     }
   }
@@ -135,9 +137,11 @@ class _BookSelectionScreenState extends State<BookSelectionScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = appLocalizations(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Select a Book'),
+        title: Text(l10n.selectABook),
         // The tab bar lives inside the AppBar's bottom slot so it scrolls
         // with the page on smaller screens.
         bottom: TabBar(
@@ -145,27 +149,27 @@ class _BookSelectionScreenState extends State<BookSelectionScreen>
           tabs: [
             Tab(
               icon: Tooltip(
-                message: 'Traditional order',
+                message: l10n.traditionalOrder,
                 child: Semantics(
-                  label: 'Traditional order tab',
+                  label: '${l10n.traditionalOrder} tab',
                   child: Icon(Icons.auto_stories_rounded),
                 ),
               ),
             ),
             Tab(
               icon: Tooltip(
-                message: 'Alphabetical order',
+                message: l10n.alphabeticalOrder,
                 child: Semantics(
-                  label: 'Alphabetical order tab',
+                  label: '${l10n.alphabeticalOrder} tab',
                   child: Icon(Icons.sort_by_alpha_rounded),
                 ),
               ),
             ),
             Tab(
               icon: Tooltip(
-                message: 'Bookmarks',
+                message: l10n.bookmarks,
                 child: Semantics(
-                  label: 'Bookmarks tab',
+                  label: '${l10n.bookmarks} tab',
                   child: Icon(Icons.bookmark_outline_rounded),
                 ),
               ),
@@ -186,6 +190,7 @@ class _BookSelectionScreenState extends State<BookSelectionScreen>
 
     // If loading failed, show the error and a retry button.
     if (_errorMessage != null) {
+      final l10n = appLocalizations(context);
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -201,7 +206,7 @@ class _BookSelectionScreenState extends State<BookSelectionScreen>
             ElevatedButton.icon(
               onPressed: _loadBooks,
               icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              label: Text(l10n.retry),
             ),
           ],
         ),

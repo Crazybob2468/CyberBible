@@ -16,6 +16,7 @@
 export 'app_routes.dart'; // Re-export so consumers of routes.dart still get AppRoutes etc.
 
 import 'package:flutter/material.dart';
+import 'package:cyber_bible_app/l10n/app_localizations.dart';
 
 import 'app_routes.dart';
 import 'screens/home_screen.dart';
@@ -122,11 +123,11 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
     default:
       return MaterialPageRoute<void>(
         settings: settings,
-        builder: (_) => Scaffold(
-          appBar: AppBar(title: const Text('Page Not Found')),
+        builder: (context) => Scaffold(
+          appBar: AppBar(title: Text(AppLocalizations.of(context)!.pageNotFound)),
           body: Center(
             child: Text(
-              'No route defined for "${settings.name}"',
+              AppLocalizations.of(context)!.noRouteDefined(settings.name ?? 'unknown'),
               style: const TextStyle(fontSize: 16),
             ),
           ),

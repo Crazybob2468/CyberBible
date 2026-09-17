@@ -19,6 +19,7 @@
 
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:cyber_bible_app/l10n/localization_helpers.dart';
 
 import '../models/app_theme_definition.dart';
 import '../services/settings_service.dart';
@@ -95,6 +96,7 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = appLocalizations(context);
 
     // Split the catalog into the two sections.
     final customizable = AppThemeCatalog.all
@@ -105,17 +107,16 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
         .toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Choose Theme')),
+      appBar: AppBar(title: Text(l10n.chooseTheme)),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         children: [
 
           // ── Customisable themes ──────────────────────────────────────────
-          _sectionLabel('Customisable Themes', cs),
+          _sectionLabel(l10n.customisableThemes, cs),
           const SizedBox(height: 4),
           Text(
-            'Tap a card to choose an accent colour. '
-            '"Classic White" also supports Light, Dark and System modes.',
+            l10n.customisableThemesSubtitle,
             style: TextStyle(
               fontSize: 12,
               color: cs.onSurfaceVariant,
@@ -136,7 +137,7 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Text(
-                  'SET THEMES',
+                  l10n.setThemesLabel,
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
@@ -150,8 +151,7 @@ class _ThemeSelectionScreenState extends State<ThemeSelectionScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Fixed, hand-crafted palettes. No customisation needed — '
-            'just tap to apply.',
+            l10n.setThemesSubtitle,
             style: TextStyle(
               fontSize: 12,
               color: cs.onSurfaceVariant,
@@ -280,14 +280,19 @@ class _ThemeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = appLocalizations(context);
     final isSelected =
         SettingsService.instance.selectedThemeId == definition.id;
     final currentAccent = SettingsService.instance.accentColor(definition.id);
 
     return Semantics(
-      label: '${definition.name} theme'
-          '${isSelected ? ', currently selected' : ''}. '
-          '${definition.isCustomizable ? 'Customisable accent colour.' : 'Fixed palette.'}',
+      label: l10n.themeCardSemantics(
+        definition.isCustomizable
+            ? l10n.customisableAccentDescription
+            : l10n.fixedPaletteDescription,
+        definition.name,
+        isSelected ? l10n.selectedThemeSuffix : '',
+      ),
       button: true,
       selected: isSelected,
       child: InkWell(
@@ -1103,6 +1108,7 @@ class _AccentPickerSheetState extends State<_AccentPickerSheet> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = appLocalizations(context);
 
     return SingleChildScrollView(
       // Scrollable wrapper prevents overflow on small screens or when the
@@ -1132,7 +1138,7 @@ class _AccentPickerSheetState extends State<_AccentPickerSheet> {
 
           // Title.
           Text(
-            'Accent Colour — ${widget.definition.name}',
+            l10n.accentColourTitle(widget.definition.name),
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 16),
@@ -1184,11 +1190,12 @@ class _AccentPickerSheetState extends State<_AccentPickerSheet> {
   /// Segmented button for Light / System / Dark — classic_white only.
   Widget _themeModeToggle(ColorScheme cs) {
     final mode = SettingsService.instance.themeMode;
+    final l10n = appLocalizations(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'BRIGHTNESS MODE',
+          l10n.brightnessMode,
           style: TextStyle(
             fontSize: 10,
             fontWeight: FontWeight.w700,
@@ -1198,23 +1205,33 @@ class _AccentPickerSheetState extends State<_AccentPickerSheet> {
         ),
         const SizedBox(height: 8),
         SegmentedButton<ThemeMode>(
-          segments: const [
+          segments: [
             ButtonSegment(
               value: ThemeMode.light,
               icon: Icon(Icons.light_mode_rounded),
-              tooltip: 'Light mode',
+              label: Text(l10n.brightnessLight),
+              tooltip: l10n.lightMode,
             ),
             ButtonSegment(
               value: ThemeMode.system,
               icon: Icon(Icons.brightness_auto_rounded),
-              tooltip: 'Follow system mode',
+              label: Text(l10n.brightnessSystem),
+              tooltip: l10n.followSystemMode,
             ),
             ButtonSegment(
               value: ThemeMode.dark,
               icon: Icon(Icons.dark_mode_rounded),
-              tooltip: 'Dark mode',
+              label: Text(l10n.brightnessDark),
+              tooltip: l10n.darkMode,
             ),
           ],
+          selectedIcon: Icon(
+            mode == ThemeMode.light
+                ? Icons.light_mode_rounded
+                : mode == ThemeMode.dark
+                    ? Icons.dark_mode_rounded
+                    : Icons.brightness_auto_rounded,
+          ),
           selected: {mode},
           onSelectionChanged: (sel) async {
             await widget.onThemeModeChanged!(sel.first);
@@ -1226,10 +1243,10 @@ class _AccentPickerSheetState extends State<_AccentPickerSheet> {
         const SizedBox(height: 8),
         Text(
           mode == ThemeMode.light
-              ? 'Light mode'
+                ? l10n.lightMode
               : mode == ThemeMode.dark
-                  ? 'Dark mode'
-                  : 'Follow system mode',
+                  ? l10n.darkMode
+                  : l10n.followSystemMode,
           style: TextStyle(
             fontSize: 12,
             color: cs.onSurfaceVariant,
@@ -1259,8 +1276,12 @@ class _SwatchButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = appLocalizations(context);
     return Semantics(
-      label: '$name accent colour${isSelected ? ', currently selected' : ''}',
+      label: l10n.accentSwatchSemantics(
+        name,
+        isSelected ? l10n.selectedThemeSuffix : '',
+      ),
       button: true,
       selected: isSelected,
       child: InkWell(
@@ -1323,12 +1344,13 @@ class _CustomPickerButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final l10n = appLocalizations(context);
 
     return Semantics(
-      label: 'Custom colour picker',
+      label: l10n.customColourPicker,
       button: true,
       child: Tooltip(
-        message: 'Custom color…',
+        message: l10n.customColourTooltip,
         child: InkWell(
           // InkWell enables Tab+Enter/Space activation on desktop/web keyboards.
           onTap: () => _openPicker(context),
@@ -1367,11 +1389,12 @@ class _CustomPickerButton extends StatelessWidget {
   /// Shows the flex_color_picker dialog.
   Future<void> _openPicker(BuildContext context) async {
     Color result = currentColor;
+    final l10n = appLocalizations(context);
 
     await showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Choose a custom accent'),
+        title: Text(l10n.pickCustomAccent),
         content: SizedBox(
           width: 280,
           child: ColorPicker(
@@ -1394,14 +1417,14 @@ class _CustomPickerButton extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () async {
               Navigator.pop(ctx);
               await onColorPicked(result);
             },
-            child: const Text('Apply'),
+            child: Text(l10n.apply),
           ),
         ],
       ),

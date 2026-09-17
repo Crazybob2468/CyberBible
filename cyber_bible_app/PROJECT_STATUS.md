@@ -82,7 +82,7 @@ cyber_bible_app/
 
 ## Current Status
 
-**Phase 1 — Post-Step-1.16 Visual Polish (gear icon fix, paragraph mode, dark themes)**
+**Phase 1 — Step 1.17 Internationalization foundation**
 
 Step 1.16 ✅ COMPLETE. The session after Step 1.16 resolved four user-reported issues and completed the paragraph-mode rendering overhaul across multiple sessions.
 
@@ -111,7 +111,63 @@ Step 1.16 ✅ COMPLETE. The session after Step 1.16 resolved four user-reported 
 ### Key numbers
 - **245 tests passing**, `dart analyze` → No issues.
 
-Next: Step 1.17 — Internationalization setup.
+Step 1.17 localization foundation is implemented below. The remaining work is the
+future downloadable UI-language module flow and the final sweep of any strings not
+yet extracted from lower-priority surfaces.
+
+---
+
+**Step 1.17 ✅ FOUNDATION COMPLETE — Flutter localization, OS default, and override**
+
+### What was built
+
+- Added Flutter l10n generation with `l10n.yaml`, English and Spanish ARB files,
+  generated `AppLocalizations`, `flutter_localizations`, and `intl`.
+- Wired `MaterialApp` to generated delegates and supported locales.
+- Added persisted language settings to `SettingsService`: use system language,
+  manual language override, effective locale, and display-name helpers.
+- Added the Settings language section with a system-language toggle, current
+  language summary, and manual language picker.
+- Localized the app shell, routes, home screen, book selection, and the main
+  theme/bookmark/reading UI foundations with English fallback behavior.
+- Added a localization fallback helper so isolated widgets and tests remain usable
+  when no localization scope has been installed. The fallback implementation
+  lives in the non-generated `lib/l10n/localization_helpers.dart` file so running
+  `flutter gen-l10n` cannot overwrite it.
+- Preserved icon-first controls and their tooltip/semantics metadata while making
+  selected segmented-control icons render consistently across Flutter versions.
+- Completed the visible app-string extraction sweep across bookmarks, reading,
+  settings, theme selection, home, and book-selection surfaces. Bible text and
+  user-created bookmark text remain runtime content and are intentionally not
+  placed in UI ARB files.
+
+### Architecture decisions
+
+- The OS locale is the default whenever a matching compiled UI locale exists.
+- English is the permanent fallback when the OS locale is unsupported or a
+  language module is unavailable.
+- A manual language choice is persisted and overrides the OS until the user
+  re-enables the system-language setting.
+- The current compiled locales are English and Spanish; the structure is ready
+  for future downloadable UI-language modules without changing screen code.
+
+### Validation
+
+- `flutter gen-l10n` completed successfully.
+- `flutter test` passes all **248 tests**.
+- `flutter analyze` reports **No issues found**.
+- `flutter run -d macos --no-pub` built and launched successfully.
+- The icon-control regression suite includes a 200% text-scale test for settings
+  and theme selection; all 4 focused tests pass.
+
+### Remaining work
+
+- Implement first-launch/default-language download status and optional additional
+  UI-language module downloads once the product defines the module catalog URL,
+  manifest/schema, versioning, signature/integrity policy, and local storage
+  contract. No such network or package contract exists in this repository yet.
+
+Next: downloadable UI-language module status and the final string audit.
 
 ---
 
