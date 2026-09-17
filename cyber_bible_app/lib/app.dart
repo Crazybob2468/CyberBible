@@ -31,11 +31,56 @@ class _CyberBibleAppState extends State<CyberBibleApp> {
   /// Locales compiled directly into this app build.
   ///
   /// Keep this list as the single source of truth for locale fallback logic.
-  /// English is the base fallback, with Spanish added for the first translation-
-  /// ready pass in Step 1.17.
+  /// English is the permanent fallback; the remaining entries are the
+  /// compiled UI-language modules available in this build.
   static const List<Locale> _compiledUiLocales = <Locale>[
     Locale('en'),
     Locale('es'),
+    Locale('fr'),
+    Locale('de'),
+    Locale('it'),
+    Locale('pt'),
+    Locale('hi'),
+    Locale('zh'),
+    Locale('ar'),
+    Locale('bn'),
+    Locale('ja'),
+    Locale('ko'),
+    Locale('ru'),
+    Locale('tr'),
+    Locale('uk'),
+    Locale('vi'),
+    Locale('pl'),
+    Locale('nl'),
+    Locale('af'),
+    Locale('am'),
+    Locale('ca'),
+    Locale('cs'),
+    Locale('da'),
+    Locale('az'),
+    Locale('be'),
+    Locale('bg'),
+    Locale('bs'),
+    Locale('et'),
+    Locale('eu'),
+    Locale('fa'),
+    Locale('fi'),
+    Locale('fil'),
+    Locale('gl'),
+    Locale('gu'),
+    Locale('he'),
+    Locale('hr'),
+    Locale('hu'),
+    Locale('hy'),
+    Locale('id'),
+    Locale('is'),
+    Locale('ka'),
+    Locale('kk'),
+    Locale('lo'),
+    Locale('lt'),
+    Locale('lv'),
+    Locale('mk'),
+    Locale('ml'),
   ];
 
   @override

@@ -135,9 +135,17 @@
   "fullChapterReference": "Capítulo completo: {bookName} {chapter}",
   "memorizeHint": "Memorizar",
   "addNoteHint": "Añadir una nota...",
+  "languageSearchHint": "Buscar idiomas",
+  "languageModuleInstalled": "Instalado",
+  "languageModulePending": "Traducción automática pendiente",
+  "languageNoMatches": "Ningún idioma coincide con la búsqueda.",
+  "languageCatalogDescription": "Los idiomas instalados funcionan sin conexión. Los demás se añadirán como módulos traducidos automáticamente.",
   "saveBookmarkSemantics": "Guardar marcador",
   "couldNotLoadChapter": "No se pudo cargar el capítulo. Inténtalo de nuevo.",
   "couldNotLoadChapters": "No se pudieron cargar los capítulos. Inténtalo de nuevo.",
   "verseWithText": "Versículo {verse}: {text}",
-  "accentSwatchSemantics": "Color de acento {name}{selected}"
+  "accentSwatchSemantics": "Color de acento {name}{selected}",
+  "oldTestament": "Antiguo Testamento",
+  "newTestament": "Nuevo Testamento",
+  "deuterocanonApocrypha": "Deuterocanónicos / Apócrifos"
 }

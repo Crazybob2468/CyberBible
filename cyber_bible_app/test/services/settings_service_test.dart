@@ -243,6 +243,18 @@ void main() {
   });
 
   group('language settings', () {
+    test('uses the first supported platform locale', () {
+      final binding = TestWidgetsFlutterBinding.ensureInitialized();
+      binding.platformDispatcher.localesTestValue = const [
+        Locale('de'),
+        Locale('es'),
+      ];
+
+      expect(SettingsService.instance.effectiveLanguageCode, 'de');
+
+      binding.platformDispatcher.clearLocalesTestValue();
+    });
+
     test('stores useSystemLanguage and notifies listeners', () async {
       var notified = false;
       SettingsService.instance.addListener(() => notified = true);

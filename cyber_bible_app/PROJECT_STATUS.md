@@ -109,11 +109,12 @@ Step 1.16 ✅ COMPLETE. The session after Step 1.16 resolved four user-reported 
 `customWidgetBuilder` in `flutter_widget_from_html_core` ALWAYS creates `WidgetBit.block()` — no CSS override is possible. The only correct approach for verse-position markers is `<div data-cbv="N">` placed as a **block sibling before** each `<p>`, never inside one.
 
 ### Key numbers
-- **245 tests passing**, `dart analyze` → No issues.
+- **264 tests passing**, `dart analyze` → No issues.
 
-Step 1.17 localization foundation is implemented below. The remaining work is the
-future downloadable UI-language module flow and the final sweep of any strings not
-yet extracted from lower-priority surfaces.
+Step 1.17 localization foundation is implemented below. The current compiled
+localization batch includes thirty-eight UI modules; the remaining work is the
+future downloadable UI-language module flow and the final sweep of any strings
+not yet extracted from lower-priority surfaces.
 
 ---
 
@@ -137,11 +138,30 @@ yet extracted from lower-priority surfaces.
 - Preserved icon-first controls and their tooltip/semantics metadata while making
   selected segmented-control icons render consistently across Flutter versions.
 - Addressed review feedback by delegating system-locale selection to Flutter at
-  runtime and making unsupported isolated locales fall back to English safely.
+  runtime, making unsupported isolated locales fall back to English safely, and
+  resolving the language summary from the full platform locale preference list.
 - Completed the visible app-string extraction sweep across bookmarks, reading,
   settings, theme selection, home, and book-selection surfaces. Bible text and
   user-created bookmark text remain runtime content and are intentionally not
   placed in UI ARB files.
+- Added a local Android/CLDR language catalog with native names, searchable
+  aliases, installed-module status, and machine-translation-pending status.
+- Replaced the two-item language dialog with a searchable language picker. The
+  picker lists the broader local language roadmap while allowing selection only
+  for bundled modules currently available offline.
+- Added a versioned local language-module contract with provenance metadata,
+  installed-module discovery, first-supported-platform-locale selection, and
+  English fallback.
+- Added complete AI-generated ARB modules for German, Italian, Portuguese, Hindi,
+  Simplified Chinese, Arabic, Bengali, Japanese, Korean, Russian, Turkish,
+  Ukrainian, Vietnamese, Polish, Dutch, Afrikaans, Amharic, Catalan, Czech, and
+  Danish, Azerbaijani, Belarusian, Bulgarian, Bosnian, Estonian, Basque,
+  Persian, Finnish, Filipino, Galician, Gujarati, Hebrew, Croatian, Hungarian,
+  Armenian, Indonesian, Icelandic, Georgian, Kazakh, Lao, Lithuanian, Latvian,
+  Macedonian, and Malayalam, with the complete current English UI key set and
+  matching ICU placeholders.
+- Registered the bulk locales with Flutter l10n, the app locale resolver, the
+  local language catalog, and the installed-module metadata.
 
 ### Architecture decisions
 
@@ -150,13 +170,32 @@ yet extracted from lower-priority surfaces.
   language module is unavailable.
 - A manual language choice is persisted and overrides the OS until the user
   re-enables the system-language setting.
-- The current compiled locales are English and Spanish; the structure is ready
-  for future downloadable UI-language modules without changing screen code.
+- The current compiled locales are English, Spanish, French, German, Italian,
+  Portuguese, Hindi, Simplified Chinese, Arabic, Bengali, Japanese, Korean,
+  Russian, Turkish, Ukrainian, Vietnamese, Polish, Dutch, Afrikaans, Amharic,
+  Catalan, Czech, Danish, Azerbaijani, Belarusian, Bulgarian, Bosnian,
+  Estonian, Basque, Persian, Finnish, Filipino, Galician, Gujarati, Hebrew,
+  Croatian, Hungarian, Armenian, Indonesian, Icelandic, Georgian, Kazakh, Lao,
+  Lithuanian, Latvian, Macedonian, and Malayalam: **47 installed UI modules**.
+  The
+  structure remains ready for additional local AI-generated UI-language modules
+  without changing screen code.
+- The local catalog remains broader than the currently bundled translation
+  modules. AI-generated language modules can be added one at a time without
+  changing the catalog or settings UI.
+- French, German, Italian, Portuguese, Hindi, Simplified Chinese, Arabic,
+  Bengali, Japanese, Korean, Russian, Turkish, Ukrainian, Vietnamese, Polish,
+  Dutch, Afrikaans, Amharic, Catalan, Czech, Danish, Azerbaijani, Belarusian,
+  Bulgarian, Bosnian, Estonian, Basque, Persian, Finnish, Filipino, Galician,
+  Gujarati, Hebrew, Croatian, Hungarian, Armenian, Indonesian, Icelandic,
+  Georgian, Kazakh, Lao, Lithuanian, Latvian, Macedonian, and Malayalam are
+  complete AI-generated modules
+  selectable both as manual overrides and through OS locale preference matching.
 
 ### Validation
 
 - `flutter gen-l10n` completed successfully.
-- `flutter test` passes all **250 tests**.
+- `flutter test` passes all **264 tests**.
 - `flutter analyze` reports **No issues found**.
 - `flutter run -d macos --no-pub` built and launched successfully.
 - The icon-control regression suite includes a 200% text-scale test for settings
@@ -172,6 +211,9 @@ yet extracted from lower-priority surfaces.
   UI-language module downloads once the product defines the module catalog URL,
   manifest/schema, versioning, signature/integrity policy, and local storage
   contract. No such network or package contract exists in this repository yet.
+- Generate and add the remaining AI-translated modules represented by the local
+  catalog; pending entries remain visible but disabled until their complete
+  string bundle is present.
 
 Next: define the downloadable UI-language module catalog and storage contract.
 

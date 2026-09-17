@@ -17,6 +17,7 @@ import 'package:cyber_bible_app/l10n/localization_helpers.dart';
 
 import '../app_routes.dart';
 import '../models/app_theme_definition.dart';
+import '../services/language_catalog.dart';
 import '../services/settings_service.dart';
 
 // ---------------------------------------------------------------------------
@@ -211,10 +212,9 @@ class _ThemeNavigationTile extends StatelessWidget {
 
 /// Language settings tile.
 ///
-/// Exposes the primary language controls for this phase: use system language,
-/// current language summary, and a language picker.  The app currently supports
-/// English and Spanish in the UI layer, and the system default is always the
-/// preferred default when the toggle is enabled.
+/// Exposes the primary language controls for this phase: use system language
+/// and a manual app-language picker. The app currently supports English and
+/// Spanish in the UI layer, and the system default is preferred when enabled.
 class _LanguageTile extends StatelessWidget {
   final ColorScheme colorScheme;
 
@@ -239,11 +239,6 @@ class _LanguageTile extends StatelessWidget {
           secondary: Icon(Icons.language_rounded, color: colorScheme.primary),
         ),
         ListTile(
-          leading: Icon(Icons.info_outline_rounded, color: colorScheme.primary),
-          title: Text(l10n.currentLanguage),
-          subtitle: Text(currentName),
-        ),
-        ListTile(
           leading: Icon(Icons.translate_rounded, color: colorScheme.primary),
           title: Text(l10n.appLanguage),
           subtitle: Text(currentName),
@@ -261,24 +256,100 @@ class _LanguageTile extends StatelessWidget {
 
   /// Shows the picker used to override the language manually.
   Future<String?> _showLanguagePicker(BuildContext context) async {
-    final l10n = appLocalizations(context);
-    final codes = <String>['en', 'es'];
-    final selected = await showDialog<String>(
+    return showDialog<String>(
       context: context,
-      builder: (context) {
-        return SimpleDialog(
-          title: Text(l10n.chooseLanguage),
-          children: codes.map((code) {
-            final name = SettingsService.instance.languageDisplayName(code);
-            return SimpleDialogOption(
-              onPressed: () => Navigator.pop(context, code),
-              child: Text(name),
-            );
-          }).toList(),
-        );
-      },
+      builder: (_) => const _LanguagePickerDialog(),
     );
-    return selected;
+  }
+}
+
+/// Stateful dialog for searching and selecting a local language module.
+class _LanguagePickerDialog extends StatefulWidget {
+  const _LanguagePickerDialog();
+
+  @override
+  State<_LanguagePickerDialog> createState() => _LanguagePickerDialogState();
+}
+
+class _LanguagePickerDialogState extends State<_LanguagePickerDialog> {
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = appLocalizations(context);
+    final filtered = androidLanguageCatalog
+        .where((entry) => entry.matches(_searchController.text))
+        .toList();
+
+    return AlertDialog(
+      title: Text(l10n.chooseLanguage),
+      content: SizedBox(
+        width: 420,
+        height: 520,
+        child: Column(
+          children: [
+            Text(
+              l10n.languageCatalogDescription,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _searchController,
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: l10n.languageSearchHint,
+                prefixIcon: const Icon(Icons.search_rounded),
+                border: const OutlineInputBorder(),
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: filtered.isEmpty
+                  ? Center(child: Text(l10n.languageNoMatches))
+                  : ListView.builder(
+                      itemCount: filtered.length,
+                      itemBuilder: (context, index) {
+                        final entry = filtered[index];
+                        final installed =
+                            entry.state == LanguageModuleState.installed;
+                        return ListTile(
+                          enabled: installed,
+                          leading: Icon(
+                            installed
+                                ? Icons.download_done_rounded
+                                : Icons.language_rounded,
+                          ),
+                          title: Text(entry.nativeName),
+                          subtitle: Text(
+                            '${entry.englishName} • ${entry.code} • '
+                            '${installed
+                                ? l10n.languageModuleInstalled
+                                : l10n.languageModulePending}',
+                          ),
+                          onTap: installed
+                              ? () => Navigator.pop(context, entry.code)
+                              : null,
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.cancel),
+        ),
+      ],
+    );
   }
 }
 

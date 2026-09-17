@@ -26,6 +26,9 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'language_catalog.dart';
+import 'language_module_service.dart';
+
 // ---------------------------------------------------------------------------
 // Shared-preferences key constants
 // ---------------------------------------------------------------------------
@@ -71,8 +74,11 @@ const _defaultThemeId = 'classic_white';
 /// Default UI language code used when no explicit choice is made.
 const String _defaultLanguageCode = 'en';
 
-/// Languages supported by the UI layer in this build.
-const List<String> _supportedLanguageCodes = <String>['en', 'es'];
+/// Language modules bundled and selectable in this build.
+final List<String> _supportedLanguageCodes = LanguageModuleService
+  .installedModules
+  .map((module) => module.languageCode)
+  .toList(growable: false);
 
 /// Default per-theme accent colors (ARGB int) keyed by theme ID.
 ///
@@ -243,22 +249,16 @@ class SettingsService extends ChangeNotifier {
   /// rules.
   String get effectiveLanguageCode {
     if (useSystemLanguage) {
-      final systemLanguage = WidgetsBinding.instance.platformDispatcher.locale.languageCode;
-      final supported = _supportedLanguageCodes.contains(systemLanguage)
-          ? systemLanguage
-          : _defaultLanguageCode;
-      return supported;
+      return LanguageModuleService.resolvePlatformLocale(
+        WidgetsBinding.instance.platformDispatcher.locales,
+      ).languageCode;
     }
     return selectedLanguageCode;
   }
 
   /// Returns the human-readable label for a supported UI language code.
   String languageDisplayName(String code) {
-    const names = <String, String>{
-      'en': 'English',
-      'es': 'Español',
-    };
-    return names[code] ?? 'English';
+    return languageCatalogEntry(code).nativeName;
   }
 
   // ---- Font size ----

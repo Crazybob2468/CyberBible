@@ -459,6 +459,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get addNoteHint => 'Add a note...';
 
   @override
+  String get languageSearchHint => 'Search languages';
+
+  @override
+  String get languageModuleInstalled => 'Installed';
+
+  @override
+  String get languageModulePending => 'Machine translation pending';
+
+  @override
+  String get languageNoMatches => 'No languages match your search.';
+
+  @override
+  String get languageCatalogDescription =>
+      'Languages marked as installed work offline. Other languages will be added as machine-translated modules.';
+
+  @override
   String get saveBookmarkSemantics => 'Save bookmark';
 
   @override
@@ -478,4 +494,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String accentSwatchSemantics(Object name, Object selected) {
     return '$name accent colour$selected';
   }
+
+  @override
+  String get oldTestament => 'Old Testament';
+
+  @override
+  String get newTestament => 'New Testament';
+
+  @override
+  String get deuterocanonApocrypha => 'Deuterocanon / Apocrypha';
 }

@@ -462,6 +462,22 @@ class AppLocalizationsEs extends AppLocalizations {
   String get addNoteHint => 'Añadir una nota...';
 
   @override
+  String get languageSearchHint => 'Buscar idiomas';
+
+  @override
+  String get languageModuleInstalled => 'Instalado';
+
+  @override
+  String get languageModulePending => 'Traducción automática pendiente';
+
+  @override
+  String get languageNoMatches => 'Ningún idioma coincide con la búsqueda.';
+
+  @override
+  String get languageCatalogDescription =>
+      'Los idiomas instalados funcionan sin conexión. Los demás se añadirán como módulos traducidos automáticamente.';
+
+  @override
   String get saveBookmarkSemantics => 'Guardar marcador';
 
   @override
@@ -481,4 +497,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String accentSwatchSemantics(Object name, Object selected) {
     return 'Color de acento $name$selected';
   }
+
+  @override
+  String get oldTestament => 'Antiguo Testamento';
+
+  @override
+  String get newTestament => 'Nuevo Testamento';
+
+  @override
+  String get deuterocanonApocrypha => 'Deuterocanónicos / Apócrifos';
 }

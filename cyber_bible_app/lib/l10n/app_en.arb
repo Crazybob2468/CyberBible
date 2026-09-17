@@ -135,9 +135,17 @@
   "fullChapterReference": "Full chapter: {bookName} {chapter}",
   "memorizeHint": "Memorize",
   "addNoteHint": "Add a note...",
+  "languageSearchHint": "Search languages",
+  "languageModuleInstalled": "Installed",
+  "languageModulePending": "Machine translation pending",
+  "languageNoMatches": "No languages match your search.",
+  "languageCatalogDescription": "Languages marked as installed work offline. Other languages will be added as machine-translated modules.",
   "saveBookmarkSemantics": "Save bookmark",
   "couldNotLoadChapter": "Could not load the chapter. Please try again.",
   "couldNotLoadChapters": "Could not load chapters. Please try again.",
   "verseWithText": "Verse {verse}: {text}",
-  "accentSwatchSemantics": "{name} accent colour{selected}"
+  "accentSwatchSemantics": "{name} accent colour{selected}",
+  "oldTestament": "Old Testament",
+  "newTestament": "New Testament",
+  "deuterocanonApocrypha": "Deuterocanon / Apocrypha"
 }

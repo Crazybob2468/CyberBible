@@ -30,6 +30,76 @@ void main() {
     expect(app.localizationsDelegates, isNotEmpty);
   });
 
+  testWidgets('manual French override reaches MaterialApp', (tester) async {
+    await SettingsService.instance.setUseSystemLanguage(false);
+    await SettingsService.instance.setSelectedLanguageCode('fr');
+
+    await tester.pumpWidget(const CyberBibleApp());
+
+    final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
+    expect(app.locale, const Locale('fr'));
+  });
+
+  testWidgets('manual German override reaches MaterialApp', (tester) async {
+    await SettingsService.instance.setUseSystemLanguage(false);
+    await SettingsService.instance.setSelectedLanguageCode('de');
+
+    await tester.pumpWidget(const CyberBibleApp());
+
+    final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
+    expect(app.locale, const Locale('de'));
+    expect(app.supportedLocales, contains(const Locale('de')));
+  });
+
+  testWidgets('manual Japanese override reaches MaterialApp', (tester) async {
+    await SettingsService.instance.setUseSystemLanguage(false);
+    await SettingsService.instance.setSelectedLanguageCode('ja');
+
+    await tester.pumpWidget(const CyberBibleApp());
+
+    final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
+    expect(app.locale, const Locale('ja'));
+    expect(app.supportedLocales, contains(const Locale('ja')));
+  });
+
+  testWidgets('AI-generated locales reach MaterialApp', (tester) async {
+    for (final code in <String>[
+      'tr',
+      'uk',
+      'vi',
+      'pl',
+      'nl',
+      'af',
+      'am',
+      'ca',
+      'cs',
+      'da',
+      'az',
+      'be',
+      'bg',
+      'bs',
+      'et',
+      'eu',
+      'fa',
+      'fi',
+      'fil',
+      'gl',
+      'gu',
+      'he',
+      'hr',
+      'hu',
+      'hy',
+    ]) {
+      await SettingsService.instance.setUseSystemLanguage(false);
+      await SettingsService.instance.setSelectedLanguageCode(code);
+      await tester.pumpWidget(const CyberBibleApp());
+
+      final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
+      expect(app.locale, Locale(code));
+      expect(app.supportedLocales, contains(Locale(code)));
+    }
+  });
+
   testWidgets('unsupported isolated locale falls back to English',
       (tester) async {
     AppLocalizations? resolved;
@@ -39,7 +109,7 @@ void main() {
         home: Builder(
           builder: (context) => Localizations.override(
             context: context,
-            locale: const Locale('fr'),
+            locale: const Locale('xx'),
             child: Builder(
               builder: (context) {
                 resolved = appLocalizations(context);

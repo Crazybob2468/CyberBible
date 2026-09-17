@@ -248,6 +248,7 @@ class _TraditionalTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = appLocalizations(context);
     // Split books by testament. The sort order from the DB preserves canonical
     // ordering within each group.
     final otBooks = books.where((b) => b.testament == Testament.ot).toList();
@@ -260,7 +261,7 @@ class _TraditionalTab extends StatelessWidget {
 
     // --- Old Testament ---
     // Testament.ot.label is the single-source-of-truth label (book.dart).
-    items.add(_SectionHeader(label: Testament.ot.label, icon: Icons.history_edu));
+    items.add(_SectionHeader(label: l10n.oldTestament, icon: Icons.history_edu));
     for (int i = 0; i < otBooks.length; i++) {
       items.add(_BookTile(book: otBooks[i], onTap: onBookTapped));
       // Add a divider between tiles but not after the last one in the group.
@@ -268,7 +269,7 @@ class _TraditionalTab extends StatelessWidget {
     }
 
     // --- New Testament ---
-    items.add(_SectionHeader(label: Testament.nt.label, icon: Icons.auto_stories));
+    items.add(_SectionHeader(label: l10n.newTestament, icon: Icons.auto_stories));
     for (int i = 0; i < ntBooks.length; i++) {
       items.add(_BookTile(book: ntBooks[i], onTap: onBookTapped));
       if (i < ntBooks.length - 1) items.add(const _TileDivider());
@@ -276,7 +277,7 @@ class _TraditionalTab extends StatelessWidget {
 
     // --- Deuterocanon / Apocrypha (only if translation includes them) ---
     if (dcBooks.isNotEmpty) {
-      items.add(_SectionHeader(label: Testament.dc.label, icon: Icons.library_books));
+      items.add(_SectionHeader(label: l10n.deuterocanonApocrypha, icon: Icons.library_books));
       for (int i = 0; i < dcBooks.length; i++) {
         items.add(_BookTile(book: dcBooks[i], onTap: onBookTapped));
         if (i < dcBooks.length - 1) items.add(const _TileDivider());

@@ -125,7 +125,6 @@ class _ChapterSelectionScreenState extends State<ChapterSelectionScreen> {
   /// arriving here before HomeScreen has called ensureOpen). On failure,
   /// [_errorMessage] is set so the UI can show a Retry button.
   Future<void> _loadChapters() async {
-    final l10n = appLocalizations(context);
     // Reset state so a retry shows a fresh spinner.
     setState(() {
       _errorMessage = null;
@@ -143,8 +142,8 @@ class _ChapterSelectionScreenState extends State<ChapterSelectionScreen> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() =>
-            _errorMessage = l10n.couldNotLoadChapters);
+        setState(() => _errorMessage =
+            appLocalizations(context).couldNotLoadChapters);
       }
     }
   }
@@ -218,6 +217,12 @@ class _ChapterSelectionScreenState extends State<ChapterSelectionScreen> {
 
   /// Builds the expanded header content: book name + testament label.
   Widget _buildExpandedHeader(ColorScheme colorScheme) {
+    final l10n = appLocalizations(context);
+    final testamentLabel = switch (widget.book.testament) {
+      Testament.ot => l10n.oldTestament,
+      Testament.nt => l10n.newTestament,
+      Testament.dc => l10n.deuterocanonApocrypha,
+    };
     return Container(
       // Match the SliverAppBar's background color.
       color: colorScheme.primaryContainer,
@@ -232,7 +237,7 @@ class _ChapterSelectionScreenState extends State<ChapterSelectionScreen> {
           // Testament label — small, slightly subdued.
           // Testament.label is the single source of truth (book.dart).
           Text(
-            widget.book.testament.label.toUpperCase(),
+            testamentLabel.toUpperCase(),
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,

@@ -345,7 +345,6 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
   /// Loads chapter USFX + verse list and prepares rendered HTML.
   Future<void> _loadChapter() async {
-    final l10n = appLocalizations(context);
     final generation = ++_loadGeneration;
     _clearPendingVerseJump();
     // Preserve widget.initialVerse across the async load so that if the
@@ -423,6 +422,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
       }
     } catch (e) {
       if (mounted && generation == _loadGeneration) {
+        final l10n = appLocalizations(context);
         setState(() {
           _contentUsfx = null;
           _verses = null;
@@ -1860,6 +1860,11 @@ class _ReadingScreenState extends State<ReadingScreen> {
   /// Expanded header content (testament, book title, chapter title).
   Widget _buildExpandedHeader(ColorScheme colorScheme) {
     final l10n = appLocalizations(context);
+    final testamentLabel = switch (widget.book.testament) {
+      Testament.ot => l10n.oldTestament,
+      Testament.nt => l10n.newTestament,
+      Testament.dc => l10n.deuterocanonApocrypha,
+    };
     return Container(
       color: colorScheme.primaryContainer,
       // Reserve vertical space so the expanded title block never sits under
@@ -1871,7 +1876,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            widget.book.testament.label.toUpperCase(),
+            testamentLabel.toUpperCase(),
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
@@ -2548,18 +2553,19 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
   }
 
   Widget _buildTraditionalBooksTab(ThemeData theme, List<Book> books) {
+    final l10n = appLocalizations(context);
     // Explicit OT -> NT -> DC order, regardless of underlying DB ordering.
     final otBooks = books.where((b) => b.testament == Testament.ot).toList();
     final ntBooks = books.where((b) => b.testament == Testament.nt).toList();
     final dcBooks = books.where((b) => b.testament == Testament.dc).toList();
 
     final items = <Widget>[
-      _QuickNavSectionHeader(label: Testament.ot.label),
+      _QuickNavSectionHeader(label: l10n.oldTestament),
       ...otBooks.map((b) => _buildBookRow(theme, b, forceFixedHeight: true)),
-      _QuickNavSectionHeader(label: Testament.nt.label),
+      _QuickNavSectionHeader(label: l10n.newTestament),
       ...ntBooks.map((b) => _buildBookRow(theme, b, forceFixedHeight: true)),
       if (dcBooks.isNotEmpty) ...[
-        _QuickNavSectionHeader(label: Testament.dc.label),
+        _QuickNavSectionHeader(label: l10n.deuterocanonApocrypha),
         ...dcBooks.map((b) => _buildBookRow(theme, b, forceFixedHeight: true)),
       ],
       const SizedBox(height: 16),
