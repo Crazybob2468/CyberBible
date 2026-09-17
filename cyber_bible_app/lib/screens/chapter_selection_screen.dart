@@ -18,6 +18,7 @@
 //   Each tile shows only the chapter number — clean and scannable.
 
 import 'package:flutter/material.dart';
+import 'package:cyber_bible_app/l10n/localization_helpers.dart';
 
 import '../models/book.dart';
 import '../app_routes.dart';
@@ -124,6 +125,7 @@ class _ChapterSelectionScreenState extends State<ChapterSelectionScreen> {
   /// arriving here before HomeScreen has called ensureOpen). On failure,
   /// [_errorMessage] is set so the UI can show a Retry button.
   Future<void> _loadChapters() async {
+    final l10n = appLocalizations(context);
     // Reset state so a retry shows a fresh spinner.
     setState(() {
       _errorMessage = null;
@@ -142,7 +144,7 @@ class _ChapterSelectionScreenState extends State<ChapterSelectionScreen> {
     } catch (e) {
       if (mounted) {
         setState(() =>
-            _errorMessage = 'Could not load chapters. Please try again.');
+            _errorMessage = l10n.couldNotLoadChapters);
       }
     }
   }
@@ -279,6 +281,7 @@ class _ChapterSelectionScreenState extends State<ChapterSelectionScreen> {
 
   /// Error card with message and a Retry button.
   Widget _buildErrorState(ColorScheme colorScheme) {
+    final l10n = appLocalizations(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -297,7 +300,7 @@ class _ChapterSelectionScreenState extends State<ChapterSelectionScreen> {
             FilledButton.icon(
               onPressed: _loadChapters,
               icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Retry'),
+              label: Text(l10n.retry),
             ),
           ],
         ),
@@ -362,11 +365,12 @@ class _ChapterTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = appLocalizations(context);
     return Semantics(
       // Announce "Chapter N" to screen readers instead of just the bare
       // number — gives assistive technology enough context to describe the
       // action without the user needing to infer it from surroundings.
-      label: 'Chapter $chapter',
+      label: l10n.chapterSelectionLabel(chapter),
       button: true,
       child: Material(
         // Rounded-square tile background.

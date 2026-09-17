@@ -154,11 +154,15 @@ yet extracted from lower-priority surfaces.
 ### Validation
 
 - `flutter gen-l10n` completed successfully.
-- `flutter test` passes all **248 tests**.
+- `flutter test` passes all **249 tests**.
 - `flutter analyze` reports **No issues found**.
 - `flutter run -d macos --no-pub` built and launched successfully.
 - The icon-control regression suite includes a 200% text-scale test for settings
   and theme selection; all 4 focused tests pass.
+- The current Flutter toolchain migrates the macOS Runner deployment target from
+  10.15 to 12.0 and regenerates that value during macOS builds. The committed
+  Xcode metadata reflects the accepted macOS 12 minimum rather than a manual
+  localization change. macOS 10.15 and 11 are not supported by this build.
 
 ### Remaining work
 
@@ -167,7 +171,7 @@ yet extracted from lower-priority surfaces.
   manifest/schema, versioning, signature/integrity policy, and local storage
   contract. No such network or package contract exists in this repository yet.
 
-Next: downloadable UI-language module status and the final string audit.
+Next: define the downloadable UI-language module catalog and storage contract.
 
 ---
 

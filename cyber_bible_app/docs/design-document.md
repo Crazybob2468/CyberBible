@@ -20,7 +20,7 @@ No existing quality Bible study app meets all perceived needs. Wish list:
 - **Free of charge (gratis)** – developed with volunteer hours and donor funding
 - **Free to use, maintain, branch, etc. (libre)** – licensed GPL 3.0
 - **Can display and/or play every Bible text and audio on eBible.org** (for which copyright permission can be obtained)
-- **Cross-platform support**: iOS, iPadOS, Android, Windows, MacOS, Linux, and preferably smart watches
+- **Cross-platform support**: iOS, iPadOS, Android, Windows, macOS 12+, Linux, and preferably smart watches
 - **Peer-to-peer sharing** of Bible files (when allowed by copyright holders) and, where practical, the software itself
 - **Cryptographic signature checks** to verify Bible files haven't been damaged
 - **Efficient but fast data compression**, especially for sound files
