@@ -2,4 +2,4 @@ arb-dir: lib/l10n
 template-arb-file: app_en.arb
 output-localization-file: app_localizations.dart
 output-class: AppLocalizations
-preferred-supported-locales: [en, es, fr, de, it, pt, hi, zh, ar, bn, ja, ko, ru, tr, uk, vi, pl, nl, af, am, ca, cs, da, az, be, bg, bs, et, eu, fa, fi, fil, gl, gu, he, hr, hu, hy, id, is, ka, kk, lo, lt, lv, mk, ml]
+preferred-supported-locales: [en, es, fr, de, it, pt, hi, zh, ar, bn, ja, ko, ru, tr, uk, vi, pl, nl, af, am, ca, cs, da, az, be, bg, bs, et, eu, fa, fi, fil, gl, gu, he, hr, hu, hy, id, is, ka, kk, lo, lt, lv, mk, ml, as, el, km, kn, ky, mn, mr, ms, my, nb, ne, or, pa, ro, si, sk, sl, sq, sr, sv, sw, ta, te, th, ur, uz, zu]

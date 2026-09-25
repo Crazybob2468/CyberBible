@@ -46,6 +46,23 @@ void main() {
       'fi',
       'fil',
       'gl',
+      'ne',
+      'or',
+      'pa',
+      'ro',
+      'si',
+      'sk',
+      'sl',
+      'sq',
+      'sr',
+      'sv',
+      'sw',
+      'ta',
+      'te',
+      'th',
+      'ur',
+      'uz',
+      'zu',
     ]) {
       expect(languageCatalogEntry(code).state, LanguageModuleState.installed);
     }

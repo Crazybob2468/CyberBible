@@ -112,7 +112,7 @@ Step 1.16 ✅ COMPLETE. The session after Step 1.16 resolved four user-reported 
 - **264 tests passing**, `dart analyze` → No issues.
 
 Step 1.17 localization foundation is implemented below. The current compiled
-localization batch includes thirty-eight UI modules; the remaining work is the
+localization batch includes seventy-four UI modules; the remaining work is the
 future downloadable UI-language module flow and the final sweep of any strings
 not yet extracted from lower-priority surfaces.
 
@@ -158,8 +158,19 @@ not yet extracted from lower-priority surfaces.
   Danish, Azerbaijani, Belarusian, Bulgarian, Bosnian, Estonian, Basque,
   Persian, Finnish, Filipino, Galician, Gujarati, Hebrew, Croatian, Hungarian,
   Armenian, Indonesian, Icelandic, Georgian, Kazakh, Lao, Lithuanian, Latvian,
-  Macedonian, and Malayalam, with the complete current English UI key set and
-  matching ICU placeholders.
+  Macedonian, Malayalam, Assamese, Greek, Khmer, Kannada, and Kyrgyz, with the
+  complete current English UI key set and matching ICU placeholders. Added
+  complete AI-generated modules for Mongolian, Marathi, Malay, Burmese,
+  Norwegian Bokmål, Nepali, Odia, Punjabi, Romanian, and Sinhala with the same
+  validated contract.
+- Added complete AI-generated Slovak, Slovenian, Albanian, Serbian, and Swedish
+  ARB modules. Each catalog contains all 147 current non-locale English UI keys
+  and its exact ICU placeholder sets.
+- Added complete AI-generated Swahili, Tamil, Telugu, Thai, and Urdu ARB
+  modules. Each catalog contains all 147 current non-locale English UI keys and
+  its exact ICU placeholder sets.
+- Added complete AI-generated Uzbek and Zulu ARB modules. Each catalog contains
+  all 147 current non-locale English UI keys and its exact ICU placeholder sets.
 - Registered the bulk locales with Flutter l10n, the app locale resolver, the
   local language catalog, and the installed-module metadata.
 
@@ -176,24 +187,47 @@ not yet extracted from lower-priority surfaces.
   Catalan, Czech, Danish, Azerbaijani, Belarusian, Bulgarian, Bosnian,
   Estonian, Basque, Persian, Finnish, Filipino, Galician, Gujarati, Hebrew,
   Croatian, Hungarian, Armenian, Indonesian, Icelandic, Georgian, Kazakh, Lao,
-  Lithuanian, Latvian, Macedonian, and Malayalam: **47 installed UI modules**.
-  The
+  Lithuanian, Latvian, Macedonian, Malayalam, Assamese, Greek, Khmer, Kannada,
+  Kyrgyz, Mongolian, Marathi, Malay, Burmese, Norwegian Bokmål, Nepali, Odia,
+  Punjabi, Romanian, Sinhala, Slovak, Slovenian, Albanian, Serbian, Swedish,
+  Swahili, Tamil, Telugu, Thai, Urdu, Uzbek, and Zulu: **74 installed UI
+  modules**. The
   structure remains ready for additional local AI-generated UI-language modules
   without changing screen code.
-- The local catalog remains broader than the currently bundled translation
-  modules. AI-generated language modules can be added one at a time without
-  changing the catalog or settings UI.
+- The local catalog and bundled translation modules now cover the complete
+  catalog currently defined in this build. Additional locales can be added
+  later without changing the catalog or settings UI.
 - French, German, Italian, Portuguese, Hindi, Simplified Chinese, Arabic,
   Bengali, Japanese, Korean, Russian, Turkish, Ukrainian, Vietnamese, Polish,
   Dutch, Afrikaans, Amharic, Catalan, Czech, Danish, Azerbaijani, Belarusian,
   Bulgarian, Bosnian, Estonian, Basque, Persian, Finnish, Filipino, Galician,
   Gujarati, Hebrew, Croatian, Hungarian, Armenian, Indonesian, Icelandic,
   Georgian, Kazakh, Lao, Lithuanian, Latvian, Macedonian, and Malayalam are
+  complete AI-generated modules; Assamese, Greek, Khmer, Kannada, and Kyrgyz
+  are also complete AI-generated modules. Mongolian, Marathi, Malay, Burmese,
+  Norwegian Bokmål, Nepali, Odia, Punjabi, Romanian, and Sinhala are also
   complete AI-generated modules
   selectable both as manual overrides and through OS locale preference matching.
+  Slovak, Slovenian, Albanian, Serbian, and Swedish are also complete
+  AI-generated modules selectable through the same offline manual-override and
+  OS-locale matching paths. Swahili, Tamil, Telugu, Thai, and Urdu are also
+  complete AI-generated modules selectable through the same offline
+  manual-override and OS-locale matching paths. Uzbek and Zulu are also
+  complete AI-generated modules selectable through the same offline
+  manual-override and OS-locale matching paths.
 
 ### Validation
 
+- Added Mongolian, Marathi, Malay, Burmese, and Norwegian Bokmål ARB catalogs
+  with all 147 non-locale English keys and identical ICU placeholder sets.
+- Added Nepali, Odia, Punjabi, Romanian, and Sinhala ARB catalogs with all 147
+  non-locale English keys and identical ICU placeholder sets.
+- Added Slovak, Slovenian, Albanian, Serbian, and Swedish ARB catalogs with all
+  147 non-locale English keys and identical ICU placeholder sets.
+- Added Swahili, Tamil, Telugu, Thai, and Urdu ARB catalogs with all 147
+  non-locale English keys and identical ICU placeholder sets.
+- Added Uzbek and Zulu ARB catalogs with all 147 non-locale English keys and
+  identical ICU placeholder sets.
 - `flutter gen-l10n` completed successfully.
 - `flutter test` passes all **264 tests**.
 - `flutter analyze` reports **No issues found**.
@@ -211,11 +245,11 @@ not yet extracted from lower-priority surfaces.
   UI-language module downloads once the product defines the module catalog URL,
   manifest/schema, versioning, signature/integrity policy, and local storage
   contract. No such network or package contract exists in this repository yet.
-- Generate and add the remaining AI-translated modules represented by the local
-  catalog; pending entries remain visible but disabled until their complete
-  string bundle is present.
+- All currently cataloged modules are already bundled locally and selectable
+  offline. The remaining work is optional remote module delivery and update
+  infrastructure.
 
-Next: define the downloadable UI-language module catalog and storage contract.
+Next: define optional downloadable UI-language module delivery and update flow.
 
 ---
 
