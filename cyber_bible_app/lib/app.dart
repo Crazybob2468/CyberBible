@@ -11,6 +11,7 @@
 import 'package:flutter/material.dart';
 import 'package:cyber_bible_app/l10n/app_localizations.dart';
 
+import 'l10n/global_localizations_fallback.dart';
 import 'models/app_theme_definition.dart';
 import 'routes.dart';
 import 'services/settings_service.dart';
@@ -53,13 +54,20 @@ class _CyberBibleAppState extends State<CyberBibleApp> {
     Locale('pl'),
     Locale('nl'),
     Locale('af'),
+    Locale('ak'),
     Locale('am'),
     Locale('ca'),
     Locale('cs'),
+    Locale('cy'),
     Locale('da'),
     Locale('az'),
     Locale('be'),
+    Locale('bem'),
     Locale('bg'),
+    Locale('bho'),
+    Locale('bm'),
+    Locale('bo'),
+    Locale('br'),
     Locale('bs'),
     Locale('et'),
     Locale('eu'),
@@ -75,13 +83,17 @@ class _CyberBibleAppState extends State<CyberBibleApp> {
     Locale('id'),
     Locale('is'),
     Locale('ka'),
+    Locale('kab'),
     Locale('kk'),
+    Locale('kln'),
+    Locale('lg'),
     Locale('lo'),
     Locale('lt'),
     Locale('lv'),
     Locale('mk'),
     Locale('ml'),
     Locale('as'),
+    Locale('ast'),
     Locale('el'),
     Locale('km'),
     Locale('kn'),
@@ -91,16 +103,20 @@ class _CyberBibleAppState extends State<CyberBibleApp> {
     Locale('ms'),
     Locale('my'),
     Locale('nb'),
+    Locale('nn'),
     Locale('ne'),
+    Locale('om'),
     Locale('or'),
     Locale('pa'),
     Locale('ro'),
+    Locale('rw'),
     Locale('si'),
     Locale('sk'),
     Locale('sl'),
     Locale('sq'),
     Locale('sr'),
     Locale('sv'),
+    Locale('se'),
     Locale('sw'),
     Locale('ta'),
     Locale('te'),
@@ -108,6 +124,28 @@ class _CyberBibleAppState extends State<CyberBibleApp> {
     Locale('ur'),
     Locale('uz'),
     Locale('zu'),
+    Locale('dz'),
+    Locale('ee'),
+    Locale('eo'),
+    Locale('ff'),
+    Locale('fo'),
+    Locale('fur'),
+    Locale('fy'),
+    Locale('ga'),
+    Locale('gd'),
+    Locale('gv'),
+    Locale('ha'),
+    Locale('haw'),
+    Locale('ig'),
+    Locale('jv'),
+    Locale('ny'),
+    Locale('so'),
+    Locale('yo'),
+    Locale('lu'),
+    Locale('luo'),
+    Locale('luy'),
+    Locale('ln'),
+    Locale('kea'),
   ];
 
   @override
@@ -130,8 +168,9 @@ class _CyberBibleAppState extends State<CyberBibleApp> {
 
   /// Returns true when [candidate] is directly supported by this app build.
   bool _isCompiledLocale(Locale candidate) {
-    return _compiledUiLocales
-        .any((locale) => locale.languageCode == candidate.languageCode);
+    return _compiledUiLocales.any(
+      (locale) => locale.languageCode == candidate.languageCode,
+    );
   }
 
   /// Resolves the manually selected UI locale from the app's language settings.
@@ -179,7 +218,12 @@ class _CyberBibleAppState extends State<CyberBibleApp> {
       // onGenerateRoute lets screens receive typed argument objects.
       locale: _resolveActiveLocale(),
       supportedLocales: AppLocalizations.supportedLocales,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: <LocalizationsDelegate<dynamic>>[
+        AppLocalizations.delegate,
+        const MaterialLocalizationsFallbackDelegate(),
+        const CupertinoLocalizationsFallbackDelegate(),
+        ...AppLocalizations.localizationsDelegates.skip(1),
+      ],
       initialRoute: AppRoutes.home,
       onGenerateRoute: onGenerateRoute,
     );

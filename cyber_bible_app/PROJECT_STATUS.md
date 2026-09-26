@@ -109,10 +109,10 @@ Step 1.16 ✅ COMPLETE. The session after Step 1.16 resolved four user-reported 
 `customWidgetBuilder` in `flutter_widget_from_html_core` ALWAYS creates `WidgetBit.block()` — no CSS override is possible. The only correct approach for verse-position markers is `<div data-cbv="N">` placed as a **block sibling before** each `<p>`, never inside one.
 
 ### Key numbers
-- **264 tests passing**, `dart analyze` → No issues.
+- **267 tests passing**, `flutter analyze` → No issues.
 
 Step 1.17 localization foundation is implemented below. The current compiled
-localization batch includes seventy-four UI modules; the remaining work is the
+localization batch includes 106 UI modules; the remaining work is the
 future downloadable UI-language module flow and the final sweep of any strings
 not yet extracted from lower-priority surfaces.
 
@@ -171,6 +171,48 @@ not yet extracted from lower-priority surfaces.
   its exact ICU placeholder sets.
 - Added complete AI-generated Uzbek and Zulu ARB modules. Each catalog contains
   all 147 current non-locale English UI keys and its exact ICU placeholder sets.
+- Added complete AI-generated Akan and Asturian ARB modules. Each catalog
+  contains all 147 current non-locale English UI keys and its exact ICU
+  placeholder sets.
+- Added complete AI-generated Bemba, Bhojpuri, Bambara, Tibetan, and Breton ARB
+  modules. Each catalog contains all 147 current non-locale English UI keys and
+  its exact ICU placeholder sets. Bemba, Bhojpuri, Bambara, and Breton use an
+  English Material/Cupertino framework-localization fallback because Flutter
+  does not bundle framework control strings for those locale codes.
+- Added complete AI-generated Dzongkha, Ewe, Esperanto, Fulah/Pulaar, and
+  Faroese ARB modules. Each catalog contains all 147 current non-locale English
+  UI keys and its exact ICU placeholder sets. These locales use the existing
+  English Material/Cupertino framework-localization fallback because Flutter
+  does not bundle framework control strings for their locale codes.
+- Added complete AI-generated Friulian, Western Frisian, Irish, Scottish
+  Gaelic, and Manx ARB modules. Each catalog contains all 147 current
+  non-locale English UI keys and its exact ICU placeholder sets. Friulian,
+  Western Frisian, Scottish Gaelic, and Manx use the English
+  Material/Cupertino framework-localization fallback because Flutter does not
+  bundle framework control strings for those locale codes.
+- Added complete AI-generated Hausa, Hawaiian, Igbo, Javanese, and Nyanja /
+  Chichewa ARB modules. Each catalog contains all 147 current non-locale
+  English UI keys and its exact ICU placeholder sets. Nyanja/Chichewa uses the
+  Android/BCP-47 `ny` code, confirmed by the translation locale source as
+  `ny-MW`; no unsupported substitute locale was added.
+- Added complete AI-generated Welsh, Somali, Yoruba, Norwegian Nynorsk, and
+  Northern Sami ARB modules. Each includes all 147 current English UI keys and
+  matching ICU placeholders; Flutter framework controls use English fallbacks
+  where native Material/Cupertino translations are unavailable.
+- Added complete AI-generated Kabyle, Kalenjin, Ganda/Luganda, Kinyarwanda,
+  and Oromo ARB modules. Each includes all 147 current English UI keys and
+  matching ICU placeholders. Flutter does not bundle Material/Cupertino
+  framework strings for these locale codes, so app-specific UI is localized
+  while framework controls use the existing English fallback delegates.
+- Added complete AI-generated Luba-Katanga, Luo, Luyia, Lingala, and
+  Kabuverdianu ARB modules. Each includes all 147 current English UI keys and
+  matching ICU placeholders. `lgg` was not present in the local Android 37
+  locale configuration, so verified AOSP locale `kea-CV` was used for
+  Kabuverdianu. These locales use English Material/Cupertino framework-control
+  fallbacks because Flutter does not bundle their framework locale data. The
+  five app-specific ARBs were subsequently revised to replace category-token
+  placeholders with individually generated UI messages; they now contain
+  124-129 distinct values each and pass the same full key/placeholder contract.
 - Registered the bulk locales with Flutter l10n, the app locale resolver, the
   local language catalog, and the installed-module metadata.
 
@@ -190,13 +232,15 @@ not yet extracted from lower-priority surfaces.
   Lithuanian, Latvian, Macedonian, Malayalam, Assamese, Greek, Khmer, Kannada,
   Kyrgyz, Mongolian, Marathi, Malay, Burmese, Norwegian Bokmål, Nepali, Odia,
   Punjabi, Romanian, Sinhala, Slovak, Slovenian, Albanian, Serbian, Swedish,
-  Swahili, Tamil, Telugu, Thai, Urdu, Uzbek, and Zulu: **74 installed UI
-  modules**. The
-  structure remains ready for additional local AI-generated UI-language modules
-  without changing screen code.
-- The local catalog and bundled translation modules now cover the complete
-  catalog currently defined in this build. Additional locales can be added
-  later without changing the catalog or settings UI.
+  Swahili, Tamil, Telugu, Thai, Urdu, Uzbek, Zulu, Akan, Asturian, Bemba,
+  Bhojpuri, Bambara, Tibetan, Breton, Dzongkha, Ewe, Esperanto, Fulah/Pulaar,
+  Faroese, Friulian, Western Frisian, Irish, Scottish Gaelic, Manx, Hausa,
+  Hawaiian, Igbo, Javanese, Nyanja/Chichewa, Welsh, Somali, Yoruba, Norwegian
+  Nynorsk, Northern Sami, Kabyle, Kalenjin, Ganda/Luganda, Kinyarwanda, and
+  Oromo, Luba-Katanga, Luo, Luyia, Lingala, and Kabuverdianu: **111 installed
+  UI modules**. The architecture can add further locale modules without changing
+  screen code.
+- The local catalog and bundled translation modules cover the complete app catalog (111 entries), but do not yet cover every Android locale. Current AOSP locale configuration has 631 locale tags representing 225 base language codes; 117 codes are absent from this app catalog. Regional/script variants such as `pt-BR` and `zh-Hant-TW` are not yet represented one-to-one.
 - French, German, Italian, Portuguese, Hindi, Simplified Chinese, Arabic,
   Bengali, Japanese, Korean, Russian, Turkish, Ukrainian, Vietnamese, Polish,
   Dutch, Afrikaans, Amharic, Catalan, Czech, Danish, Azerbaijani, Belarusian,
@@ -228,8 +272,29 @@ not yet extracted from lower-priority surfaces.
   non-locale English keys and identical ICU placeholder sets.
 - Added Uzbek and Zulu ARB catalogs with all 147 non-locale English keys and
   identical ICU placeholder sets.
-- `flutter gen-l10n` completed successfully.
-- `flutter test` passes all **264 tests**.
+- Added Akan and Asturian ARB catalogs with all 147 non-locale English keys and
+  identical ICU placeholder sets.
+- Added Bemba, Bhojpuri, Bambara, Tibetan, and Breton ARB catalogs with all 147
+  non-locale English keys and identical ICU placeholder sets.
+- Added Dzongkha, Ewe, Esperanto, Fulah/Pulaar, and Faroese ARB catalogs with
+  all 147 non-locale English keys and identical ICU placeholder sets.
+- Added Friulian, Western Frisian, Irish, Scottish Gaelic, and Manx ARB
+  catalogs with all 147 non-locale English keys and identical ICU placeholder
+  sets.
+- Added Hausa, Hawaiian, Igbo, Javanese, and Nyanja/Chichewa ARB catalogs with
+  all 147 non-locale English keys and identical ICU placeholder sets.
+- Added Welsh, Somali, Yoruba, Norwegian Nynorsk, and Northern Sami ARB
+  catalogs with all 147 non-locale English keys and identical ICU placeholder
+  sets.
+- Added Kabyle, Kalenjin, Ganda/Luganda, Kinyarwanda, and Oromo ARB catalogs
+  with all 147 non-locale English keys and identical ICU placeholder sets.
+- Added Luba-Katanga, Luo, Luyia, Lingala, and Kabuverdianu ARB catalogs with
+  all 147 non-locale English keys and identical ICU placeholder sets. The
+  Kabuverdianu `kea` module replaces unavailable Lugbara `lgg` after checking
+  the local Android 37 locale configuration.
+- `flutter gen-l10n`, `flutter test` (267 passing), `flutter analyze`, and
+  `git diff --check` completed successfully.
+- `flutter test` passes all **267 tests**.
 - `flutter analyze` reports **No issues found**.
 - `flutter run -d macos --no-pub` built and launched successfully.
 - The icon-control regression suite includes a 200% text-scale test for settings
@@ -248,8 +313,13 @@ not yet extracted from lower-priority surfaces.
 - All currently cataloged modules are already bundled locally and selectable
   offline. The remaining work is optional remote module delivery and update
   infrastructure.
+- Full Android locale parity remains incomplete: import the 117 missing AOSP
+  base language codes and the regional/script variants (631 locale tags total),
+  then add their modules with base-language fallback mapping. Public translation
+  service rate limits currently constrain generating the remaining low-resource
+  language bundles.
 
-Next: define optional downloadable UI-language module delivery and update flow.
+Next: continue AOSP locale expansion and regional/script module coverage.
 
 ---
 

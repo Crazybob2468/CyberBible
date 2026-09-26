@@ -1,6 +1,7 @@
 // Integration tests for the root app localization configuration.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -76,7 +77,12 @@ void main() {
       'da',
       'az',
       'be',
+      'bem',
       'bg',
+      'bho',
+      'bm',
+      'bo',
+      'br',
       'bs',
       'et',
       'eu',
@@ -116,6 +122,36 @@ void main() {
       'ur',
       'uz',
       'zu',
+      'dz',
+      'ee',
+      'eo',
+      'ff',
+      'fo',
+      'fur',
+      'fy',
+      'ga',
+      'gd',
+      'gv',
+      'ha',
+      'haw',
+      'ig',
+      'jv',
+      'kab',
+      'kln',
+      'lg',
+      'ny',
+      'om',
+      'rw',
+      'cy',
+      'so',
+      'yo',
+      'nn',
+      'se',
+      'lu',
+      'luo',
+      'luy',
+      'ln',
+      'kea',
     ]) {
       await SettingsService.instance.setUseSystemLanguage(false);
       await SettingsService.instance.setSelectedLanguageCode(code);
@@ -127,8 +163,41 @@ void main() {
     }
   });
 
-  testWidgets('unsupported isolated locale falls back to English',
-      (tester) async {
+  // Flutter has no framework strings for these locales, so the app delegates
+  // must supply the English Material and Cupertino control labels.
+  testWidgets('new locales use English Material and Cupertino controls', (
+    tester,
+  ) async {
+    for (final code in <String>[
+      'cy',
+      'so',
+      'yo',
+      'nn',
+      'se',
+      'kab',
+      'kln',
+      'lg',
+      'rw',
+      'om',
+      'lu',
+      'luo',
+      'luy',
+      'ln',
+      'kea',
+    ]) {
+      await SettingsService.instance.setUseSystemLanguage(false);
+      await SettingsService.instance.setSelectedLanguageCode(code);
+      await tester.pumpWidget(const CyberBibleApp());
+
+      final context = tester.element(find.byType(Scaffold).first);
+      expect(MaterialLocalizations.of(context).okButtonLabel, 'OK');
+      expect(CupertinoLocalizations.of(context).alertDialogLabel, 'Alert');
+    }
+  });
+
+  testWidgets('unsupported isolated locale falls back to English', (
+    tester,
+  ) async {
     AppLocalizations? resolved;
 
     await tester.pumpWidget(
