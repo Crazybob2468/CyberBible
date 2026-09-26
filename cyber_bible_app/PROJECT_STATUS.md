@@ -82,7 +82,12 @@ cyber_bible_app/
 
 ## Current Status
 
-**Phase 1 — Step 1.17 Internationalization foundation**
+**Phase 1 — Step 1.17 UI localization**
+
+The localization foundation and the current local module catalog are implemented.
+The app bundles 111 UI language modules; this is not yet one-to-one coverage of
+all Android locale tags. For the decisions, problems, validation, and remaining
+AOSP coverage work, see [the Phase 1.17 localization report](docs/phase-1.17-localization-report.md).
 
 Step 1.16 ✅ COMPLETE. The session after Step 1.16 resolved four user-reported issues and completed the paragraph-mode rendering overhaul across multiple sessions.
 
@@ -111,10 +116,11 @@ Step 1.16 ✅ COMPLETE. The session after Step 1.16 resolved four user-reported 
 ### Key numbers
 - **267 tests passing**, `flutter analyze` → No issues.
 
-Step 1.17 localization foundation is implemented below. The current compiled
-localization batch includes 106 UI modules; the remaining work is the
-future downloadable UI-language module flow and the final sweep of any strings
-not yet extracted from lower-priority surfaces.
+Step 1.17 work includes Flutter localization plumbing, local AI-generated ARB
+modules, the language catalog and picker, locale fallbacks, and translation of
+the visible UI surfaces. Remaining scope is full Android locale/variant parity
+and optional remote language-module delivery; those are not prerequisites for
+using the 111 modules currently bundled.
 
 ---
 
