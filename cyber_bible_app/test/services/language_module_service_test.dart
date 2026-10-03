@@ -102,16 +102,21 @@ void main() {
         'ny',
         'om',
         'rw',
-         'cy',
-         'so',
-         'yo',
-         'nn',
-         'se',
-         'lu',
-         'luo',
-         'luy',
-         'ln',
-         'kea',
+        'cy',
+        'so',
+        'yo',
+        'nn',
+        'se',
+        'lu',
+        'luo',
+        'luy',
+        'ln',
+        'kea',
+        'ceb',
+        'su',
+        'xh',
+        'mai',
+        'qu',
       ]),
     );
     expect(
@@ -142,6 +147,24 @@ void main() {
       const Locale('zh'),
     );
   });
+
+  test(
+    'legacy Android language tags resolve to canonical installed modules',
+    () {
+      expect(LanguageModuleService.isInstalled('in'), isTrue);
+      expect(LanguageModuleService.isInstalled('iw'), isTrue);
+      expect(
+        LanguageModuleService.resolvePlatformLocale(const [Locale('in')]),
+        const Locale('id'),
+      );
+      expect(
+        LanguageModuleService.resolvePlatformLocale(const [Locale('iw')]),
+        const Locale('he'),
+      );
+      expect(LanguageModuleService.catalogEntry('in').code, 'id');
+      expect(LanguageModuleService.catalogEntry('iw').code, 'he');
+    },
+  );
 
   test('platform locale resolution selects each new installed language', () {
     for (final code in <String>[
@@ -227,16 +250,25 @@ void main() {
       'ny',
       'om',
       'rw',
-       'cy',
-       'so',
-       'yo',
-       'nn',
-       'se',
+      'cy',
+      'so',
+      'yo',
+      'nn',
+      'se',
       'lu',
       'luo',
       'luy',
       'ln',
       'kea',
+      'ceb',
+      'su',
+      'xh',
+      'mai',
+      'qu',
+      'rn',
+      'sd',
+      'szl',
+      'tzm',
     ]) {
       expect(
         LanguageModuleService.resolvePlatformLocale([Locale(code)]),

@@ -99,6 +99,7 @@ void main() {
       'el',
       'km',
       'kn',
+      'ku',
       'ky',
       'mn',
       'mr',
@@ -152,6 +153,16 @@ void main() {
       'luy',
       'ln',
       'kea',
+      'ceb',
+      'su',
+      'xh',
+      'mai',
+      'qu',
+      'ku',
+      'rn',
+      'sd',
+      'szl',
+      'tzm',
     ]) {
       await SettingsService.instance.setUseSystemLanguage(false);
       await SettingsService.instance.setSelectedLanguageCode(code);
@@ -184,6 +195,15 @@ void main() {
       'luy',
       'ln',
       'kea',
+      'ceb',
+      'su',
+      'xh',
+      'mai',
+      'qu',
+      'rn',
+      'sd',
+      'szl',
+      'tzm',
     ]) {
       await SettingsService.instance.setUseSystemLanguage(false);
       await SettingsService.instance.setSelectedLanguageCode(code);

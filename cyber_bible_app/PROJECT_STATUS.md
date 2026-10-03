@@ -85,7 +85,7 @@ cyber_bible_app/
 **Phase 1 — Step 1.17 UI localization**
 
 The localization foundation and the current local module catalog are implemented.
-The app bundles 111 UI language modules; this is not yet one-to-one coverage of
+The app bundles 116 UI language modules; this is not yet one-to-one coverage of
 all Android locale tags. For the decisions, problems, validation, and remaining
 AOSP coverage work, see [the Phase 1.17 localization report](docs/phase-1.17-localization-report.md).
 
@@ -120,7 +120,7 @@ Step 1.17 work includes Flutter localization plumbing, local AI-generated ARB
 modules, the language catalog and picker, locale fallbacks, and translation of
 the visible UI surfaces. Remaining scope is full Android locale/variant parity
 and optional remote language-module delivery; those are not prerequisites for
-using the 111 modules currently bundled.
+  using the 167 modules currently bundled.
 
 ---
 
@@ -219,6 +219,10 @@ using the 111 modules currently bundled.
   five app-specific ARBs were subsequently revised to replace category-token
   placeholders with individually generated UI messages; they now contain
   124-129 distinct values each and pass the same full key/placeholder contract.
+- Added complete AI-generated Cebuano, Sundanese, Xhosa, Maithili, and Quechua
+  ARB modules. Each includes all 147 current English UI keys and matching ICU
+  placeholders. Flutter does not provide Material/Cupertino framework strings
+  for these locale codes, so framework controls use the English fallbacks.
 - Registered the bulk locales with Flutter l10n, the app locale resolver, the
   local language catalog, and the installed-module metadata.
 
@@ -243,10 +247,18 @@ using the 111 modules currently bundled.
   Faroese, Friulian, Western Frisian, Irish, Scottish Gaelic, Manx, Hausa,
   Hawaiian, Igbo, Javanese, Nyanja/Chichewa, Welsh, Somali, Yoruba, Norwegian
   Nynorsk, Northern Sami, Kabyle, Kalenjin, Ganda/Luganda, Kinyarwanda, and
-  Oromo, Luba-Katanga, Luo, Luyia, Lingala, and Kabuverdianu: **111 installed
+  Oromo, Luba-Katanga, Luo, Luyia, Lingala, Kabuverdianu, Cebuano, Sundanese,
+  Xhosa, Maithili, Quechua, Kurdish, Maltese, Malagasy, Māori, and
+  Luxembourgish, Interlingua, Tongan, Turkmen, Tatar, Occitan, Romansh, Low
+  German, Mauritian Creole, Pashto, Uyghur, Venetian, Cantonese, Sanskrit, and
+  Wolof, Interlingue, Swiss German, Tajik, Tigrinya, Ewondo, Nyankole, Shona,
+  and Ossetian, Sardinian, Sango, Nuer, Sena, Chuvash, Inari Sami, Zhuang,
+  Nheengatu, Yakut, Santali, Kamba, Gikuyu, Dogri, Bodo, Cornish, and
+  Colognian, Basaa, Bena, Samburu, Sangu, Kirundi, Sindhi, Silesian, and
+  Tamazight: **167 installed
   UI modules**. The architecture can add further locale modules without changing
   screen code.
-- The local catalog and bundled translation modules cover the complete app catalog (111 entries), but do not yet cover every Android locale. Current AOSP locale configuration has 631 locale tags representing 225 base language codes; 117 codes are absent from this app catalog. Regional/script variants such as `pt-BR` and `zh-Hant-TW` are not yet represented one-to-one.
+- The local catalog and bundled translation modules cover the complete app catalog (167 entries), but do not yet cover every Android locale. Current AOSP locale configuration has 631 locale tags representing 225 base language codes; 59 base languages remain unsupported after mapping legacy Android tags `in` and `iw` to Indonesian (`id`) and Hebrew (`he`). Regional/script variants such as `pt-BR` and `zh-Hant-TW` are not yet represented one-to-one. Silesian has 8 and Tamazight 7 English fallback messages where translation services altered ICU placeholders.
 - French, German, Italian, Portuguese, Hindi, Simplified Chinese, Arabic,
   Bengali, Japanese, Korean, Russian, Turkish, Ukrainian, Vietnamese, Polish,
   Dutch, Afrikaans, Amharic, Catalan, Czech, Danish, Azerbaijani, Belarusian,
@@ -319,7 +331,7 @@ using the 111 modules currently bundled.
 - All currently cataloged modules are already bundled locally and selectable
   offline. The remaining work is optional remote module delivery and update
   infrastructure.
-- Full Android locale parity remains incomplete: import the 117 missing AOSP
+- Full Android locale parity remains incomplete: import the 59 missing AOSP
   base language codes and the regional/script variants (631 locale tags total),
   then add their modules with base-language fallback mapping. Public translation
   service rate limits currently constrain generating the remaining low-resource

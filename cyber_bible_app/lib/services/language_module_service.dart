@@ -19,100 +19,52 @@ class LanguageModuleInfo {
   /// Human-readable source label for translation provenance.
   final String sourceLabel;
 
-  const LanguageModuleInfo({
-    required this.languageCode,
-    required this.schemaVersion,
-    required this.sourceLabel,
-  });
+  const LanguageModuleInfo({required this.languageCode, required this.schemaVersion, required this.sourceLabel});
 }
 
 /// Owns local module discovery and platform-locale matching.
 class LanguageModuleService {
   LanguageModuleService._();
 
+  /// Maps legacy Android language tags to the current BCP-47 module codes.
+  static const Map<String, String> _legacyLanguageCodeAliases = <String, String>{'in': 'id', 'iw': 'he'};
+
   /// Versioned metadata for modules currently compiled into the app.
   static const List<LanguageModuleInfo> installedModules = <LanguageModuleInfo>[
-    LanguageModuleInfo(
-      languageCode: 'en',
-      schemaVersion: 1,
-      sourceLabel: 'Human-authored base English',
-    ),
-    LanguageModuleInfo(
-      languageCode: 'es',
-      schemaVersion: 1,
-      sourceLabel: 'AI-generated initial translation',
-    ),
-    LanguageModuleInfo(
-      languageCode: 'fr',
-      schemaVersion: 1,
-      sourceLabel: 'AI-generated initial translation',
-    ),
-    LanguageModuleInfo(
-      languageCode: 'de',
-      schemaVersion: 1,
-      sourceLabel: 'AI-generated initial translation',
-    ),
-    LanguageModuleInfo(
-      languageCode: 'it',
-      schemaVersion: 1,
-      sourceLabel: 'AI-generated initial translation',
-    ),
-    LanguageModuleInfo(
-      languageCode: 'pt',
-      schemaVersion: 1,
-      sourceLabel: 'AI-generated initial translation',
-    ),
-    LanguageModuleInfo(
-      languageCode: 'hi',
-      schemaVersion: 1,
-      sourceLabel: 'AI-generated initial translation',
-    ),
-    LanguageModuleInfo(
-      languageCode: 'zh',
-      schemaVersion: 1,
-      sourceLabel: 'AI-generated initial translation',
-    ),
-    LanguageModuleInfo(
-      languageCode: 'ar',
-      schemaVersion: 1,
-      sourceLabel: 'AI-generated initial translation',
-    ),
-    LanguageModuleInfo(
-      languageCode: 'bn',
-      schemaVersion: 1,
-      sourceLabel: 'AI-generated initial translation',
-    ),
-    LanguageModuleInfo(
-      languageCode: 'ja',
-      schemaVersion: 1,
-      sourceLabel: 'AI-generated initial translation',
-    ),
-    LanguageModuleInfo(
-      languageCode: 'ko',
-      schemaVersion: 1,
-      sourceLabel: 'AI-generated initial translation',
-    ),
-    LanguageModuleInfo(
-      languageCode: 'ru',
-      schemaVersion: 1,
-      sourceLabel: 'AI-generated initial translation',
-    ),
+    LanguageModuleInfo(languageCode: 'en', schemaVersion: 1, sourceLabel: 'Human-authored base English'),
+    LanguageModuleInfo(languageCode: 'es', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'fr', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'de', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'it', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'pt', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'hi', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'zh', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'ar', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'bn', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'ja', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'ko', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'ru', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'tr', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'uk', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'vi', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'pl', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'nl', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'af', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'bas', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'ak', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'am', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'ca', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'cs', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'cv', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'da', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'doi', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'az', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'be', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'bem', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'bez', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'bg', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'bho', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'brx', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'bm', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'bo', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'br', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
@@ -123,15 +75,20 @@ class LanguageModuleService {
     LanguageModuleInfo(languageCode: 'fi', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'fil', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'gl', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'gsw', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'gu', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'he', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'hr', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'hu', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'hy', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'ia', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'id', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'ie', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'is', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'ka', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'kab', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'kam', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'lb', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'kk', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'kln', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'lg', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
@@ -145,20 +102,28 @@ class LanguageModuleService {
     LanguageModuleInfo(languageCode: 'el', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'km', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'kn', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'ku', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'ky', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'mn', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'mr', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'ms', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'mt', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'my', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'nb', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'ne', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'om', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'oc', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'or', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'os', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'pa', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'ps', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'ro', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'rw', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'sah', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'si', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'sn', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'sk', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'smn', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'sl', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'sq', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'sr', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
@@ -166,13 +131,20 @@ class LanguageModuleService {
     LanguageModuleInfo(languageCode: 'sw', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'ta', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'te', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'tg', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'th', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'ti', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'tk', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'to', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'tt', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'ur', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'uz', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'ug', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'zu', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'dz', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'ee', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'eo', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'ewo', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'ff', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'fo', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'fur', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
@@ -185,33 +157,70 @@ class LanguageModuleService {
     LanguageModuleInfo(languageCode: 'ig', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'jv', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'ny', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'nyn', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'nus', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'cy', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'so', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'yo', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'nn', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'se', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'seh', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'sg', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'lu', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'luo', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'luy', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'ln', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
     LanguageModuleInfo(languageCode: 'kea', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'ceb', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'su', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'xh', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'mai', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'mg', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'mi', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'qu', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'rm', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'mfe', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'nds', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'ki', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'kw', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'ksh', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'vec', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'yue', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'saq', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'sbp', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'szl', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'tzm', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'rn', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'sd', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'sa', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'sat', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'sc', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'wo', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'yrl', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
+    LanguageModuleInfo(languageCode: 'za', schemaVersion: 1, sourceLabel: 'AI-generated initial translation'),
   ];
 
   /// Returns true when a compiled local module exists for [languageCode].
   static bool isInstalled(String languageCode) {
-    return installedModules.any(
-      (module) => module.languageCode == languageCode,
-    );
+    final canonicalCode = _canonicalLanguageCode(languageCode);
+    return installedModules.any((module) => module.languageCode == canonicalCode);
+  }
+
+  /// Converts a legacy language tag to the canonical code used by this app.
+  static String _canonicalLanguageCode(String languageCode) {
+    return _legacyLanguageCodeAliases[languageCode] ?? languageCode;
   }
 
   /// Selects the first installed locale from the platform preference order.
   ///
   /// English is returned when none of the platform preferences has a local
-  /// module. This is the same fallback rule used during first launch.
+  /// module. Legacy Android tags are converted to their installed canonical
+  /// code so they resolve to the same translation bundle.
   static Locale resolvePlatformLocale(Iterable<Locale> platformLocales) {
     for (final platformLocale in platformLocales) {
-      if (isInstalled(platformLocale.languageCode)) {
-        return Locale(platformLocale.languageCode);
+      final canonicalCode = _canonicalLanguageCode(platformLocale.languageCode);
+      if (isInstalled(canonicalCode)) {
+        return Locale(canonicalCode);
       }
     }
     return const Locale('en');
@@ -219,6 +228,6 @@ class LanguageModuleService {
 
   /// Returns the local catalog entry for [languageCode].
   static LanguageCatalogEntry catalogEntry(String languageCode) {
-    return languageCatalogEntry(languageCode);
+    return languageCatalogEntry(_canonicalLanguageCode(languageCode));
   }
 }

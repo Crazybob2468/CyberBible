@@ -86,6 +86,11 @@ void main() {
       'luy',
       'ln',
       'kea',
+      'ceb',
+      'su',
+      'xh',
+      'mai',
+      'qu',
     ]) {
       expect(languageCatalogEntry(code).state, LanguageModuleState.installed);
     }
@@ -114,6 +119,7 @@ void main() {
     expect(languageCatalogEntry('bm').nativeName, 'Bamanankan');
     expect(languageCatalogEntry('bo').nativeName, 'བོད་སྐད');
     expect(languageCatalogEntry('br').nativeName, 'Brezhoneg');
+    expect(languageCatalogEntry('ceb').nativeName, 'Cebuano');
     expect(languageCatalogEntry('cy').nativeName, 'Cymraeg');
     expect(languageCatalogEntry('dz').nativeName, 'རྫོང་ཁ');
     expect(languageCatalogEntry('ee').nativeName, 'Eʋegbe');
@@ -132,10 +138,18 @@ void main() {
     expect(languageCatalogEntry('lu').nativeName, 'Kiluba');
     expect(languageCatalogEntry('luo').nativeName, 'Dholuo');
     expect(languageCatalogEntry('luy').nativeName, 'Luluyia');
+    expect(languageCatalogEntry('mai').nativeName, 'मैथिली');
     expect(languageCatalogEntry('ny').nativeName, 'Chichewa');
     expect(languageCatalogEntry('nn').nativeName, 'Norsk nynorsk');
     expect(languageCatalogEntry('se').nativeName, 'Davvisámegiella');
     expect(languageCatalogEntry('so').nativeName, 'Soomaali');
+    expect(languageCatalogEntry('su').nativeName, 'Basa Sunda');
+    expect(languageCatalogEntry('qu').nativeName, 'Runa Simi');
+    expect(languageCatalogEntry('rn').nativeName, 'Ikirundi');
+    expect(languageCatalogEntry('sd').nativeName, 'سنڌي');
+    expect(languageCatalogEntry('szl').nativeName, 'ślůnski godka');
+    expect(languageCatalogEntry('tzm').nativeName, 'ⵜⴰⵎⴰⵣⵉⵖⵜ');
+    expect(languageCatalogEntry('xh').nativeName, 'isiXhosa');
     expect(languageCatalogEntry('yo').nativeName, 'Yorùbá');
   });
 
