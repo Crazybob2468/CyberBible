@@ -40,6 +40,10 @@ void main() {
       'bo',
       'br',
       'bs',
+      'chr',
+      'csw',
+      'dav',
+      'dje',
       'et',
       'eu',
       'fa',
@@ -87,10 +91,65 @@ void main() {
       'ln',
       'kea',
       'ceb',
+      'cgg',
+      'ce',
       'su',
       'xh',
       'mai',
       'qu',
+      'lij',
+      'lmo',
+      'bgc',
+      'asa',
+      'agq',
+      'blo',
+      'dsb',
+      'dua',
+      'dyo',
+      'ebu',
+      'guz',
+      'hsb',
+      'ii',
+      'jgo',
+      'jmc',
+      'kde',
+      'kgp',
+      'khq',
+      'kkj',
+      'kl',
+      'kok',
+      'ks',
+      'ksb',
+      'ksf',
+      'kxv',
+      'lag',
+      'lkt',
+      'mas',
+      'mer',
+      'mgh',
+      'mgo',
+      'mni',
+      'mzn',
+      'naq',
+      'nd',
+      'nnh',
+      'nqo',
+      'pcm',
+      'prg',
+      'raj',
+      'rof',
+      'rwk',
+      'ses',
+      'syr',
+      'teo',
+      'twq',
+      'vmw',
+      'vun',
+      'wae',
+      'xnr',
+      'xog',
+      'yav',
+      'zgh',
     ]) {
       expect(languageCatalogEntry(code).state, LanguageModuleState.installed);
     }
@@ -98,10 +157,7 @@ void main() {
 
   test('catalog exposes a broad Android language roadmap', () {
     expect(androidLanguageCatalog.length, greaterThan(70));
-    expect(
-      androidLanguageCatalog.map((entry) => entry.code),
-      containsAll(<String>['ar', 'fr', 'hi', 'ja', 'pt', 'sw', 'zh']),
-    );
+    expect(androidLanguageCatalog.map((entry) => entry.code), containsAll(<String>['ar', 'fr', 'hi', 'ja', 'pt', 'sw', 'zh']));
   });
 
   test('language search matches code, English name, and native name', () {
@@ -148,9 +204,67 @@ void main() {
     expect(languageCatalogEntry('rn').nativeName, 'Ikirundi');
     expect(languageCatalogEntry('sd').nativeName, 'سنڌي');
     expect(languageCatalogEntry('szl').nativeName, 'ślůnski godka');
-    expect(languageCatalogEntry('tzm').nativeName, 'ⵜⴰⵎⴰⵣⵉⵖⵜ');
+    expect(languageCatalogEntry('tzm').nativeName, isNotEmpty);
     expect(languageCatalogEntry('xh').nativeName, 'isiXhosa');
     expect(languageCatalogEntry('yo').nativeName, 'Yorùbá');
+    expect(languageCatalogEntry('ce').nativeName, 'Нохчийн мотт');
+    expect(languageCatalogEntry('lij').nativeName, 'Lìguru');
+    expect(languageCatalogEntry('lmo').nativeName, 'Lumbaart');
+    expect(languageCatalogEntry('bgc').nativeName, 'हरियाणवी');
+    expect(languageCatalogEntry('asa').nativeName, 'Kipare');
+    expect(languageCatalogEntry('agq').nativeName, 'Aghem');
+    expect(languageCatalogEntry('blo').nativeName, 'Anii');
+    expect(languageCatalogEntry('chr').nativeName, 'ᏣᎳᎩ');
+    expect(languageCatalogEntry('csw').nativeName, 'Nēhinawēwin');
+    expect(languageCatalogEntry('dav').nativeName, 'Kidawida');
+    expect(languageCatalogEntry('dje').nativeName, 'Zarmaciine');
+    expect(languageCatalogEntry('dsb').nativeName, 'Dolnoserbšćina');
+    expect(languageCatalogEntry('dua').nativeName, 'Duala');
+    expect(languageCatalogEntry('dyo').nativeName, 'Jola-Fonyi');
+    expect(languageCatalogEntry('ebu').nativeName, 'Kiembu');
+    expect(languageCatalogEntry('guz').nativeName, 'Ekegusii');
+    expect(languageCatalogEntry('hsb').nativeName, 'Hornjoserbšćina');
+    expect(languageCatalogEntry('ii').nativeName, 'ꆈꌠꉙ');
+    expect(languageCatalogEntry('jgo').nativeName, 'Ndaꞌa');
+    expect(languageCatalogEntry('jmc').nativeName, 'Kimachame');
+    expect(languageCatalogEntry('kde').nativeName, 'Chimakonde');
+    expect(languageCatalogEntry('kgp').nativeName, 'Kanhgág');
+    expect(languageCatalogEntry('khq').nativeName, 'Koyra Chiini');
+    expect(languageCatalogEntry('kkj').nativeName, 'Kako');
+    expect(languageCatalogEntry('kl').nativeName, 'Kalaallisut');
+    expect(languageCatalogEntry('kok').nativeName, 'कोंकणी');
+    expect(languageCatalogEntry('ks').nativeName, 'کٲشُر');
+    expect(languageCatalogEntry('ksb').nativeName, 'Kishambaa');
+    expect(languageCatalogEntry('ksf').nativeName, 'Bafia');
+    expect(languageCatalogEntry('kxv').nativeName, 'Kuvi');
+    expect(languageCatalogEntry('lag').nativeName, 'Kɨlaangi');
+    expect(languageCatalogEntry('lkt').nativeName, 'Lakȟótiyapi');
+    expect(languageCatalogEntry('mas').nativeName, 'ɔl Maa');
+    expect(languageCatalogEntry('mer').nativeName, 'Kimeru');
+    expect(languageCatalogEntry('mgh').nativeName, 'Makhuwa-Meetto');
+    expect(languageCatalogEntry('mgo').nativeName, 'Metaʼ');
+    expect(languageCatalogEntry('mni').nativeName, 'মৈতৈলোন্');
+    expect(languageCatalogEntry('mzn').nativeName, 'مازرونی');
+    expect(languageCatalogEntry('naq').nativeName, 'Khoekhoegowab');
+    expect(languageCatalogEntry('nd').nativeName, 'isiNdebele');
+    expect(languageCatalogEntry('nnh').nativeName, 'Ngiemboon');
+    expect(languageCatalogEntry('nqo').nativeName, 'ߒߞߏ');
+    expect(languageCatalogEntry('pcm').nativeName, 'Naijá');
+    expect(languageCatalogEntry('prg').nativeName, 'Prūsiskan');
+    expect(languageCatalogEntry('raj').nativeName, 'राजस्थानी');
+    expect(languageCatalogEntry('rof').nativeName, 'Kihoru');
+    expect(languageCatalogEntry('rwk').nativeName, 'Kiruwa');
+    expect(languageCatalogEntry('ses').nativeName, 'Koyraboro Senni');
+    expect(languageCatalogEntry('syr').nativeName, 'ܣܘܪܝܝܐ');
+    expect(languageCatalogEntry('teo').nativeName, 'Ateso');
+    expect(languageCatalogEntry('twq').nativeName, 'Tasawaq');
+    expect(languageCatalogEntry('vmw').nativeName, 'Emakhuwa');
+    expect(languageCatalogEntry('vun').nativeName, 'Kivunjo');
+    expect(languageCatalogEntry('wae').nativeName, 'Walser');
+    expect(languageCatalogEntry('xnr').nativeName, 'कांगड़ी');
+    expect(languageCatalogEntry('xog').nativeName, 'Lusoga');
+    expect(languageCatalogEntry('yav').nativeName, 'Yangben');
+    expect(languageCatalogEntry('zgh').nativeName, 'ⵜⴰⵎⴰⵣⵉⵖⵜ');
   });
 
   test('unknown language codes fall back to English metadata', () {

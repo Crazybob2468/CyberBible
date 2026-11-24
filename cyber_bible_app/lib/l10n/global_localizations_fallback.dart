@@ -8,6 +8,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 /// Locale codes whose app strings are localized but whose framework controls
 /// must use English because Flutter does not provide their global locale data.
 const Set<String> _frameworkFallbackLocaleCodes = <String>{
+  'asa',
+  'agq',
   'bas',
   'bem',
   'bez',
@@ -16,6 +18,7 @@ const Set<String> _frameworkFallbackLocaleCodes = <String>{
   'bm',
   'br',
   'ceb',
+  'ce',
   'cy',
   'dz',
   'ee',
@@ -35,6 +38,10 @@ const Set<String> _frameworkFallbackLocaleCodes = <String>{
   'ie',
   'jv',
   'kab',
+  'kkj',
+  'kl',
+  'kok',
+  'ks',
   'lb',
   'kea',
   'ku',
@@ -94,11 +101,62 @@ const Set<String> _frameworkFallbackLocaleCodes = <String>{
   'sbp',
   'xh',
   'yo',
+  'cgg',
+  'lij',
+  'lmo',
+  'bgc',
+  'blo',
+  'chr',
+  'csw',
+  'dav',
+  'dje',
+  'dsb',
+  'dua',
+  'dyo',
+  'ebu',
+  'guz',
+  'hsb',
+  'ii',
+  'jgo',
+  'jmc',
+  'kde',
+  'kgp',
+  'khq',
+  'ksb',
+  'ksf',
+  'kxv',
+  'lag',
+  'lkt',
+  'mas',
+  'mer',
+  'mgh',
+  'mgo',
+  'mni',
+  'mzn',
+  'naq',
+  'nd',
+  'nnh',
+  'nqo',
+  'pcm',
+  'prg',
+  'raj',
+  'rof',
+  'rwk',
+  'ses',
+  'syr',
+  'teo',
+  'twq',
+  'vmw',
+  'vun',
+  'wae',
+  'xnr',
+  'xog',
+  'yav',
+  'zgh',
 };
 
 /// Supplies English Material control strings when Flutter has no native data.
-class MaterialLocalizationsFallbackDelegate
-    extends LocalizationsDelegate<MaterialLocalizations> {
+class MaterialLocalizationsFallbackDelegate extends LocalizationsDelegate<MaterialLocalizations> {
   /// Creates the constant fallback delegate used by [MaterialApp].
   const MaterialLocalizationsFallbackDelegate();
 
@@ -117,8 +175,7 @@ class MaterialLocalizationsFallbackDelegate
 }
 
 /// Supplies English Cupertino control strings when Flutter has no native data.
-class CupertinoLocalizationsFallbackDelegate
-    extends LocalizationsDelegate<CupertinoLocalizations> {
+class CupertinoLocalizationsFallbackDelegate extends LocalizationsDelegate<CupertinoLocalizations> {
   /// Creates the constant fallback delegate used by [MaterialApp].
   const CupertinoLocalizationsFallbackDelegate();
 

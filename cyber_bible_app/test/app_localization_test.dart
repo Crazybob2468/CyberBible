@@ -154,15 +154,69 @@ void main() {
       'ln',
       'kea',
       'ceb',
+      'cgg',
+      'ce',
       'su',
       'xh',
       'mai',
       'qu',
-      'ku',
-      'rn',
-      'sd',
-      'szl',
-      'tzm',
+      'lij',
+      'lmo',
+      'bgc',
+      'asa',
+      'agq',
+      'blo',
+      'chr',
+      'csw',
+      'dav',
+      'dje',
+      'dsb',
+      'dua',
+      'dyo',
+      'ebu',
+      'guz',
+      'hsb',
+      'ii',
+      'jgo',
+      'jmc',
+      'kde',
+      'kgp',
+      'khq',
+      'kkj',
+      'kl',
+      'kok',
+      'ks',
+      'ksb',
+      'ksf',
+      'kxv',
+      'lag',
+      'lkt',
+      'mas',
+      'mer',
+      'mgh',
+      'mgo',
+      'mni',
+      'mzn',
+      'naq',
+      'nd',
+      'nnh',
+      'nqo',
+      'pcm',
+      'prg',
+      'raj',
+      'rof',
+      'rwk',
+      'ses',
+      'syr',
+      'teo',
+      'twq',
+      'vmw',
+      'vun',
+      'wae',
+      'xnr',
+      'xog',
+      'yav',
+      'zgh',
     ]) {
       await SettingsService.instance.setUseSystemLanguage(false);
       await SettingsService.instance.setSelectedLanguageCode(code);
@@ -176,9 +230,7 @@ void main() {
 
   // Flutter has no framework strings for these locales, so the app delegates
   // must supply the English Material and Cupertino control labels.
-  testWidgets('new locales use English Material and Cupertino controls', (
-    tester,
-  ) async {
+  testWidgets('new locales use English Material and Cupertino controls', (tester) async {
     for (final code in <String>[
       'cy',
       'so',
@@ -196,14 +248,22 @@ void main() {
       'ln',
       'kea',
       'ceb',
+      'cgg',
+      'ce',
       'su',
       'xh',
       'mai',
       'qu',
-      'rn',
-      'sd',
-      'szl',
-      'tzm',
+      'lij',
+      'lmo',
+      'bgc',
+      'asa',
+      'agq',
+      'blo',
+      'chr',
+      'csw',
+      'dav',
+      'dje',
     ]) {
       await SettingsService.instance.setUseSystemLanguage(false);
       await SettingsService.instance.setSelectedLanguageCode(code);
@@ -215,9 +275,7 @@ void main() {
     }
   });
 
-  testWidgets('unsupported isolated locale falls back to English', (
-    tester,
-  ) async {
+  testWidgets('unsupported isolated locale falls back to English', (tester) async {
     AppLocalizations? resolved;
 
     await tester.pumpWidget(

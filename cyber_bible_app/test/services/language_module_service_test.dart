@@ -11,9 +11,7 @@ void main() {
     expect(LanguageModuleService.isInstalled('es'), isTrue);
     expect(LanguageModuleService.isInstalled('fr'), isTrue);
     expect(
-      LanguageModuleService.installedModules.map(
-        (module) => module.languageCode,
-      ),
+      LanguageModuleService.installedModules.map((module) => module.languageCode),
       containsAll(<String>[
         'de',
         'it',
@@ -113,58 +111,94 @@ void main() {
         'ln',
         'kea',
         'ceb',
+        'cgg',
+        'ce',
         'su',
         'xh',
         'mai',
         'qu',
+        'rn',
+        'sd',
+        'szl',
+        'tzm',
+        'lij',
+        'lmo',
+        'bgc',
+        'agq',
+        'blo',
+        'chr',
+        'csw',
+        'dav',
+        'dje',
+        'dsb',
+        'dua',
+        'dyo',
+        'ebu',
+        'guz',
+        'hsb',
+        'ii',
+        'jgo',
+        'jmc',
+        'kde',
+        'kgp',
+        'khq',
+        'kkj',
+        'kl',
+        'kok',
+        'ks',
+        'ksb',
+        'ksf',
+        'kxv',
+        'lag',
+        'lkt',
+        'mas',
+        'mer',
+        'mgh',
+        'mgo',
+        'mni',
+        'mzn',
+        'naq',
+        'nd',
+        'nnh',
+        'nqo',
+        'pcm',
+        'prg',
+        'raj',
+        'rof',
+        'rwk',
+        'ses',
+        'syr',
+        'teo',
+        'twq',
+        'vmw',
+        'vun',
+        'wae',
+        'xnr',
+        'xog',
+        'yav',
+        'zgh',
       ]),
     );
-    expect(
-      LanguageModuleService.installedModules
-          .where((module) => module.languageCode != 'en')
-          .every(
-            (module) =>
-                module.sourceLabel == 'AI-generated initial translation',
-          ),
-      isTrue,
-    );
+    expect(LanguageModuleService.installedModules.where((module) => module.languageCode != 'en').every((module) => module.sourceLabel == 'AI-generated initial translation'), isTrue);
     expect(LanguageModuleService.installedModules.first.schemaVersion, 1);
   });
 
   test('platform locale resolution selects the first installed language', () {
-    expect(
-      LanguageModuleService.resolvePlatformLocale(const [
-        Locale('xx'),
-        Locale('es'),
-      ]),
-      const Locale('es'),
-    );
+    expect(LanguageModuleService.resolvePlatformLocale(const [Locale('xx'), Locale('es')]), const Locale('es'));
   });
 
   test('platform locale resolution selects a newly installed language', () {
-    expect(
-      LanguageModuleService.resolvePlatformLocale(const [Locale('zh')]),
-      const Locale('zh'),
-    );
+    expect(LanguageModuleService.resolvePlatformLocale(const [Locale('zh')]), const Locale('zh'));
   });
 
-  test(
-    'legacy Android language tags resolve to canonical installed modules',
-    () {
-      expect(LanguageModuleService.isInstalled('in'), isTrue);
-      expect(LanguageModuleService.isInstalled('iw'), isTrue);
-      expect(
-        LanguageModuleService.resolvePlatformLocale(const [Locale('in')]),
-        const Locale('id'),
-      );
-      expect(
-        LanguageModuleService.resolvePlatformLocale(const [Locale('iw')]),
-        const Locale('he'),
-      );
-      expect(LanguageModuleService.catalogEntry('in').code, 'id');
-      expect(LanguageModuleService.catalogEntry('iw').code, 'he');
-    },
-  );
+  test('legacy Android language tags resolve to canonical installed modules', () {
+    expect(LanguageModuleService.isInstalled('in'), isTrue);
+    expect(LanguageModuleService.isInstalled('iw'), isTrue);
+    expect(LanguageModuleService.resolvePlatformLocale(const [Locale('in')]), const Locale('id'));
+    expect(LanguageModuleService.resolvePlatformLocale(const [Locale('iw')]), const Locale('he'));
+    expect(LanguageModuleService.catalogEntry('in').code, 'id');
+    expect(LanguageModuleService.catalogEntry('iw').code, 'he');
+  });
 
   test('platform locale resolution selects each new installed language', () {
     for (final code in <String>[
@@ -261,6 +295,8 @@ void main() {
       'ln',
       'kea',
       'ceb',
+      'cgg',
+      'ce',
       'su',
       'xh',
       'mai',
@@ -269,18 +305,68 @@ void main() {
       'sd',
       'szl',
       'tzm',
+      'lij',
+      'lmo',
+      'bgc',
+      'agq',
+      'blo',
+      'chr',
+      'csw',
+      'dav',
+      'dje',
+      'dsb',
+      'dua',
+      'dyo',
+      'ebu',
+      'guz',
+      'hsb',
+      'ii',
+      'jgo',
+      'jmc',
+      'kde',
+      'kgp',
+      'khq',
+      'kkj',
+      'kl',
+      'kok',
+      'ks',
+      'ksb',
+      'ksf',
+      'kxv',
+      'lag',
+      'lkt',
+      'mas',
+      'mer',
+      'mgh',
+      'mgo',
+      'mni',
+      'mzn',
+      'naq',
+      'nd',
+      'nnh',
+      'nqo',
+      'pcm',
+      'prg',
+      'raj',
+      'rof',
+      'rwk',
+      'ses',
+      'syr',
+      'teo',
+      'twq',
+      'vmw',
+      'vun',
+      'wae',
+      'xnr',
+      'xog',
+      'yav',
+      'zgh',
     ]) {
-      expect(
-        LanguageModuleService.resolvePlatformLocale([Locale(code)]),
-        Locale(code),
-      );
+      expect(LanguageModuleService.resolvePlatformLocale([Locale(code)]), Locale(code));
     }
   });
 
   test('platform locale resolution falls back to English', () {
-    expect(
-      LanguageModuleService.resolvePlatformLocale(const [Locale('xx')]),
-      const Locale('en'),
-    );
+    expect(LanguageModuleService.resolvePlatformLocale(const [Locale('xx')]), const Locale('en'));
   });
 }

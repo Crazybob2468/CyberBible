@@ -178,6 +178,7 @@ class _CyberBibleAppState extends State<CyberBibleApp> {
     Locale('ln'),
     Locale('kea'),
     Locale('ceb'),
+    Locale('ce'),
     Locale('su'),
     Locale('xh'),
     Locale('mai'),
@@ -203,6 +204,64 @@ class _CyberBibleAppState extends State<CyberBibleApp> {
     Locale('brx'),
     Locale('saq'),
     Locale('sbp'),
+    Locale('cgg'),
+    Locale('lij'),
+    Locale('lmo'),
+    Locale('bgc'),
+    Locale('asa'),
+    Locale('agq'),
+    Locale('blo'),
+    Locale('chr'),
+    Locale('csw'),
+    Locale('dav'),
+    Locale('dje'),
+    Locale('dsb'),
+    Locale('dua'),
+    Locale('dyo'),
+    Locale('ebu'),
+    Locale('guz'),
+    Locale('hsb'),
+    Locale('ii'),
+    Locale('jgo'),
+    Locale('jmc'),
+    Locale('kde'),
+    Locale('kgp'),
+    Locale('khq'),
+    Locale('kkj'),
+    Locale('kl'),
+    Locale('kok'),
+    Locale('ks'),
+    Locale('ksb'),
+    Locale('ksf'),
+    Locale('kxv'),
+    Locale('lag'),
+    Locale('lkt'),
+    Locale('mas'),
+    Locale('mer'),
+    Locale('mgh'),
+    Locale('mgo'),
+    Locale('mni'),
+    Locale('mzn'),
+    Locale('naq'),
+    Locale('nd'),
+    Locale('nnh'),
+    Locale('nqo'),
+    Locale('pcm'),
+    Locale('prg'),
+    Locale('raj'),
+    Locale('rof'),
+    Locale('rwk'),
+    Locale('ses'),
+    Locale('syr'),
+    Locale('teo'),
+    Locale('twq'),
+    Locale('vmw'),
+    Locale('vun'),
+    Locale('wae'),
+    Locale('xnr'),
+    Locale('xog'),
+    Locale('yav'),
+    Locale('zgh'),
   ];
 
   @override
@@ -225,9 +284,7 @@ class _CyberBibleAppState extends State<CyberBibleApp> {
 
   /// Returns true when [candidate] is directly supported by this app build.
   bool _isCompiledLocale(Locale candidate) {
-    return _compiledUiLocales.any(
-      (locale) => locale.languageCode == candidate.languageCode,
-    );
+    return _compiledUiLocales.any((locale) => locale.languageCode == candidate.languageCode);
   }
 
   /// Resolves the manually selected UI locale from the app's language settings.
@@ -276,9 +333,7 @@ class _CyberBibleAppState extends State<CyberBibleApp> {
       locale: _resolveActiveLocale(),
       // Resolve all device preferences, including legacy language-code aliases.
       localeListResolutionCallback: (locales, _) {
-        return LanguageModuleService.resolvePlatformLocale(
-          locales ?? const <Locale>[],
-        );
+        return LanguageModuleService.resolvePlatformLocale(locales ?? const <Locale>[]);
       },
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: <LocalizationsDelegate<dynamic>>[
