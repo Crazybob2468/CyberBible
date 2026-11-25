@@ -17,6 +17,7 @@
 //   always the same, like a splash page. All inner screens (book selection,
 //   chapter selection, reading) continue to follow the system theme normally.
 
+import 'package:cyber_bible_app/l10n/localization_helpers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // SystemUiOverlayStyle
 
@@ -97,9 +98,10 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (e) {
       if (mounted) {
+        final l10n = appLocalizations(context);
         setState(() {
           _loading = false;
-          _errorMessage = 'Could not open the Bible database. Please try again.';
+          _errorMessage = l10n.couldNotOpenDatabase;
         });
       }
     }
@@ -156,6 +158,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Gold-tinted spinner shown while the database is being opened.
   Widget _buildLoadingState() {
+    final l10n = appLocalizations(context);
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -171,9 +174,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   strokeWidth: 3,
                 ),
                 const SizedBox(height: 24),
-                const Text(
-                  'Loading Cyber Bible...',
-                  style: TextStyle(
+                Text(
+                  l10n.loadingCyberBible,
+                  style: const TextStyle(
                     fontSize: 16,
                     color: Colors.white60,
                     letterSpacing: 0.5,
@@ -191,6 +194,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// Error card + Retry button shown when the database open fails.
   Widget _buildErrorState() {
+    final l10n = appLocalizations(context);
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -230,7 +234,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 24),
                     _GoldButton(
-                      label: 'Retry',
+                      label: l10n.retry,
                       icon: Icons.refresh,
                       onTap: _openDatabase,
                     ),
@@ -258,6 +262,7 @@ class _HomeScreenState extends State<HomeScreen> {
   ///   • Genesis 1:1 verse in a frosted-glass block
   ///   • "Read the Bible" gold gradient button
   Widget _buildReadyState() {
+    final l10n = appLocalizations(context);
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -296,10 +301,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 10),
 
                   // Tagline.
-                  const Text(
-                    'A free and open source Bible study app',
+                  Text(
+                    l10n.homeTagline,
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 15.5,
                       color: Color(0xD8F3E6C8),
                       letterSpacing: 0.35,
@@ -329,7 +334,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                   // Primary CTA — navigate to book selection.
                   _GoldButton(
-                    label: 'Read the Bible',
+                    label: l10n.readTheBible,
                     icon: Icons.library_books_rounded,
                     onTap: () =>
                         Navigator.pushNamed(context, AppRoutes.bookSelect),
@@ -351,12 +356,12 @@ class _HomeScreenState extends State<HomeScreen> {
           right: 0,
           child: SafeArea(
             child: Semantics(
-              label: 'Settings',
+              label: l10n.settingsTooltip,
               button: true,
               child: IconButton(
                 icon: const Icon(Icons.settings_rounded),
                 color: const Color(0xCCF3E6C8), // cream-gold, matches home screen palette
-                tooltip: 'Settings',
+                tooltip: l10n.settingsTooltip,
                 onPressed: () =>
                     Navigator.pushNamed(context, AppRoutes.settings),
               ),

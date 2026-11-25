@@ -20,7 +20,7 @@ No existing quality Bible study app meets all perceived needs. Wish list:
 - **Free of charge (gratis)** – developed with volunteer hours and donor funding
 - **Free to use, maintain, branch, etc. (libre)** – licensed GPL 3.0
 - **Can display and/or play every Bible text and audio on eBible.org** (for which copyright permission can be obtained)
-- **Cross-platform support**: iOS, iPadOS, Android, Windows, MacOS, Linux, and preferably smart watches
+- **Cross-platform support**: iOS, iPadOS, Android, Windows, macOS 12+, Linux, and preferably smart watches
 - **Peer-to-peer sharing** of Bible files (when allowed by copyright holders) and, where practical, the software itself
 - **Cryptographic signature checks** to verify Bible files haven't been damaged
 - **Efficient but fast data compression**, especially for sound files
@@ -139,12 +139,13 @@ Main parts and sub-parts:
 
 The default Cyber Bible UI language is the device OS locale, not hardcoded English.
 
-- **English always compiled in** — English ARB files are included at build time and serve as the permanent fallback. This is practical because the core development team is English-speaking.
-- **Target ~100+ languages** — use Android's supported language set as the reference for coverage goals.
-- **Downloadable UI language modules** — languages other than English are delivered as on-demand downloadable modules (not compiled into the APK) to keep the initial install size manageable. This is the same module strategy used for Bible translations.
-- **Module pairing strategy** — a UI language module can be bundled or suggested alongside a Bible translation in the same language, or alongside the appropriate language of wider communication for the region where that language is spoken.
-- **Auto-download trigger** — on first launch, if the OS locale is not English, the app should offer to download (or automatically begin downloading) the matching UI language module.
-- **OS locale default** — at startup, read the device locale (via Flutter's `WidgetsBinding.instance.platformDispatcher.locale`) and apply the matching UI language if available; otherwise fall back to English.
+- **Local-first UI modules** — English is always bundled as the permanent fallback. Machine-generated UI-language ARB modules are bundled locally and remain available offline. This is the current implementation because the project has no remote language-module host.
+- **Android coverage target** — use Android's AOSP locale configuration as the reference. The searchable catalog contains 226 language codes covering all 225 AOSP base language codes; 185 modules are selectable and 41 incomplete, duplicated, or otherwise unverified bundles remain pending. Nyanja (`ny`) is an extra catalog entry. Regional and script variants require exact-tag mapping and remain future work.
+- **Automated translation policy** — UI strings may be machine-generated and may contain imperfect wording, as accepted by the project owner. Every bundle must preserve all message keys and ICU placeholders; an individual string stays in English if a translation service damages its placeholders. Bible text is not part of UI localization; it comes from each Bible content module.
+- **Searchable language selection** — Settings searches local language metadata by language code, English name, native name, and aliases. Best-effort AI-generated bundles may be selectable without human review. Keep a bundle pending only while it is substantially English, copied wholesale from a different locale, or otherwise clearly mislabeled; preserve its AI-generated provenance and validate keys/placeholders automatically.
+- **OS locale resolution** — on first launch and while system-language mode is enabled, match the ordered platform locale list against installed modules. Resolve regional/script preferences to the best available language module; fall back to English when no supported module matches.
+- **Manual override** — users can persist an app-language choice in Settings. Re-enabling system-language mode returns locale selection to Flutter's platform locale resolution.
+- **Future remote delivery** — if hosting becomes available, modules may later be downloaded on demand without changing the catalog/search interface. That requires defining a catalog host, manifest, versioning, integrity verification, caching, and update behavior. Remote language delivery is not implemented yet.
 - **Audio Bible caching note (Phase 5)** — audio files follow the same philosophy: chapter-by-chapter downloads with cache management that can offload stored chapters when device storage is low. This is a deliberate trade-off between offline-first goals and practical storage limits.
 
 ### Installers

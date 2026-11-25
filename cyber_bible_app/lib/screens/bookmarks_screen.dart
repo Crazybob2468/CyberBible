@@ -22,6 +22,7 @@
 // Tapping a card navigates to the reading screen at the saved location.
 
 import 'package:flutter/material.dart';
+import 'package:cyber_bible_app/l10n/localization_helpers.dart';
 
 import '../app_routes.dart';
 import '../models/bookmark.dart';
@@ -86,8 +87,9 @@ class _BookmarksTabState extends State<BookmarksTab> {
       }
     } catch (e) {
       if (mounted) {
+        final l10n = appLocalizations(context);
         setState(() =>
-            _errorMessage = 'Could not load bookmarks. Please try again.');
+            _errorMessage = l10n.couldNotLoadBookmarks);
       }
     }
   }
@@ -125,20 +127,22 @@ class _BookmarksTabState extends State<BookmarksTab> {
 
   /// Shows a confirmation dialog and, if confirmed, deletes [bookmark].
   Future<void> _confirmDelete(Bookmark bookmark) async {
+    final l10n = appLocalizations(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete bookmark?'),
-        content: Text(
-          'Remove "${bookmark.reference}"'
-          '${bookmark.label != null && bookmark.label!.isNotEmpty ? ' (${bookmark.label})' : ''}?'
-          '\n\nThis cannot be undone.',
-        ),
+        title: Text(l10n.deleteBookmarkDialog),
+        content: Text(l10n.removeBookmarkMessage(
+          bookmark.label != null && bookmark.label!.isNotEmpty
+              ? ' (${bookmark.label})'
+              : '',
+          bookmark.reference,
+        )),
         actions: [
           // Cancel — do nothing
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           // Delete — styled with error color for visual weight
           TextButton(
@@ -146,7 +150,7 @@ class _BookmarksTabState extends State<BookmarksTab> {
             style: TextButton.styleFrom(
               foregroundColor: Theme.of(ctx).colorScheme.error,
             ),
-            child: const Text('Delete'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -162,7 +166,7 @@ class _BookmarksTabState extends State<BookmarksTab> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not delete bookmark.')),
+          SnackBar(content: Text(l10n.couldNotDeleteBookmark)),
         );
       }
     }
@@ -176,6 +180,7 @@ class _BookmarksTabState extends State<BookmarksTab> {
   /// If the book is not found (e.g., a bookmark from a no-longer-installed
   /// translation), shows a snackbar instead of crashing.
   Future<void> _navigateTo(Bookmark bookmark) async {
+    final l10n = appLocalizations(context);
     try {
       final books = await BibleService.getBooks();
       final book = books.firstWhere(
@@ -203,7 +208,7 @@ class _BookmarksTabState extends State<BookmarksTab> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content:
-                Text('Could not navigate to ${bookmark.reference}.'),
+                Text(l10n.bookmarkReferenceNavigationError(bookmark.reference)),
           ),
         );
       }
@@ -227,6 +232,7 @@ class _BookmarksTabState extends State<BookmarksTab> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = appLocalizations(context);
     // Loading state
     if (_bookmarks == null && _errorMessage == null) {
       return const Center(child: CircularProgressIndicator());
@@ -251,7 +257,7 @@ class _BookmarksTabState extends State<BookmarksTab> {
             ElevatedButton.icon(
               onPressed: _loadBookmarks,
               icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+              label: Text(l10n.retry),
             ),
           ],
         ),
@@ -331,17 +337,18 @@ class _SortHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = appLocalizations(context);
 
     final label = sortOrder == BookmarkSortOrder.recentFirst
-        ? 'Recent first'
-        : 'Canonical order';
+      ? l10n.bookmarkSortRecent
+      : l10n.bookmarkSortCanonical;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 12, 4),
       child: Row(
         children: [
           Text(
-            'Bookmarks',
+            l10n.bookmarksTabLabel,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: colorScheme.onSurface,
                   fontWeight: FontWeight.w700,
@@ -358,7 +365,7 @@ class _SortHeader extends StatelessWidget {
               size: 20,
               color: colorScheme.primary,
             ),
-            tooltip: 'Sort: $label',
+            tooltip: l10n.sortBookmarksTooltip(label),
           ),
         ],
       ),
@@ -396,6 +403,7 @@ class _FilterChipRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = appLocalizations(context);
     return SizedBox(
       height: 48,
       child: ListView(
@@ -403,11 +411,12 @@ class _FilterChipRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12),
         children: [
           // "All" chip — always first
-          _chip(context, label: 'All', value: null),
+          _chip(context, label: l10n.bookmarkFilterAll, value: null),
           // One chip per unique label
           for (final label in labels) _chip(context, label: label, value: label),
           // "Unlabeled" chip — last, only when there are unlabeled bookmarks
-          if (hasUnlabeled) _chip(context, label: 'Unlabeled', value: ''),
+          if (hasUnlabeled)
+            _chip(context, label: l10n.bookmarkFilterUnlabeled, value: ''),
         ],
       ),
     );
@@ -470,6 +479,7 @@ class _BookmarkCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final l10n = appLocalizations(context);
 
     final hasLabel = bookmark.label != null && bookmark.label!.isNotEmpty;
     // Chapter-level bookmarks (verse = '') have no verse-text body.
@@ -512,7 +522,7 @@ class _BookmarkCard extends StatelessWidget {
                     ),
                     // Delete button — uses error color for visual destructive signal
                     Semantics(
-                      label: 'Delete bookmark ${bookmark.reference}',
+                      label: l10n.deleteBookmarkSemantics(bookmark.reference),
                       button: true,
                       // excludeSemantics suppresses the IconButton's auto-generated
                       // semantics node (which would duplicate the label and button flag).
@@ -527,7 +537,7 @@ class _BookmarkCard extends StatelessWidget {
                           color: colorScheme.error,
                         ),
                         onPressed: onDelete,
-                        tooltip: 'Delete bookmark',
+                        tooltip: l10n.deleteBookmarkTooltip,
                         // Ensure minimum 48 × 48 dp tap target
                         constraints: const BoxConstraints(
                           minWidth: 48,
@@ -599,6 +609,7 @@ class _EmptyBookmarksState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final l10n = appLocalizations(context);
 
     return Center(
       child: Padding(
@@ -613,7 +624,7 @@ class _EmptyBookmarksState extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'No bookmarks yet.',
+              l10n.noBookmarksYet,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.w600,
@@ -622,7 +633,7 @@ class _EmptyBookmarksState extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Tap the bookmark icon while reading to save a location.',
+              l10n.noBookmarksYetHint,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -644,15 +655,16 @@ class _EmptyFilterState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = appLocalizations(context);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('No bookmarks match this filter.'),
+          Text(l10n.noBookmarksMatchFilter),
           const SizedBox(height: 12),
           TextButton(
             onPressed: onClear,
-            child: const Text('Clear filter'),
+            child: Text(l10n.clearFilter),
           ),
         ],
       ),

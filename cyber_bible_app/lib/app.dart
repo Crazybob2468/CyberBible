@@ -9,9 +9,12 @@
 // respond to the chosen theme.
 
 import 'package:flutter/material.dart';
+import 'package:cyber_bible_app/l10n/app_localizations.dart';
 
+import 'l10n/global_localizations_fallback.dart';
 import 'models/app_theme_definition.dart';
 import 'routes.dart';
+import 'services/language_module_service.dart';
 import 'services/settings_service.dart';
 
 /// Root widget of the Cyber Bible app.
@@ -27,28 +30,202 @@ class CyberBibleApp extends StatefulWidget {
 }
 
 class _CyberBibleAppState extends State<CyberBibleApp> {
-  /// Device locale captured at app startup, before any BuildContext lookup.
-  ///
-  /// Step 1.16.5 architecture rule: UI language defaults to OS locale when a
-  /// matching UI language is available; otherwise we fall back to English.
-  ///
-  /// In this phase we only compile English strings, so non-English locales
-  /// intentionally resolve to English until Step 1.17+ wires real ARB files
-  /// and on-demand language module availability checks.
-  late final Locale _startupLocale;
-
   /// Locales compiled directly into this app build.
   ///
   /// Keep this list as the single source of truth for locale fallback logic.
-  /// Additional locales are added in Step 1.17 once ARB extraction begins.
+  /// English is the permanent fallback; the remaining entries are the
+  /// compiled UI-language modules available in this build.
   static const List<Locale> _compiledUiLocales = <Locale>[
     Locale('en'),
+    Locale('es'),
+    Locale('fr'),
+    Locale('de'),
+    Locale('it'),
+    Locale('pt'),
+    Locale('pcm'),
+    Locale('ps'),
+    Locale('pl'),
+    Locale('hi'),
+    Locale('zh'),
+    Locale('ar'),
+    Locale('bn'),
+    Locale('ja'),
+    Locale('ko'),
+    Locale('ru'),
+    Locale('nl'),
+    Locale('tr'),
+    Locale('uk'),
+    Locale('vi'),
+    Locale('af'),
+    Locale('bas'),
+    Locale('ak'),
+    Locale('am'),
+    Locale('ca'),
+    Locale('cs'),
+    Locale('cv'),
+    Locale('cy'),
+    Locale('da'),
+    Locale('doi'),
+    Locale('az'),
+    Locale('be'),
+    Locale('bem'),
+    Locale('bez'),
+    Locale('bg'),
+    Locale('bho'),
+    Locale('bm'),
+    Locale('bo'),
+    Locale('br'),
+    Locale('bs'),
+    Locale('et'),
+    Locale('eu'),
+    Locale('fa'),
+    Locale('fi'),
+    Locale('fil'),
+    Locale('gl'),
+    Locale('gsw'),
+    Locale('gu'),
+    Locale('he'),
+    Locale('hr'),
+    Locale('hu'),
+    Locale('hy'),
+    Locale('ia'),
+    Locale('id'),
+    Locale('ie'),
+    Locale('is'),
+    Locale('ka'),
+    Locale('kab'),
+    Locale('lb'),
+    Locale('kk'),
+    Locale('kln'),
+    Locale('lg'),
+    Locale('lo'),
+    Locale('lt'),
+    Locale('lv'),
+    Locale('mk'),
+    Locale('ml'),
+    Locale('as'),
+    Locale('ast'),
+    Locale('el'),
+    Locale('km'),
+    Locale('kn'),
+    Locale('ku'),
+    Locale('ky'),
+    Locale('mn'),
+    Locale('mr'),
+    Locale('ms'),
+    Locale('mt'),
+    Locale('my'),
+    Locale('nb'),
+    Locale('nn'),
+    Locale('ne'),
+    Locale('om'),
+    Locale('or'),
+    Locale('os'),
+    Locale('pa'),
+    Locale('ro'),
+    Locale('rn'),
+    Locale('rw'),
+    Locale('sah'),
+    Locale('si'),
+    Locale('sn'),
+    Locale('sk'),
+    Locale('smn'),
+    Locale('szl'),
+    Locale('sl'),
+    Locale('sq'),
+    Locale('sr'),
+    Locale('sv'),
+    Locale('se'),
+    Locale('seh'),
+    Locale('sg'),
+    Locale('sw'),
+    Locale('ta'),
+    Locale('te'),
+    Locale('tg'),
+    Locale('th'),
+    Locale('ti'),
+    Locale('tk'),
+    Locale('to'),
+    Locale('tt'),
+    Locale('tzm'),
+    Locale('ug'),
+    Locale('ur'),
+    Locale('uz'),
+    Locale('zu'),
+    Locale('dz'),
+    Locale('ee'),
+    Locale('eo'),
+    Locale('ewo'),
+    Locale('ff'),
+    Locale('fo'),
+    Locale('fur'),
+    Locale('fy'),
+    Locale('ga'),
+    Locale('gd'),
+    Locale('gv'),
+    Locale('ha'),
+    Locale('haw'),
+    Locale('ig'),
+    Locale('jv'),
+    Locale('ny'),
+    Locale('nyn'),
+    Locale('nus'),
+    Locale('oc'),
+    Locale('so'),
+    Locale('yo'),
+    Locale('lu'),
+    Locale('luo'),
+    Locale('luy'),
+    Locale('ln'),
+    Locale('kea'),
+    Locale('ceb'),
+    Locale('ce'),
+    Locale('su'),
+    Locale('xh'),
+    Locale('mai'),
+    Locale('mg'),
+    Locale('mi'),
+    Locale('qu'),
+    Locale('rm'),
+    Locale('mfe'),
+    Locale('nds'),
+    Locale('vec'),
+    Locale('yue'),
+    Locale('sa'),
+    Locale('sat'),
+    Locale('sc'),
+    Locale('sd'),
+    Locale('wo'),
+    Locale('yrl'),
+    Locale('za'),
+    Locale('kam'),
+    Locale('ki'),
+    Locale('kw'),
+    Locale('ksh'),
+    Locale('brx'),
+    Locale('saq'),
+    Locale('sbp'),
+    Locale('cgg'),
+    Locale('lij'),
+    Locale('lmo'),
+    Locale('bgc'),
+    Locale('asa'),
+    Locale('dav'),
+    Locale('dje'),
+    Locale('dsb'),
+    Locale('hsb'),
+    Locale('kgp'),
+    Locale('kl'),
+    Locale('kok'),
+    Locale('ks'),
+    Locale('mni'),
+    Locale('mzn'),
+    Locale('syr'),
   ];
 
   @override
   void initState() {
     super.initState();
-    _startupLocale = WidgetsBinding.instance.platformDispatcher.locale;
     // Listen to SettingsService so this widget rebuilds when the user changes
     // a theme-level preference (theme ID, accent color, or theme mode).
     SettingsService.instance.addListener(_onSettingsChanged);
@@ -65,21 +242,22 @@ class _CyberBibleAppState extends State<CyberBibleApp> {
   void _onSettingsChanged() => setState(() {});
 
   /// Returns true when [candidate] is directly supported by this app build.
-  ///
-  /// Language-code matching is used for now because Step 1.17 only needs a
-  /// language-level split (e.g., `en`) before region/script variants are added.
   bool _isCompiledLocale(Locale candidate) {
-    return _compiledUiLocales
-        .any((locale) => locale.languageCode == candidate.languageCode);
+    return _compiledUiLocales.any(
+      (locale) => locale.languageCode == candidate.languageCode,
+    );
   }
 
-  /// Resolves the startup UI locale from the OS locale with English fallback.
-  Locale _resolveStartupLocale() {
-    if (_isCompiledLocale(_startupLocale)) {
-      return _compiledUiLocales.firstWhere(
-        (locale) => locale.languageCode == _startupLocale.languageCode,
-        orElse: () => const Locale('en'),
-      );
+  /// Resolves the manually selected UI locale from the app's language settings.
+  ///
+  /// Returns null when system language is enabled so Flutter can observe and
+  /// resolve platform locale changes against [supportedLocales] at runtime.
+  Locale? _resolveActiveLocale() {
+    if (SettingsService.instance.useSystemLanguage) return null;
+
+    final code = SettingsService.instance.selectedLanguageCode;
+    if (_isCompiledLocale(Locale(code))) {
+      return Locale(code);
     }
     return const Locale('en');
   }
@@ -113,8 +291,21 @@ class _CyberBibleAppState extends State<CyberBibleApp> {
 
       // Named route configuration — all routes defined in routes.dart.
       // onGenerateRoute lets screens receive typed argument objects.
-      locale: _resolveStartupLocale(),
-      supportedLocales: _compiledUiLocales,
+      locale: _resolveActiveLocale(),
+      // Resolve all device preferences, including legacy language-code aliases.
+      localeListResolutionCallback: (locales, _) {
+        return LanguageModuleService.resolvePlatformLocale(
+          locales ?? const <Locale>[],
+        );
+      },
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: <LocalizationsDelegate<dynamic>>[
+        AppLocalizations.delegate,
+        const MaterialLocalizationsFallbackDelegate(),
+        const WidgetsLocalizationsFallbackDelegate(),
+        const CupertinoLocalizationsFallbackDelegate(),
+        ...AppLocalizations.localizationsDelegates.skip(1),
+      ],
       initialRoute: AppRoutes.home,
       onGenerateRoute: onGenerateRoute,
     );

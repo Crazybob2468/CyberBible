@@ -63,6 +63,7 @@ The **World English Bible (WEB)** is bundled as the default translation.
 - [Flutter SDK](https://flutter.dev/docs/get-started/install) (latest stable)
 - Android Studio or VS Code with the Flutter extension
 - An Android/iOS device or emulator
+- macOS 12 or newer for macOS desktop builds
 
 ### Run the App
 

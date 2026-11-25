@@ -13,6 +13,39 @@ Bible data comes from eBible.org (USFX XML format) and is stored in per-translat
 - `cyber_bible_app/PROJECT_STATUS.md` — current step, architecture decisions, and full roadmap
 - `cyber_bible_app/docs/design-document.md` — complete design vision and feature plan
 
+## Roadmap Preservation — Required
+
+`cyber_bible_app/PROJECT_STATUS.md` is the canonical, persistent project roadmap.
+Keeping the complete plan visible is required so the team can make decisions
+against the agreed sequence of work.
+
+- Never delete, truncate, replace, or summarize away the `Development Roadmap`
+  section, its phase descriptions, or its step-by-step task tables when updating
+  project status or preparing a handoff.
+- Update the existing roadmap in place: mark completed work, revise an outdated
+  task, or add newly agreed work while retaining the other phases and steps.
+- Keep `Current Status` and the roadmap consistent. State the active/completed
+  step, key progress, and the next planned roadmap task; do not leave a stale
+  “Next” instruction that conflicts with the roadmap.
+- Before editing `PROJECT_STATUS.md`, inspect its roadmap and the diff from the
+  starting revision. After editing, verify that `## Development Roadmap` and all
+  existing phase headings and step rows are still present.
+- If roadmap content appears obsolete, contradictory, or too large to preserve,
+  discuss the proposed change with the developer first. Do not remove it on an
+  agent's own initiative. Restore accidentally removed roadmap content from Git
+  history before continuing.
+- Best-effort AI translations may be selectable without human review; do not
+  make paid or volunteer translation review a prerequisite. Do not mark a
+  module installed merely because an ARB file exists or has complete keys:
+  replace broad English fallthrough with target-language AI text, do not copy
+  a whole catalog from another language, and keep only clearly untranslated or
+  mislabeled bundles pending. Preserve AI provenance and validate keys and
+  ICU placeholders.
+- Treat active ARB files as the source of truth and regenerate Dart localization
+  classes with `flutter gen-l10n`. Do not add temporary per-language or
+  per-batch translation scripts to the repository; retain a generator only when
+  it is a documented, reusable project tool with explicit inputs and validation.
+
 ---
 
 ## Team Context
