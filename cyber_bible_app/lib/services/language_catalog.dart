@@ -9,8 +9,8 @@ enum LanguageModuleState {
   /// The module is bundled and can be selected immediately, including offline.
   installed,
 
-  /// The language is in the catalog but its machine-translated module is not
-  /// bundled in this build yet.
+  /// The language is in the catalog, but no target-language module is
+  /// available for selection yet.
   machineTranslationPending,
 }
 
@@ -223,8 +223,8 @@ const List<LanguageCatalogEntry> androidLanguageCatalog = <LanguageCatalogEntry>
   LanguageCatalogEntry(code: 'cgg', englishName: 'Chiga', nativeName: 'Rukiga', state: LanguageModuleState.installed),
   LanguageCatalogEntry(code: 'kea', englishName: 'Kabuverdianu', nativeName: 'Kabuverdianu', aliases: <String>['Cape Verdean Creole'], state: LanguageModuleState.installed),
   LanguageCatalogEntry(code: 'asa', englishName: 'Asu', nativeName: 'Kipare', state: LanguageModuleState.installed),
-  LanguageCatalogEntry(code: 'agq', englishName: 'Aghem', nativeName: 'Aghem', state: LanguageModuleState.installed),
-  LanguageCatalogEntry(code: 'blo', englishName: 'Anii', nativeName: 'Anii', state: LanguageModuleState.installed),
+  LanguageCatalogEntry(code: 'agq', englishName: 'Aghem', nativeName: 'Aghem'),
+  LanguageCatalogEntry(code: 'blo', englishName: 'Anii', nativeName: 'Anii'),
   LanguageCatalogEntry(code: 'chr', englishName: 'Cherokee', nativeName: 'ᏣᎳᎩ', state: LanguageModuleState.installed),
   LanguageCatalogEntry(code: 'csw', englishName: 'Swampy Cree', nativeName: 'Nēhinawēwin', state: LanguageModuleState.installed),
   LanguageCatalogEntry(code: 'dav', englishName: 'Taita', nativeName: 'Kidawida', state: LanguageModuleState.installed),
@@ -248,16 +248,16 @@ const List<LanguageCatalogEntry> androidLanguageCatalog = <LanguageCatalogEntry>
   LanguageCatalogEntry(code: 'kxv', englishName: 'Kuvi', nativeName: 'Kuvi', state: LanguageModuleState.installed),
   LanguageCatalogEntry(code: 'lag', englishName: 'Langi', nativeName: 'Kɨlaangi', state: LanguageModuleState.installed),
   LanguageCatalogEntry(code: 'lkt', englishName: 'Lakota', nativeName: 'Lakȟótiyapi', state: LanguageModuleState.installed),
-  LanguageCatalogEntry(code: 'mas', englishName: 'Masai', nativeName: 'ɔl Maa', state: LanguageModuleState.installed),
-  LanguageCatalogEntry(code: 'mer', englishName: 'Meru', nativeName: 'Kimeru', state: LanguageModuleState.installed),
+  LanguageCatalogEntry(code: 'mas', englishName: 'Masai', nativeName: 'ɔl Maa'),
+  LanguageCatalogEntry(code: 'mer', englishName: 'Meru', nativeName: 'Kimeru'),
   LanguageCatalogEntry(code: 'mgo', englishName: 'Metaʼ', nativeName: 'Metaʼ', state: LanguageModuleState.installed),
   LanguageCatalogEntry(code: 'mni', englishName: 'Manipuri', nativeName: 'মৈতৈলোন্', state: LanguageModuleState.installed),
   LanguageCatalogEntry(code: 'mzn', englishName: 'Mazanderani', nativeName: 'مازرونی', state: LanguageModuleState.installed),
   LanguageCatalogEntry(code: 'naq', englishName: 'Nama', nativeName: 'Khoekhoegowab', state: LanguageModuleState.installed),
-  LanguageCatalogEntry(code: 'mgh', englishName: 'Makhuwa-Meetto', nativeName: 'Makhuwa-Meetto', state: LanguageModuleState.installed),
-  LanguageCatalogEntry(code: 'nd', englishName: 'North Ndebele', nativeName: 'isiNdebele', state: LanguageModuleState.installed),
-  LanguageCatalogEntry(code: 'nnh', englishName: 'Ngiemboon', nativeName: 'Ngiemboon', state: LanguageModuleState.installed),
-  LanguageCatalogEntry(code: 'nqo', englishName: 'N’Ko', nativeName: 'ߒߞߏ', state: LanguageModuleState.installed),
+  LanguageCatalogEntry(code: 'mgh', englishName: 'Makhuwa-Meetto', nativeName: 'Makhuwa-Meetto'),
+  LanguageCatalogEntry(code: 'nd', englishName: 'North Ndebele', nativeName: 'isiNdebele'),
+  LanguageCatalogEntry(code: 'nnh', englishName: 'Ngiemboon', nativeName: 'Ngiemboon'),
+  LanguageCatalogEntry(code: 'nqo', englishName: 'N’Ko', nativeName: 'ߒߞߏ'),
   LanguageCatalogEntry(code: 'pcm', englishName: 'Nigerian Pidgin', nativeName: 'Naijá', state: LanguageModuleState.installed),
   LanguageCatalogEntry(code: 'prg', englishName: 'Prussian', nativeName: 'Prūsiskan', state: LanguageModuleState.installed),
   LanguageCatalogEntry(code: 'raj', englishName: 'Rajasthani', nativeName: 'राजस्थानी', state: LanguageModuleState.installed),

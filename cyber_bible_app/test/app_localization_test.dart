@@ -164,8 +164,8 @@ void main() {
       'lmo',
       'bgc',
       'asa',
-      'agq',
-      'blo',
+      'ak',
+      'ast',
       'chr',
       'csw',
       'dav',
@@ -191,16 +191,10 @@ void main() {
       'kxv',
       'lag',
       'lkt',
-      'mas',
-      'mer',
-      'mgh',
       'mgo',
       'mni',
       'mzn',
       'naq',
-      'nd',
-      'nnh',
-      'nqo',
       'pcm',
       'prg',
       'raj',
@@ -229,10 +223,9 @@ void main() {
   });
 
   // Flutter has no framework strings for these locales, so the app delegates
-  // must supply the English Material and Cupertino control labels.
-  testWidgets('new locales use English Material and Cupertino controls', (tester) async {
+  // must supply the English Widgets, Material, and Cupertino localizations.
+  testWidgets('new locales use English framework localizations', (tester) async {
     for (final code in <String>[
-      'cy',
       'so',
       'yo',
       'nn',
@@ -258,8 +251,6 @@ void main() {
       'lmo',
       'bgc',
       'asa',
-      'agq',
-      'blo',
       'chr',
       'csw',
       'dav',
@@ -272,7 +263,20 @@ void main() {
       final context = tester.element(find.byType(Scaffold).first);
       expect(MaterialLocalizations.of(context).okButtonLabel, 'OK');
       expect(CupertinoLocalizations.of(context).alertDialogLabel, 'Alert');
+      expect(
+        WidgetsLocalizations.of(context).textDirection,
+        TextDirection.ltr,
+      );
     }
+  });
+
+  testWidgets('Welsh uses Flutter framework localizations', (tester) async {
+    await SettingsService.instance.setUseSystemLanguage(false);
+    await SettingsService.instance.setSelectedLanguageCode('cy');
+    await tester.pumpWidget(const CyberBibleApp());
+
+    final context = tester.element(find.byType(Scaffold).first);
+    expect(MaterialLocalizations.of(context).okButtonLabel, 'Iawn');
   });
 
   testWidgets('unsupported isolated locale falls back to English', (tester) async {

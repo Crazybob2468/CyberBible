@@ -2,9 +2,9 @@
 
 ## Executive Summary
 
-Phase 1.17 established Flutter localization, system-language selection, a persisted manual override, a searchable local language catalog, and a versioned module boundary. The app now bundles **226 AI-generated or base-English UI language modules**, each containing the full **147-message** application UI catalog.
+Phase 1.17 established Flutter localization, system-language selection, a persisted manual override, a searchable local language catalog, and a versioned module boundary. The app exposes **218 installed UI language modules** from a searchable catalog of 226 language codes. Eight bundles remain pending because their current strings are unrelated-language or untranslated placeholders.
 
-The target of base-language support for every Android locale is complete: all **225 AOSP base language codes** are covered after resolving the legacy Android tags `in` and `iw` to Indonesian (`id`) and Hebrew (`he`). The catalog contains one extra module, Nyanja (`ny`). Regional/script variants such as `pt-BR`, `pt-PT`, `zh-Hans-CN`, and `zh-Hant-TW` remain future exact-tag work rather than missing base languages.
+All **225 AOSP base language codes** remain represented in the catalog after resolving the legacy Android tags `in` and `iw` to Indonesian (`id`) and Hebrew (`he`), but the eight pending modules are not selectable. The catalog contains one extra entry, Nyanja (`ny`). Regional/script variants such as `pt-BR`, `pt-PT`, `zh-Hans-CN`, and `zh-Hant-TW` remain future exact-tag work rather than missing base languages.
 
 ## Phase Goal
 
@@ -27,8 +27,9 @@ The phase also adopts the user-approved quality policy: UI translations may be m
 - Flutter `gen-l10n` configuration, English template ARB, generated localization classes, and app localization delegates.
 - Persisted system-language preference and manual language override.
 - Searchable local language catalog with native names, aliases, installed status, and module provenance/schema metadata.
-- 226 local modules covering the current catalog. Each ARB has 147 non-locale keys matching English and exact ICU placeholder parity.
-- Haryanvi (`bgc`) retains 8 English fallbacks; Asu (`asa`) 5; Aghem (`agq`) and Anii (`blo`) 26 each. Ligurian 2, Lombard 8, Chiga 3, Silesian 8, and Tamazight 7 also retain documented fallbacks.
+- 218 installed local modules. Each active ARB has 147 non-locale keys matching English and exact ICU placeholder parity.
+- Haryanvi (`bgc`) retains 8 English fallbacks; Asu (`asa`) 5. Ligurian 2, Lombard 8, Chiga 3, Silesian 8, and Tamazight 7 also retain documented fallbacks.
+- Aghem (`agq`), Anii (`blo`), Masai (`mas`), Meru (`mer`), Makhuwa-Meetto (`mgh`), North Ndebele (`nd`), Ngiemboon (`nnh`), and N’Ko (`nqo`) remain visible in the catalog as pending, not installed.
 - Localization of the app shell, Settings, home, book and chapter selection, reading, bookmarks, themes, navigation, error messages, accessibility labels, and testament section labels.
 - Runtime OS locale matching, unsupported-locale fallback, and regression tests for locale ordering and overrides.
 - Fixes for chapter and reading screens that called inherited localization lookup during `initState`, causing uncaught exceptions and permanent loading spinners.
@@ -38,10 +39,9 @@ The five low-resource modules `lu`, `luo`, `luy`, `ln`, and `kea` were revised a
 
 ## Coverage and Remaining Scope
 
-- Current app catalog: **226 installed language codes**.
-- AOSP base-language coverage: **225 of 225**.
-- Uncovered AOSP base languages: **0**.
-- Extra catalog module: Nyanja (`ny`) is bundled but is not a separate base code in the current AOSP locale config snapshot.
+- Current app catalog: **226 language codes**, with 218 installed and 8 pending.
+- AOSP base-language catalog coverage: **225 of 225**; pending languages are not selectable.
+- Extra catalog entry: Nyanja (`ny`) is not a separate base code in the current AOSP locale config snapshot.
 - Regional/script variants remain future exact-tag work.
 
 ## Issues Encountered and Resolutions
@@ -57,12 +57,12 @@ The five low-resource modules `lu`, `luo`, `luy`, `ln`, and `kea` were revised a
 
 ## Verification
 
-Latest recorded validation for the current 226-module state:
+Latest recorded validation for the current 218-installed-module state:
 
-- All 226 ARB files pass key and placeholder parity.
-- All six locale registries contain 226 entries.
-- AOSP base-language audit: 225 of 225 covered, 0 missing.
-- `flutter test`: 268 tests passed.
+- All locale ARB files pass key and placeholder parity.
+- The searchable catalog contains 226 entries; the installed-module registry contains 218.
+- AOSP base-language catalog audit: 225 of 225 represented, including pending entries.
+- `flutter test`: 273 tests passed.
 - `flutter analyze`: no issues.
 - `git diff --check`: clean.
 

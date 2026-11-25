@@ -140,13 +140,12 @@ Main parts and sub-parts:
 The default Cyber Bible UI language is the device OS locale, not hardcoded English.
 
 - **Local-first UI modules** — English is always bundled as the permanent fallback. Machine-generated UI-language ARB modules are bundled locally and remain available offline. This is the current implementation because the project has no remote language-module host.
-- **Android coverage target** — use Android's AOSP locale configuration as the reference. The app catalog now contains 226 language codes, covering all 225 AOSP base language codes with 0 uncovered bases. Nyanja (`ny`) is an extra catalog module. Regional and script variants require exact-tag mapping and remain future work.
+- **Android coverage target** — use Android's AOSP locale configuration as the reference. The searchable catalog contains 226 language codes covering all 225 AOSP base language codes; 218 modules are selectable and 8 questionable translations remain pending. Nyanja (`ny`) is an extra catalog entry. Regional and script variants require exact-tag mapping and remain future work.
 - **Automated translation policy** — UI strings may be machine-generated and may contain imperfect wording, as accepted by the project owner. Every bundle must preserve all message keys and ICU placeholders; an individual string stays in English if a translation service damages its placeholders. Bible text is not part of UI localization; it comes from each Bible content module.
 - **Searchable language selection** — Settings searches local language metadata by language code, English name, native name, and aliases. A module is selectable only when its complete string bundle is included.
 - **OS locale resolution** — on first launch and while system-language mode is enabled, match the ordered platform locale list against installed modules. Resolve regional/script preferences to the best available language module; fall back to English when no supported module matches.
 - **Manual override** — users can persist an app-language choice in Settings. Re-enabling system-language mode returns locale selection to Flutter's platform locale resolution.
 - **Future remote delivery** — if hosting becomes available, modules may later be downloaded on demand without changing the catalog/search interface. That requires defining a catalog host, manifest, versioning, integrity verification, caching, and update behavior. Remote language delivery is not implemented yet.
-- **Audio Bible caching note (Phase 5)** — audio files follow the same offline-first philosophy: chapter-by-chapter downloads with cache management that can offload stored chapters when device storage is low.
 - **Audio Bible caching note (Phase 5)** — audio files follow the same philosophy: chapter-by-chapter downloads with cache management that can offload stored chapters when device storage is low. This is a deliberate trade-off between offline-first goals and practical storage limits.
 
 ### Installers

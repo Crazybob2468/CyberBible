@@ -25,27 +25,31 @@ const Map<String, Map<String, String>> _terms = <String, Map<String, String>>{
     'settings': 'Ebitere', 'language': 'Olulimi', 'book': 'Ekitabu',
     'verse': 'Olunyiriri', 'chapter': 'Eshina', 'choose': 'Londa',
     'save': 'Lama', 'cancel': 'Leka', 'delete': 'Yiyaho', 'theme': 'Endolwa',
-    'error': 'Obulema', 'search': 'Nonya', 'system': 'Sisitemu',
+    'error': 'Obulema', 'search': 'Nonya',
+    'system': 'Sisitemu',
   },
   'ln': <String, String>{
     'settings': 'Bobongisi', 'language': 'Lokota', 'book': 'Buku',
     'verse': 'Vɛrsɛ', 'chapter': 'Mokapo', 'choose': 'Pona', 'save': 'Bomba',
     'cancel': 'Tika', 'delete': 'Longola', 'theme': 'Lolenge',
-    'error': 'Libunga', 'search': 'Luka', 'system': 'Sistɛme',
+    'error': 'Libunga', 'search': 'Luka',
+    'system': 'Sistɛme',
   },
   'kea': <String, String>{
     'settings': 'Konfiguraçon', 'language': 'Língua', 'book': 'Livru',
     'verse': 'Versíkulu', 'chapter': 'Kapitulu', 'choose': 'Skodje',
     'save': 'Warda', 'cancel': 'Kansela', 'delete': 'Apaga', 'theme': 'Téma',
-    'error': 'Eru', 'search': 'Piskiza', 'system': 'Sistema',
+    'error': 'Eru', 'search': 'Piskiza',
+    'system': 'Sistema',
   },
 };
 
-/// Replaces each English message with a concise target-language UI phrase.
+/// Replaces each English message with a concise target-language UI phrase,
+/// preserving the English value for keys with no usable category mapping.
 ///
 /// Placeholders are appended unchanged because the ARB contract only permits
 /// the same placeholder names as the English source message.
-String _translate(String key, String english, Map<String, String> terms) {
+String translatePendingLocaleMessage(String key, String english, Map<String, String> terms) {
   final lowerKey = key.toLowerCase();
   String value;
   if (lowerKey.contains('language')) {
@@ -75,7 +79,7 @@ String _translate(String key, String english, Map<String, String> terms) {
   } else if (lowerKey.contains('choose') || lowerKey.contains('select')) {
     value = terms['choose']!;
   } else {
-    value = terms['settings']!;
+    return english;
   }
 
   final placeholders = RegExp(r'\{([^{}]+)\}')
@@ -96,7 +100,7 @@ void main() {
     final catalog = <String, dynamic>{'@@locale': entry.key};
     for (final source in english.entries) {
       if (source.key.startsWith('@@')) continue;
-      catalog[source.key] = _translate(
+      catalog[source.key] = translatePendingLocaleMessage(
         source.key,
         source.value as String,
         entry.value,

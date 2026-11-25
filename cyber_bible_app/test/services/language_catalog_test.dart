@@ -101,8 +101,6 @@ void main() {
       'lmo',
       'bgc',
       'asa',
-      'agq',
-      'blo',
       'dsb',
       'dua',
       'dyo',
@@ -124,16 +122,10 @@ void main() {
       'kxv',
       'lag',
       'lkt',
-      'mas',
-      'mer',
-      'mgh',
       'mgo',
       'mni',
       'mzn',
       'naq',
-      'nd',
-      'nnh',
-      'nqo',
       'pcm',
       'prg',
       'raj',
@@ -269,5 +261,23 @@ void main() {
 
   test('unknown language codes fall back to English metadata', () {
     expect(languageCatalogEntry('unknown').code, 'en');
+  });
+
+  test('questionable translation modules are listed as pending', () {
+    for (final code in <String>[
+      'agq',
+      'blo',
+      'mas',
+      'mer',
+      'mgh',
+      'nd',
+      'nnh',
+      'nqo',
+    ]) {
+      expect(
+        languageCatalogEntry(code).state,
+        LanguageModuleState.machineTranslationPending,
+      );
+    }
   });
 }

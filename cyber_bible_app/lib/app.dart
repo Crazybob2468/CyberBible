@@ -209,8 +209,6 @@ class _CyberBibleAppState extends State<CyberBibleApp> {
     Locale('lmo'),
     Locale('bgc'),
     Locale('asa'),
-    Locale('agq'),
-    Locale('blo'),
     Locale('chr'),
     Locale('csw'),
     Locale('dav'),
@@ -236,16 +234,10 @@ class _CyberBibleAppState extends State<CyberBibleApp> {
     Locale('kxv'),
     Locale('lag'),
     Locale('lkt'),
-    Locale('mas'),
-    Locale('mer'),
-    Locale('mgh'),
     Locale('mgo'),
     Locale('mni'),
     Locale('mzn'),
     Locale('naq'),
-    Locale('nd'),
-    Locale('nnh'),
-    Locale('nqo'),
     Locale('pcm'),
     Locale('prg'),
     Locale('raj'),
@@ -284,7 +276,9 @@ class _CyberBibleAppState extends State<CyberBibleApp> {
 
   /// Returns true when [candidate] is directly supported by this app build.
   bool _isCompiledLocale(Locale candidate) {
-    return _compiledUiLocales.any((locale) => locale.languageCode == candidate.languageCode);
+    return _compiledUiLocales.any(
+      (locale) => locale.languageCode == candidate.languageCode,
+    );
   }
 
   /// Resolves the manually selected UI locale from the app's language settings.
@@ -333,12 +327,15 @@ class _CyberBibleAppState extends State<CyberBibleApp> {
       locale: _resolveActiveLocale(),
       // Resolve all device preferences, including legacy language-code aliases.
       localeListResolutionCallback: (locales, _) {
-        return LanguageModuleService.resolvePlatformLocale(locales ?? const <Locale>[]);
+        return LanguageModuleService.resolvePlatformLocale(
+          locales ?? const <Locale>[],
+        );
       },
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: <LocalizationsDelegate<dynamic>>[
         AppLocalizations.delegate,
         const MaterialLocalizationsFallbackDelegate(),
+        const WidgetsLocalizationsFallbackDelegate(),
         const CupertinoLocalizationsFallbackDelegate(),
         ...AppLocalizations.localizationsDelegates.skip(1),
       ],

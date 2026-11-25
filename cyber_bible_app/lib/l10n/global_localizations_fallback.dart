@@ -1,5 +1,5 @@
 // English framework-localization fallbacks for installed UI locales that are
-// not included in Flutter's global Material and Cupertino locale data.
+// not included in Flutter's global Widgets, Material, and Cupertino locale data.
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -8,8 +8,9 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 /// Locale codes whose app strings are localized but whose framework controls
 /// must use English because Flutter does not provide their global locale data.
 const Set<String> _frameworkFallbackLocaleCodes = <String>{
+  'ak',
+  'ast',
   'asa',
-  'agq',
   'bas',
   'bem',
   'bez',
@@ -19,7 +20,6 @@ const Set<String> _frameworkFallbackLocaleCodes = <String>{
   'br',
   'ceb',
   'ce',
-  'cy',
   'dz',
   'ee',
   'eo',
@@ -105,7 +105,6 @@ const Set<String> _frameworkFallbackLocaleCodes = <String>{
   'lij',
   'lmo',
   'bgc',
-  'blo',
   'chr',
   'csw',
   'dav',
@@ -127,16 +126,10 @@ const Set<String> _frameworkFallbackLocaleCodes = <String>{
   'kxv',
   'lag',
   'lkt',
-  'mas',
-  'mer',
-  'mgh',
   'mgo',
   'mni',
   'mzn',
   'naq',
-  'nd',
-  'nnh',
-  'nqo',
   'pcm',
   'prg',
   'raj',
@@ -172,6 +165,26 @@ class MaterialLocalizationsFallbackDelegate extends LocalizationsDelegate<Materi
 
   @override
   bool shouldReload(MaterialLocalizationsFallbackDelegate old) => false;
+}
+
+/// Supplies English widget direction and text-editing strings when Flutter has
+/// no native `WidgetsLocalizations` data for an installed app locale.
+class WidgetsLocalizationsFallbackDelegate extends LocalizationsDelegate<WidgetsLocalizations> {
+  /// Creates the constant fallback delegate used by [MaterialApp].
+  const WidgetsLocalizationsFallbackDelegate();
+
+  @override
+  bool isSupported(Locale locale) {
+    return _frameworkFallbackLocaleCodes.contains(locale.languageCode);
+  }
+
+  @override
+  Future<WidgetsLocalizations> load(Locale locale) {
+    return GlobalWidgetsLocalizations.delegate.load(const Locale('en'));
+  }
+
+  @override
+  bool shouldReload(WidgetsLocalizationsFallbackDelegate old) => false;
 }
 
 /// Supplies English Cupertino control strings when Flutter has no native data.

@@ -114,13 +114,13 @@ Step 1.16 ✅ COMPLETE. The session after Step 1.16 resolved four user-reported 
 `customWidgetBuilder` in `flutter_widget_from_html_core` ALWAYS creates `WidgetBit.block()` — no CSS override is possible. The only correct approach for verse-position markers is `<div data-cbv="N">` placed as a **block sibling before** each `<p>`, never inside one.
 
 ### Key numbers
-- **267 tests passing**, `flutter analyze` → No issues.
+- **273 tests passing**, `flutter analyze` → No issues.
 
 Step 1.17 work includes Flutter localization plumbing, local AI-generated ARB
 modules, the language catalog and picker, locale fallbacks, and translation of
 the visible UI surfaces. Remaining scope is full Android locale/variant parity
-and optional remote language-module delivery; those are not prerequisites for
-  using the 226 modules currently bundled.
+and optional remote language-module delivery; 218 modules are currently
+available, while eight questionable translations remain visible as pending.
 
 ---
 
@@ -214,11 +214,12 @@ and optional remote language-module delivery; those are not prerequisites for
   Kabuverdianu ARB modules. Each includes all 147 current English UI keys and
   matching ICU placeholder sets.
 
-## Direct-AI Localization Status — 226 Modules
+## Direct-AI Localization Status — 218 Installed Modules
 
-- Current catalog: **226 bundled UI-language modules**.
-- AOSP base-language coverage: **225 of 225** after legacy `in`/`iw` aliases.
-- Remaining uncovered AOSP base languages: **0**.
-- The catalog has one extra module, Nyanja (`ny`), relative to the AOSP base-code set.
+- Current language catalog: **226 entries**; **218 modules are installed** and
+  8 questionable translations are pending.
+- All **225 AOSP base language codes** remain represented in the catalog after
+  legacy `in`/`iw` aliases; pending modules are not selectable.
+- Nyanja (`ny`) is one extra catalog entry relative to the AOSP base-code set.
 - Regional/script variants remain future work under exact locale-tag matching; the 631 AOSP locale tags are not all separate catalog entries.
-- All 226 ARBs contain 147 non-locale keys and pass exact ICU-placeholder parity.
+- Locale ARBs contain 147 non-locale keys and pass exact ICU-placeholder parity.

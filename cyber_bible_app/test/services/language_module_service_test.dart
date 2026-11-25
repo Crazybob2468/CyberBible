@@ -124,8 +124,6 @@ void main() {
         'lij',
         'lmo',
         'bgc',
-        'agq',
-        'blo',
         'chr',
         'csw',
         'dav',
@@ -151,16 +149,10 @@ void main() {
         'kxv',
         'lag',
         'lkt',
-        'mas',
-        'mer',
-        'mgh',
         'mgo',
         'mni',
         'mzn',
         'naq',
-        'nd',
-        'nnh',
-        'nqo',
         'pcm',
         'prg',
         'raj',
@@ -190,6 +182,28 @@ void main() {
   test('platform locale resolution selects a newly installed language', () {
     expect(LanguageModuleService.resolvePlatformLocale(const [Locale('zh')]), const Locale('zh'));
   });
+
+  test(
+    'questionable translation modules remain pending and resolve to English',
+    () {
+      for (final code in <String>[
+        'agq',
+        'blo',
+        'mas',
+        'mer',
+        'mgh',
+        'nd',
+        'nnh',
+        'nqo',
+      ]) {
+        expect(LanguageModuleService.isInstalled(code), isFalse);
+        expect(
+          LanguageModuleService.resolvePlatformLocale([Locale(code)]),
+          const Locale('en'),
+        );
+      }
+    },
+  );
 
   test('legacy Android language tags resolve to canonical installed modules', () {
     expect(LanguageModuleService.isInstalled('in'), isTrue);
@@ -308,8 +322,6 @@ void main() {
       'lij',
       'lmo',
       'bgc',
-      'agq',
-      'blo',
       'chr',
       'csw',
       'dav',
@@ -335,16 +347,10 @@ void main() {
       'kxv',
       'lag',
       'lkt',
-      'mas',
-      'mer',
-      'mgh',
       'mgo',
       'mni',
       'mzn',
       'naq',
-      'nd',
-      'nnh',
-      'nqo',
       'pcm',
       'prg',
       'raj',
