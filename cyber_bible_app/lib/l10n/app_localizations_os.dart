@@ -464,7 +464,7 @@ class AppLocalizationsOs extends AppLocalizations {
   String get languageModuleInstalled => 'Æвæрд';
 
   @override
-  String get languageModulePending => 'Машины перевод кæсын';
+  String get languageModulePending => 'Машины перевод кӕсын';
 
   @override
   String get languageNoMatches => 'Æвзаг нæй кæсынты хъуыддагæн.';

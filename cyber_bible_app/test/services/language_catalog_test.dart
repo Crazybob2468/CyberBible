@@ -40,8 +40,6 @@ void main() {
       'bo',
       'br',
       'bs',
-      'chr',
-      'csw',
       'dav',
       'dje',
       'et',
@@ -121,7 +119,6 @@ void main() {
       'ksf',
       'kxv',
       'lag',
-      'lkt',
       'mgo',
       'mni',
       'mzn',
@@ -273,6 +270,9 @@ void main() {
       'nd',
       'nnh',
       'nqo',
+      'chr',
+      'csw',
+      'lkt',
     ]) {
       expect(
         languageCatalogEntry(code).state,

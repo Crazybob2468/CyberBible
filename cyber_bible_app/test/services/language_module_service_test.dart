@@ -10,6 +10,9 @@ void main() {
     expect(LanguageModuleService.isInstalled('en'), isTrue);
     expect(LanguageModuleService.isInstalled('es'), isTrue);
     expect(LanguageModuleService.isInstalled('fr'), isTrue);
+    expect(LanguageModuleService.isInstalled('chr'), isFalse);
+    expect(LanguageModuleService.isInstalled('csw'), isFalse);
+    expect(LanguageModuleService.isInstalled('lkt'), isFalse);
     expect(
       LanguageModuleService.installedModules.map((module) => module.languageCode),
       containsAll(<String>[
@@ -124,8 +127,6 @@ void main() {
         'lij',
         'lmo',
         'bgc',
-        'chr',
-        'csw',
         'dav',
         'dje',
         'dsb',
@@ -148,7 +149,6 @@ void main() {
         'ksf',
         'kxv',
         'lag',
-        'lkt',
         'mgo',
         'mni',
         'mzn',
@@ -322,8 +322,6 @@ void main() {
       'lij',
       'lmo',
       'bgc',
-      'chr',
-      'csw',
       'dav',
       'dje',
       'dsb',
@@ -346,7 +344,6 @@ void main() {
       'ksf',
       'kxv',
       'lag',
-      'lkt',
       'mgo',
       'mni',
       'mzn',

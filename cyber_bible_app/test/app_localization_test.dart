@@ -7,10 +7,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:cyber_bible_app/app.dart';
 import 'package:cyber_bible_app/l10n/app_localizations.dart';
+import 'package:cyber_bible_app/l10n/app_localizations_os.dart';
 import 'package:cyber_bible_app/l10n/localization_helpers.dart';
 import 'package:cyber_bible_app/services/settings_service.dart';
 
 void main() {
+  // Ossetian uses Cyrillic ӕ; the Latin æ in this label was accidental.
+  test('Ossetian pending status uses the Ossetian Cyrillic character', () {
+    expect(
+      AppLocalizationsOs().languageModulePending,
+      'Машины перевод кӕсын',
+    );
+  });
+
   setUp(() async {
     // Use an isolated preferences store so each test starts with the default
     // system-language setting and no persisted manual override.
@@ -166,8 +175,6 @@ void main() {
       'asa',
       'ak',
       'ast',
-      'chr',
-      'csw',
       'dav',
       'dje',
       'dsb',
@@ -190,7 +197,6 @@ void main() {
       'ksf',
       'kxv',
       'lag',
-      'lkt',
       'mgo',
       'mni',
       'mzn',
@@ -251,8 +257,6 @@ void main() {
       'lmo',
       'bgc',
       'asa',
-      'chr',
-      'csw',
       'dav',
       'dje',
     ]) {
