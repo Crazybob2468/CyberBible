@@ -34,10 +34,17 @@ against the agreed sequence of work.
   discuss the proposed change with the developer first. Do not remove it on an
   agent's own initiative. Restore accidentally removed roadmap content from Git
   history before continuing.
-- Do not mark a language module installed merely because an ARB file exists or
-  has complete keys. Confirm its messages contain target-language translations;
-  if a bundle is wholly English or otherwise untranslated, keep it pending and
-  out of the selectable module registry.
+- Best-effort AI translations may be selectable without human review; do not
+  make paid or volunteer translation review a prerequisite. Do not mark a
+  module installed merely because an ARB file exists or has complete keys:
+  replace broad English fallthrough with target-language AI text, do not copy
+  a whole catalog from another language, and keep only clearly untranslated or
+  mislabeled bundles pending. Preserve AI provenance and validate keys and
+  ICU placeholders.
+- Treat active ARB files as the source of truth and regenerate Dart localization
+  classes with `flutter gen-l10n`. Do not add temporary per-language or
+  per-batch translation scripts to the repository; retain a generator only when
+  it is a documented, reusable project tool with explicit inputs and validation.
 
 ---
 

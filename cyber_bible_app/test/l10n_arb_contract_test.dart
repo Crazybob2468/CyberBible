@@ -1,4 +1,4 @@
-// Parsed contract tests for every bundled Flutter localization catalog.
+// Parsed contract tests for active locales and pending translation drafts.
 
 import 'dart:convert';
 import 'dart:io';
@@ -13,6 +13,36 @@ Set<String> _placeholders(String value) {
 }
 
 void main() {
+  test(
+    'active locales do not reuse another locale complete message catalog',
+    () {
+      final l10nDirectory = Directory('lib/l10n');
+      final activeCatalogSignatures = <String>{};
+
+      for (final entity in l10nDirectory.listSync()) {
+        if (entity is! File ||
+            !entity.path.endsWith('.arb') ||
+            entity.path.endsWith('app_en.arb')) {
+          continue;
+        }
+
+        final catalog =
+            jsonDecode(entity.readAsStringSync()) as Map<String, dynamic>;
+        final messageKeys =
+            catalog.keys.where((key) => !key.startsWith('@')).toList()..sort();
+        final signature = jsonEncode(<String, dynamic>{
+          for (final key in messageKeys) key: catalog[key],
+        });
+
+        expect(
+          activeCatalogSignatures.add(signature),
+          isTrue,
+          reason: '${entity.path} duplicates another active locale catalog',
+        );
+      }
+    },
+  );
+
   test(
     'every ARB locale matches the English key and ICU placeholder contract',
     () {
@@ -30,22 +60,29 @@ void main() {
           key: _placeholders(english[key] as String),
       };
 
-      for (final entity in l10nDirectory.listSync()) {
-        if (entity is! File || !entity.path.endsWith('.arb')) continue;
+      final catalogDirectories = <Directory>[
+        l10nDirectory,
+        Directory('docs/localization/pending'),
+      ];
+      for (final directory in catalogDirectories) {
+        expect(directory.existsSync(), isTrue, reason: directory.path);
+        for (final entity in directory.listSync()) {
+          if (entity is! File || !entity.path.endsWith('.arb')) continue;
 
-        final catalog =
-            jsonDecode(entity.readAsStringSync()) as Map<String, dynamic>;
-        final catalogKeys = catalog.keys
-            .where((key) => !key.startsWith('@@'))
-            .toSet();
-        expect(catalogKeys, englishKeys, reason: entity.path);
+          final catalog =
+              jsonDecode(entity.readAsStringSync()) as Map<String, dynamic>;
+          final catalogKeys = catalog.keys
+              .where((key) => !key.startsWith('@@'))
+              .toSet();
+          expect(catalogKeys, englishKeys, reason: entity.path);
 
-        for (final key in englishKeys) {
-          expect(
-            _placeholders(catalog[key] as String),
-            englishPlaceholders[key],
-            reason: '${entity.path}: $key',
-          );
+          for (final key in englishKeys) {
+            expect(
+              _placeholders(catalog[key] as String),
+              englishPlaceholders[key],
+              reason: '${entity.path}: $key',
+            );
+          }
         }
       }
     },

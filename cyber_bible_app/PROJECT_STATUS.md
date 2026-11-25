@@ -86,11 +86,12 @@ cyber_bible_app/
 
 The localization foundation is implemented: system-language selection, a
 persisted manual override, a searchable local catalog, and offline UI-language
-modules. The catalog contains 226 language codes; 215 modules are selectable
-and 11 questionable or untranslated bundles remain pending. All 225 AOSP base-language
-codes are represented in the catalog, but regional/script variants remain
-future work. See the [Phase 1.17 localization report](docs/phase-1.17-localization-report.md)
-for decisions, detailed coverage, known issues, and verification.
+modules. The catalog contains 226 language codes; 185 modules are selectable
+and 41 incomplete, duplicated, or otherwise unverified bundles remain pending.
+All 225 AOSP base-language codes are represented in the catalog, but
+regional/script variants remain future work. See the
+[Phase 1.17 localization report](docs/phase-1.17-localization-report.md) for
+decisions, detailed coverage, known issues, and verification.
 
 The rest of this status document retains the previous step-by-step completion
 history and the development roadmap so prior implementation context remains
@@ -121,7 +122,7 @@ Step 1.16 ✅ COMPLETE. The session after Step 1.16 resolved four user-reported 
 `customWidgetBuilder` in `flutter_widget_from_html_core` ALWAYS creates `WidgetBit.block()` — no CSS override is possible. The only correct approach for verse-position markers is `<div data-cbv="N">` placed as a **block sibling before** each `<p>`, never inside one.
 
 ### Key numbers
-- **274 tests passing**, `flutter analyze` → No issues.
+- **273 tests passing**, `flutter analyze` → No issues.
 
 Step 1.17 localization foundation is complete. Remaining localization follow-up
 is tracked in the report above. The next numbered roadmap task is Phase 2,
@@ -719,7 +720,7 @@ The goal: open the app, pick a book and chapter, and read formatted Bible text.
 | 1.15 ✅ | **Bookmarks — UI** | Add a way to bookmark the current location (long-press or button). Build a bookmarks list screen accessible from the home screen or menu. |
 | 1.16 ✅ | **Settings screen (font & theme)** | Build a settings screen with: font size slider; light/dark/system theme toggle; accent color picker (let users choose from a curated palette of seed colors that drive the Material 3 `ColorScheme` — e.g. the default calm blue, forest green, crimson, gold, purple, etc.); words-of-Christ color toggle (red or black); section headings toggle (show/hide `<s>` and `<d>` noncanonical text, per design doc); verse numbers toggle (show/hide inline verse number superscripts); **verse format toggle** (paragraph/prose mode — text flows as natural paragraphs with inline verse superscripts — vs. verse-list mode — each verse begins on its own line; default is paragraph/prose mode). Persist all settings with `shared_preferences`. The home screen branded gradient is fixed and unaffected by theme changes; all inner screens (book selection, chapter selection, reading) respond to the chosen theme. |
 | 1.16.5 ✅ | **Verse-jump accuracy + icon-first UI + OS language** | Fix the inconsistent scroll-to-verse bug (off-by-verse, reported on Pixel 10 / Android 16 for Matt 20:11, John 3:16). Audit existing screens and replace text-only controls with icons where meaning is universally clear (icon-first UI principle). Configure `MaterialApp` to use the OS locale as the default UI language (English compiled-in as fallback) — foundational plumbing for Step 1.17 full ARB extraction. |
-| 1.17 ✅ | **UI localization foundation** | Set up Flutter l10n with ARB files, extract visible UI strings, add a searchable local language catalog and persisted manual override, resolve the system locale against installed modules, and retain English fallback. The catalog represents all 225 AOSP base-language codes; 215 modules are selectable and 11 questionable or untranslated bundles remain pending. Regional/script variants remain future work; see the [Phase 1.17 localization report](docs/phase-1.17-localization-report.md). |
+| 1.17 ✅ | **UI localization foundation** | Set up Flutter l10n with ARB files, extract visible UI strings, add a searchable local language catalog and persisted manual override, resolve the system locale against installed modules, and retain English fallback. The catalog represents all 225 AOSP base-language codes; 185 modules are selectable and 41 incomplete, duplicated, or otherwise unverified bundles remain pending. Regional/script variants remain future work; see the [Phase 1.17 localization report](docs/phase-1.17-localization-report.md). |
 
 ### Phase 2 — Study Features
 

@@ -15,13 +15,14 @@ class AppLocalizationsPcm extends AppLocalizations {
   String get languageSection => 'Language';
 
   @override
-  String get useSystemLanguage => 'Use system language';
+  String get useSystemLanguage => 'Use device language';
 
   @override
-  String get useSystemLanguageSubtitle => 'Use di device language as default.';
+  String get useSystemLanguageSubtitle =>
+      'Use di language wey your device dey use by default.';
 
   @override
-  String get currentLanguage => 'Current language';
+  String get currentLanguage => 'Language wey you dey use';
 
   @override
   String get appLanguage => 'App language';
@@ -33,13 +34,13 @@ class AppLocalizationsPcm extends AppLocalizations {
   String get theme => 'Theme';
 
   @override
-  String get appearance => 'Appearance';
+  String get appearance => 'How e look';
 
   @override
   String get textSection => 'Text';
 
   @override
-  String get readingFormatSection => 'Reading format';
+  String get readingFormatSection => 'How text go appear';
 
   @override
   String get displaySection => 'Display';
@@ -51,16 +52,16 @@ class AppLocalizationsPcm extends AppLocalizations {
   String get sectionHeadings => 'Section headings';
 
   @override
-  String get redLetterText => 'Red-letter text';
+  String get redLetterText => 'Words wey dey red';
 
   @override
   String get selectABook => 'Choose one book';
 
   @override
-  String get traditionalOrder => 'Traditional order';
+  String get traditionalOrder => 'Normal Bible order';
 
   @override
-  String get alphabeticalOrder => 'Alphabetical order';
+  String get alphabeticalOrder => 'Alphabet order';
 
   @override
   String get bookmarks => 'Bookmarks';
@@ -72,18 +73,18 @@ class AppLocalizationsPcm extends AppLocalizations {
   String get chooseTheme => 'Choose theme';
 
   @override
-  String get customisableThemes => 'Customisable themes';
+  String get customisableThemes => 'Themes wey you fit change';
 
   @override
   String get customisableThemesSubtitle =>
-      'Tap a card to choose an accent colour. \"Classic White\" also supports Light, Dark and System modes.';
+      'Tap one card to choose highlight colour. \"Classic White\" fit also use Light, Dark and System modes.';
 
   @override
-  String get setThemes => 'SET THEMES';
+  String get setThemes => 'READY-MADE THEMES';
 
   @override
   String get setThemesSubtitle =>
-      'Fixed, hand-crafted palettes. No customisation needed — just tap to apply.';
+      'Na ready-made colour combinations. You no need change dem — just tap to use.';
 
   @override
   String get deleteBookmarkQuestion => 'Delete bookmark?';
@@ -95,62 +96,64 @@ class AppLocalizationsPcm extends AppLocalizations {
   String get delete => 'Delete';
 
   @override
-  String get bookmarkSaved => 'Bookmark saved';
+  String get bookmarkSaved => 'Bookmark don save';
 
   @override
-  String get couldNotDeleteBookmark => 'Could not delete bookmark.';
+  String get couldNotDeleteBookmark => 'We no fit delete bookmark.';
 
   @override
   String couldNotNavigate(Object reference) {
-    return 'Could not navigate to $reference.';
+    return 'We no fit go to $reference.';
   }
 
   @override
-  String get pageNotFound => 'Page not found';
+  String get pageNotFound => 'We no see di page';
 
   @override
   String noRouteDefined(Object routeName) {
-    return 'No route defined for \"$routeName\"';
+    return 'No route dey for \"$routeName\"';
   }
 
   @override
   String get english => 'English';
 
   @override
-  String get spanish => 'Spanish';
+  String get spanish => 'Español';
 
   @override
-  String get systemDefault => 'System default';
+  String get systemDefault => 'Device default';
 
   @override
-  String get languageStatusEnglish => 'English fallback active';
+  String get languageStatusEnglish =>
+      'English dey show because di language no dey available';
 
   @override
-  String get languageStatusSystem => 'Using system language';
+  String get languageStatusSystem => 'Dey use device language';
 
   @override
   String languageStatusSelected(Object languageName) {
-    return 'Selected language: $languageName';
+    return 'Language wey you choose: $languageName';
   }
 
   @override
   String get themeLabel => 'Theme';
 
   @override
-  String get notFoundTitle => 'Page not found';
+  String get notFoundTitle => 'We no see di page';
 
   @override
-  String get loadingCyberBible => 'Loading Cyber Bible...';
+  String get loadingCyberBible => 'Cyber Bible dey load...';
 
   @override
   String get couldNotOpenDatabase =>
-      'Could not open the Bible database. Please try again.';
+      'We no fit open di Bible database. Abeg try again.';
 
   @override
-  String get homeTagline => 'A free and open source Bible study app';
+  String get homeTagline =>
+      'Free Bible study app wey anybody fit see and use di source code';
 
   @override
-  String get readTheBible => 'Read the Bible';
+  String get readTheBible => 'Read di Bible';
 
   @override
   String get settingsTooltip => 'Settings';
@@ -159,44 +162,44 @@ class AppLocalizationsPcm extends AppLocalizations {
   String get themeChoose => 'Choose theme';
 
   @override
-  String get customThemes => 'Custom themes';
+  String get customThemes => 'Themes wey you fit change';
 
   @override
   String get customThemesSubtitle =>
-      'Tap a card to choose an accent colour. \"Classic White\" also supports Light, Dark and System modes.';
+      'Tap one card to choose highlight colour. \"Classic White\" fit also use Light, Dark and System modes.';
 
   @override
-  String get setThemesLabel => 'SET THEMES';
+  String get setThemesLabel => 'READY-MADE THEMES';
 
   @override
   String get deleteBookmarkDialog => 'Delete bookmark?';
 
   @override
   String removeBookmarkMessage(Object details, Object reference) {
-    return 'Remove \"$reference\"$details?\n\nThis cannot be undone.';
+    return 'Remove \"$reference\"$details?\n\nYou no fit undo am.';
   }
 
   @override
   String get couldNotLoadBookmarks =>
-      'Could not load bookmarks. Please try again.';
+      'We no fit load bookmarks. Abeg try again.';
 
   @override
-  String get bookmarkSavedMessage => 'Bookmark saved';
+  String get bookmarkSavedMessage => 'Bookmark don save';
 
   @override
-  String get couldNotSaveBookmark => 'Could not save bookmark.';
+  String get couldNotSaveBookmark => 'We no fit save bookmark.';
 
   @override
-  String get noBookmarksMatchFilter => 'No bookmarks match this filter.';
+  String get noBookmarksMatchFilter => 'No bookmark match dis filter.';
 
   @override
   String get clearFilter => 'Clear filter';
 
   @override
-  String get traditionalOrderLabel => 'Traditional order';
+  String get traditionalOrderLabel => 'Normal Bible order';
 
   @override
-  String get alphabeticalOrderLabel => 'Alphabetical order';
+  String get alphabeticalOrderLabel => 'Alphabet order';
 
   @override
   String get bookmarksTabLabel => 'Bookmarks';
@@ -208,13 +211,13 @@ class AppLocalizationsPcm extends AppLocalizations {
   String get addBookmark => 'Add bookmark';
 
   @override
-  String get selectVerse => 'Select verse';
+  String get selectVerse => 'Choose verse';
 
   @override
-  String get labelOptional => 'Label (optional)';
+  String get labelOptional => 'Label (you fit leave am empty)';
 
   @override
-  String get notesOptional => 'Notes (optional)';
+  String get notesOptional => 'Notes (you fit leave am empty)';
 
   @override
   String get save => 'Save';
@@ -233,22 +236,22 @@ class AppLocalizationsPcm extends AppLocalizations {
   }
 
   @override
-  String get switchToFullChapter => 'Switch to full chapter';
+  String get switchToFullChapter => 'Change to full chapter bookmark';
 
   @override
-  String get bookmarkSheetCancel => 'Cancel';
+  String get bookmarkSheetCancel => 'Cancel, close bookmark panel';
 
   @override
-  String get pickCustomAccent => 'Choose a custom accent';
+  String get pickCustomAccent => 'Choose your own highlight colour';
 
   @override
-  String get apply => 'Apply';
+  String get apply => 'Use am';
 
   @override
-  String get custom => 'Custom';
+  String get custom => 'Your choice';
 
   @override
-  String get brightnessSystem => 'System';
+  String get brightnessSystem => 'Device setting';
 
   @override
   String get brightnessLight => 'Light';
@@ -257,25 +260,25 @@ class AppLocalizationsPcm extends AppLocalizations {
   String get brightnessDark => 'Dark';
 
   @override
-  String get selectBook => 'Select a book';
+  String get selectBook => 'Choose one book';
 
   @override
   String get bookmarkFilterAll => 'All';
 
   @override
-  String get bookmarkFilterUnlabeled => 'Unlabeled';
+  String get bookmarkFilterUnlabeled => 'No label';
 
   @override
-  String get bookmarkSortRecent => 'Recent';
+  String get bookmarkSortRecent => 'Newest first';
 
   @override
-  String get bookmarkSortCanonical => 'Bible order';
+  String get bookmarkSortCanonical => 'Bible book order';
 
   @override
   String get chapterRetry => 'Try again';
 
   @override
-  String get fontSize => 'Font size';
+  String get fontSize => 'Text size';
 
   @override
   String fontSizePixels(Object size) {
@@ -283,18 +286,18 @@ class AppLocalizationsPcm extends AppLocalizations {
   }
 
   @override
-  String get fontSizeSlider => 'Font size';
+  String get fontSizeSlider => 'Slider for text size';
 
   @override
-  String get fontSizeSliderHint => 'Swipe to adjust from 12 to 28';
+  String get fontSizeSliderHint => 'Swipe to change am from 12 to 28';
 
   @override
   String get fontPreview =>
-      '\"In the beginning God created the heavens and the earth.\" — Gen 1:1';
+      '\"For beginning, God create heaven and earth.\" — Gen 1:1';
 
   @override
   String get showVerseNumbersSubtitle =>
-      'Show verse number superscripts in the reading screen.';
+      'Show small verse numbers above di text for reading screen.';
 
   @override
   String get showSectionHeadingsSubtitle =>
@@ -302,33 +305,33 @@ class AppLocalizationsPcm extends AppLocalizations {
 
   @override
   String get wordsOfChristSubtitle =>
-      'Show Jesus\' words in red. Disable for a single text color.';
+      'Show Jesus words for red. Turn am off to use one text colour.';
 
   @override
-  String get verseFormatTitle => 'Verse Format';
+  String get verseFormatTitle => 'How verses go appear';
 
   @override
-  String get verseFormatSubtitle => 'Choose how scripture text is laid out.';
+  String get verseFormatSubtitle => 'Choose how Bible text go appear.';
 
   @override
-  String get paragraphMode => 'Paragraph mode';
+  String get paragraphMode => 'Paragraph';
 
   @override
-  String get verseListMode => 'Verse-list mode';
+  String get verseListMode => 'Verse list';
 
   @override
-  String get paragraphModeTooltip => 'Choose paragraph mode';
+  String get paragraphModeTooltip => 'Paragraph display';
 
   @override
-  String get verseListModeTooltip => 'Choose verse-list mode';
+  String get verseListModeTooltip => 'Verse-list display';
 
   @override
   String get paragraphModeDescription =>
-      'Text flows continuously with indented paragraphs, like a printed Bible.';
+      'Text dey flow together, with space for di beginning of each paragraph, like printed Bible.';
 
   @override
   String get verseListModeDescription =>
-      'Each scripture paragraph begins on its own line, making verse groups easy to spot.';
+      'Each Bible paragraph dey start for new line, so e easy to see verse groups.';
 
   @override
   String get deleteBookmarkTooltip => 'Delete bookmark';
@@ -340,18 +343,19 @@ class AppLocalizationsPcm extends AppLocalizations {
 
   @override
   String sortBookmarksTooltip(Object sortOrder) {
-    return 'Sort: $sortOrder';
+    return 'Arrange: $sortOrder';
   }
 
   @override
-  String get noBookmarksYet => 'No bookmarks yet.';
+  String get noBookmarksYet => 'You never save any bookmark.';
 
   @override
-  String get noBookmarksYetHint => 'Add a bookmark while reading.';
+  String get noBookmarksYetHint =>
+      'Tap di bookmark icon when you dey read to save where you stop.';
 
   @override
   String bookmarkReferenceNavigationError(Object reference) {
-    return 'Could not navigate to $reference.';
+    return 'We no fit go to $reference.';
   }
 
   @override
@@ -360,39 +364,41 @@ class AppLocalizationsPcm extends AppLocalizations {
   }
 
   @override
-  String get selectedThemeSuffix => ', currently selected';
+  String get selectedThemeSuffix => ', na dis one you choose now';
 
   @override
-  String get customisableAccentDescription => 'Customisable accent colour.';
+  String get customisableAccentDescription =>
+      'Highlight colour wey you fit change.';
 
   @override
-  String get fixedPaletteDescription => 'Fixed palette.';
+  String get fixedPaletteDescription => 'Colour combination wey no dey change.';
 
   @override
   String accentColourTitle(Object themeName) {
-    return 'Accent Colour — $themeName';
+    return 'Highlight colour — $themeName';
   }
 
   @override
-  String get brightnessMode => 'BRIGHTNESS MODE';
+  String get brightnessMode => 'LIGHT OR DARK MODE';
 
   @override
-  String get lightMode => 'Light';
+  String get lightMode => 'Light mode';
 
   @override
-  String get followSystemMode => 'Follow system';
+  String get followSystemMode => 'Follow device setting';
 
   @override
-  String get darkMode => 'Dark';
+  String get darkMode => 'Dark mode';
 
   @override
-  String get customColourPicker => 'Custom colour picker';
+  String get customColourPicker => 'Choose your own colour';
 
   @override
-  String get customColourTooltip => 'Custom color…';
+  String get customColourTooltip => 'Choose your own colour…';
 
   @override
-  String get couldNotLoadBooks => 'Could not load books.';
+  String get couldNotLoadBooks =>
+      'We no fit load di book list. Abeg try again.';
 
   @override
   String chapterLabel(Object chapter) {
@@ -400,10 +406,10 @@ class AppLocalizationsPcm extends AppLocalizations {
   }
 
   @override
-  String get traditionalOrderBooks => 'Traditional order';
+  String get traditionalOrderBooks => 'Books for normal Bible order';
 
   @override
-  String get alphabeticalOrderBooks => 'Alphabetical order';
+  String get alphabeticalOrderBooks => 'Books for alphabet order';
 
   @override
   String get home => 'Home';
@@ -418,20 +424,20 @@ class AppLocalizationsPcm extends AppLocalizations {
   String get chooseVerse => 'Choose verse';
 
   @override
-  String get bookChapterQuickNavigation => 'Book and chapter quick navigation';
+  String get bookChapterQuickNavigation => 'Quick way to find book and chapter';
 
   @override
-  String get verseQuickNavigation => 'Verse quick navigation';
+  String get verseQuickNavigation => 'Quick way to find verse';
 
   @override
-  String get backToBooks => 'Back to books';
+  String get backToBooks => 'Go back to books';
 
   @override
-  String get selectBookTitle => 'Select a book';
+  String get selectBookTitle => 'Choose book';
 
   @override
   String selectChapterTitle(Object bookName) {
-    return 'Select chapter of $bookName';
+    return 'Choose chapter ($bookName)';
   }
 
   @override
@@ -450,37 +456,36 @@ class AppLocalizationsPcm extends AppLocalizations {
   }
 
   @override
-  String get memorizeHint => 'Memorize';
+  String get memorizeHint => 'Learn am by heart';
 
   @override
-  String get addNoteHint => 'Add a note...';
+  String get addNoteHint => 'Add note...';
 
   @override
-  String get languageSearchHint => 'Search language';
+  String get languageSearchHint => 'Search for language';
 
   @override
-  String get languageModuleInstalled => 'Language module installed';
+  String get languageModuleInstalled => 'Don install';
 
   @override
-  String get languageModulePending => 'Language module pending';
+  String get languageModulePending => 'Machine translation never ready';
 
   @override
-  String get languageNoMatches => 'No matching languages.';
+  String get languageNoMatches => 'No language match wetin you search.';
 
   @override
   String get languageCatalogDescription =>
-      'Languages marked as installed work offline. Other languages will be added as machine-translated modules.';
+      'Languages wey show as installed fit work without internet. Other languages go come later as machine-translated modules.';
 
   @override
   String get saveBookmarkSemantics => 'Save bookmark';
 
   @override
   String get couldNotLoadChapter =>
-      'Could not load the chapter. Please try again.';
+      'We no fit load di chapter. Abeg try again.';
 
   @override
-  String get couldNotLoadChapters =>
-      'Could not load chapters. Please try again.';
+  String get couldNotLoadChapters => 'We no fit load chapters. Abeg try again.';
 
   @override
   String verseWithText(Object text, Object verse) {
@@ -489,7 +494,7 @@ class AppLocalizationsPcm extends AppLocalizations {
 
   @override
   String accentSwatchSemantics(Object name, Object selected) {
-    return '$name accent colour$selected';
+    return '$name highlight colour$selected';
   }
 
   @override

@@ -19,7 +19,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get useSystemLanguageSubtitle =>
-      'Match the device language by default.';
+      'Mặc định dùng ngôn ngữ của thiết bị.';
 
   @override
   String get currentLanguage => 'Ngôn ngữ hiện tại';
@@ -73,21 +73,21 @@ class AppLocalizationsVi extends AppLocalizations {
   String get chooseTheme => 'Chọn chủ đề';
 
   @override
-  String get customisableThemes => 'Customisable Themes';
+  String get customisableThemes => 'Giao diện có thể tùy chỉnh';
 
   @override
   String get customisableThemesSubtitle =>
-      'Tap a card to choose an accent colour. \"Classic White\" also supports Light, Dark and System modes.';
+      'Chạm vào thẻ để chọn màu nhấn. “Classic White” cũng hỗ trợ các chế độ Sáng, Tối và Hệ thống.';
 
   @override
-  String get setThemes => 'SET THEMES';
+  String get setThemes => 'ĐẶT GIAO DIỆN';
 
   @override
   String get setThemesSubtitle =>
-      'Fixed, hand-crafted palettes. No customisation needed — just tap to apply.';
+      'Bảng màu cố định được thiết kế thủ công. Không cần tùy chỉnh — chỉ cần chạm để áp dụng.';
 
   @override
-  String get deleteBookmarkQuestion => 'Delete bookmark?';
+  String get deleteBookmarkQuestion => 'Xóa dấu trang?';
 
   @override
   String get cancel => 'Hủy';
@@ -96,22 +96,22 @@ class AppLocalizationsVi extends AppLocalizations {
   String get delete => 'Xóa';
 
   @override
-  String get bookmarkSaved => 'Bookmark saved';
+  String get bookmarkSaved => 'Đã lưu dấu trang';
 
   @override
-  String get couldNotDeleteBookmark => 'Could not delete bookmark.';
+  String get couldNotDeleteBookmark => 'Không thể xóa dấu trang.';
 
   @override
   String couldNotNavigate(Object reference) {
-    return 'Could not navigate to $reference.';
+    return 'Không thể chuyển đến $reference.';
   }
 
   @override
-  String get pageNotFound => 'Page Not Found';
+  String get pageNotFound => 'Không tìm thấy trang';
 
   @override
   String noRouteDefined(Object routeName) {
-    return 'No route defined for \"$routeName\"';
+    return 'Chưa xác định tuyến đường cho “$routeName”';
   }
 
   @override
@@ -121,34 +121,34 @@ class AppLocalizationsVi extends AppLocalizations {
   String get spanish => 'Español';
 
   @override
-  String get systemDefault => 'System default';
+  String get systemDefault => 'Mặc định hệ thống';
 
   @override
-  String get languageStatusEnglish => 'English fallback active';
+  String get languageStatusEnglish => 'Đang dùng tiếng Anh dự phòng';
 
   @override
-  String get languageStatusSystem => 'Using system language';
+  String get languageStatusSystem => 'Đang dùng ngôn ngữ hệ thống';
 
   @override
   String languageStatusSelected(Object languageName) {
-    return 'Selected language: $languageName';
+    return 'Ngôn ngữ đã chọn: $languageName';
   }
 
   @override
   String get themeLabel => 'Chủ đề';
 
   @override
-  String get notFoundTitle => 'Page Not Found';
+  String get notFoundTitle => 'Không tìm thấy trang';
 
   @override
-  String get loadingCyberBible => 'Loading Cyber Bible...';
+  String get loadingCyberBible => 'Đang tải Cyber Bible…';
 
   @override
   String get couldNotOpenDatabase =>
-      'Could not open the Bible database. Please try again.';
+      'Không thể mở cơ sở dữ liệu Kinh Thánh. Vui lòng thử lại.';
 
   @override
-  String get homeTagline => 'A free and open source Bible study app';
+  String get homeTagline => 'Ứng dụng học Kinh Thánh miễn phí và mã nguồn mở';
 
   @override
   String get readTheBible => 'Đọc Kinh Thánh';
@@ -160,38 +160,39 @@ class AppLocalizationsVi extends AppLocalizations {
   String get themeChoose => 'Chọn chủ đề';
 
   @override
-  String get customThemes => 'Customisable Themes';
+  String get customThemes => 'Giao diện tùy chỉnh';
 
   @override
   String get customThemesSubtitle =>
-      'Tap a card to choose an accent colour. \"Classic White\" also supports Light, Dark and System modes.';
+      'Chạm vào thẻ để chọn màu nhấn. “Classic White” cũng hỗ trợ các chế độ Sáng, Tối và Hệ thống.';
 
   @override
-  String get setThemesLabel => 'SET THEMES';
+  String get setThemesLabel => 'ĐẶT GIAO DIỆN';
 
   @override
-  String get deleteBookmarkDialog => 'Delete bookmark?';
+  String get deleteBookmarkDialog => 'Xóa dấu trang?';
 
   @override
   String removeBookmarkMessage(Object details, Object reference) {
-    return 'Remove \"$reference\"$details?\n\nThis cannot be undone.';
+    return 'Xóa “$reference”$details?\n\nBạn không thể hoàn tác thao tác này.';
   }
 
   @override
   String get couldNotLoadBookmarks =>
-      'Could not load bookmarks. Please try again.';
+      'Không thể tải dấu trang. Vui lòng thử lại.';
 
   @override
-  String get bookmarkSavedMessage => 'Bookmark saved';
+  String get bookmarkSavedMessage => 'Đã lưu dấu trang';
 
   @override
-  String get couldNotSaveBookmark => 'Could not save bookmark.';
+  String get couldNotSaveBookmark => 'Không thể lưu dấu trang.';
 
   @override
-  String get noBookmarksMatchFilter => 'No bookmarks match this filter.';
+  String get noBookmarksMatchFilter =>
+      'Không có dấu trang nào khớp với bộ lọc này.';
 
   @override
-  String get clearFilter => 'Clear filter';
+  String get clearFilter => 'Xóa bộ lọc';
 
   @override
   String get traditionalOrderLabel => 'Thứ tự truyền thống';
@@ -225,22 +226,22 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String verseTitle(Object verse) {
-    return 'Verse $verse';
+    return 'Câu $verse';
   }
 
   @override
   String chapterTitle(Object chapter) {
-    return 'Chapter $chapter';
+    return 'Chương $chapter';
   }
 
   @override
-  String get switchToFullChapter => 'Switch to full chapter bookmark';
+  String get switchToFullChapter => 'Chuyển sang dấu trang cả chương';
 
   @override
-  String get bookmarkSheetCancel => 'Cancel, close bookmark sheet';
+  String get bookmarkSheetCancel => 'Hủy, đóng bảng dấu trang';
 
   @override
-  String get pickCustomAccent => 'Choose a custom accent';
+  String get pickCustomAccent => 'Chọn màu nhấn tùy chỉnh';
 
   @override
   String get apply => 'Áp dụng';
@@ -261,16 +262,16 @@ class AppLocalizationsVi extends AppLocalizations {
   String get selectBook => 'Chọn sách';
 
   @override
-  String get bookmarkFilterAll => 'All';
+  String get bookmarkFilterAll => 'Tất cả';
 
   @override
-  String get bookmarkFilterUnlabeled => 'Unlabeled';
+  String get bookmarkFilterUnlabeled => 'Chưa gắn nhãn';
 
   @override
-  String get bookmarkSortRecent => 'Recent first';
+  String get bookmarkSortRecent => 'Mới nhất trước';
 
   @override
-  String get bookmarkSortCanonical => 'Canonical order';
+  String get bookmarkSortCanonical => 'Thứ tự Kinh Thánh';
 
   @override
   String get chapterRetry => 'Thử lại';
@@ -284,32 +285,32 @@ class AppLocalizationsVi extends AppLocalizations {
   }
 
   @override
-  String get fontSizeSlider => 'Font size slider';
+  String get fontSizeSlider => 'Thanh trượt cỡ chữ';
 
   @override
-  String get fontSizeSliderHint => 'Swipe to adjust from 12 to 28';
+  String get fontSizeSliderHint => 'Vuốt để điều chỉnh từ 12 đến 28';
 
   @override
   String get fontPreview =>
-      '\"In the beginning God created the heavens and the earth.\" — Gen 1:1';
+      '“Ban đầu Đức Chúa Trời dựng nên trời và đất.” — Sáng 1:1';
 
   @override
   String get showVerseNumbersSubtitle =>
-      'Show verse number superscripts in the reading screen.';
+      'Hiển thị số câu dạng chỉ số trên trong màn hình đọc.';
 
   @override
   String get showSectionHeadingsSubtitle =>
-      'Show section and Psalm headings between passages.';
+      'Hiển thị tiêu đề đoạn và Thi Thiên giữa các phần.';
 
   @override
   String get wordsOfChristSubtitle =>
-      'Show Jesus\' words in red. Disable for a single text color.';
+      'Hiển thị lời của Chúa Giê-su bằng màu đỏ. Tắt để dùng một màu chữ duy nhất.';
 
   @override
-  String get verseFormatTitle => 'Verse Format';
+  String get verseFormatTitle => 'Định dạng câu';
 
   @override
-  String get verseFormatSubtitle => 'Choose how scripture text is laid out.';
+  String get verseFormatSubtitle => 'Chọn cách trình bày văn bản Kinh Thánh.';
 
   @override
   String get paragraphMode => 'Đoạn văn';
@@ -318,138 +319,139 @@ class AppLocalizationsVi extends AppLocalizations {
   String get verseListMode => 'Danh sách câu';
 
   @override
-  String get paragraphModeTooltip => 'Paragraph mode';
+  String get paragraphModeTooltip => 'Chế độ đoạn văn';
 
   @override
-  String get verseListModeTooltip => 'Verse-list mode';
+  String get verseListModeTooltip => 'Chế độ danh sách câu';
 
   @override
   String get paragraphModeDescription =>
-      'Text flows continuously with indented paragraphs, like a printed Bible.';
+      'Văn bản liền mạch với các đoạn thụt đầu dòng, như trong Kinh Thánh in.';
 
   @override
   String get verseListModeDescription =>
-      'Each scripture paragraph begins on its own line, making verse groups easy to spot.';
+      'Mỗi đoạn Kinh Thánh bắt đầu trên một dòng riêng, giúp dễ nhận biết các nhóm câu.';
 
   @override
-  String get deleteBookmarkTooltip => 'Delete bookmark';
+  String get deleteBookmarkTooltip => 'Xóa dấu trang';
 
   @override
   String deleteBookmarkSemantics(Object reference) {
-    return 'Delete bookmark $reference';
+    return 'Xóa dấu trang $reference';
   }
 
   @override
   String sortBookmarksTooltip(Object sortOrder) {
-    return 'Sort: $sortOrder';
+    return 'Sắp xếp: $sortOrder';
   }
 
   @override
-  String get noBookmarksYet => 'No bookmarks yet.';
+  String get noBookmarksYet => 'Chưa có dấu trang nào.';
 
   @override
   String get noBookmarksYetHint =>
-      'Tap the bookmark icon while reading to save a location.';
+      'Chạm vào biểu tượng dấu trang khi đọc để lưu vị trí.';
 
   @override
   String bookmarkReferenceNavigationError(Object reference) {
-    return 'Could not navigate to $reference.';
+    return 'Không thể chuyển đến $reference.';
   }
 
   @override
   String themeCardSemantics(Object description, Object name, Object selected) {
-    return '$name theme$selected. $description';
+    return 'Giao diện $name$selected. $description';
   }
 
   @override
-  String get selectedThemeSuffix => ', currently selected';
+  String get selectedThemeSuffix => ', hiện được chọn';
 
   @override
-  String get customisableAccentDescription => 'Customisable accent colour.';
+  String get customisableAccentDescription => 'Màu nhấn có thể tùy chỉnh.';
 
   @override
-  String get fixedPaletteDescription => 'Fixed palette.';
+  String get fixedPaletteDescription => 'Bảng màu cố định.';
 
   @override
   String accentColourTitle(Object themeName) {
-    return 'Accent Colour — $themeName';
+    return 'Màu nhấn — $themeName';
   }
 
   @override
-  String get brightnessMode => 'BRIGHTNESS MODE';
+  String get brightnessMode => 'CHẾ ĐỘ ĐỘ SÁNG';
 
   @override
-  String get lightMode => 'Light mode';
+  String get lightMode => 'Chế độ sáng';
 
   @override
-  String get followSystemMode => 'Follow system mode';
+  String get followSystemMode => 'Theo hệ thống';
 
   @override
-  String get darkMode => 'Dark mode';
+  String get darkMode => 'Chế độ tối';
 
   @override
-  String get customColourPicker => 'Custom colour picker';
+  String get customColourPicker => 'Bewerker voor aangepaste kleuren';
 
   @override
-  String get customColourTooltip => 'Custom color…';
+  String get customColourTooltip => 'Màu tùy chỉnh…';
 
   @override
   String get couldNotLoadBooks =>
-      'Could not load the books list. Please try again.';
+      'Không thể tải danh sách sách. Vui lòng thử lại.';
 
   @override
   String chapterLabel(Object chapter) {
-    return 'Chapter $chapter';
+    return 'Chương $chapter';
   }
 
   @override
-  String get traditionalOrderBooks => 'Traditional order books';
+  String get traditionalOrderBooks => 'Các sách theo thứ tự truyền thống';
 
   @override
-  String get alphabeticalOrderBooks => 'Alphabetical order books';
+  String get alphabeticalOrderBooks => 'Các sách theo thứ tự bảng chữ cái';
 
   @override
   String get home => 'Trang chủ';
 
   @override
-  String get addBookmarkTooltip => 'Add bookmark';
+  String get addBookmarkTooltip => 'Thêm dấu trang';
 
   @override
-  String get chooseBookChapter => 'Choose book and chapter';
+  String get chooseBookChapter => 'Chọn sách và chương';
 
   @override
-  String get chooseVerse => 'Choose verse';
+  String get chooseVerse => 'Chọn câu';
 
   @override
-  String get bookChapterQuickNavigation => 'Book and chapter quick navigation';
+  String get bookChapterQuickNavigation =>
+      'Điều hướng nhanh đến sách và chương';
 
   @override
-  String get verseQuickNavigation => 'Verse quick navigation';
+  String get verseQuickNavigation => 'Điều hướng nhanh đến câu';
 
   @override
-  String get backToBooks => 'Back to books';
+  String get backToBooks => 'Quay lại danh sách sách';
 
   @override
-  String get selectBookTitle => 'Select Book';
+  String get selectBookTitle => 'Chọn sách';
 
   @override
   String selectChapterTitle(Object bookName) {
-    return 'Select Chapter ($bookName)';
+    return 'Chọn chương ($bookName)';
   }
 
   @override
   String chapterSelectionLabel(Object chapter) {
-    return 'Chapter $chapter';
+    return 'Chương $chapter';
   }
 
   @override
   String verseSelectionLabel(Object verse) {
-    return 'Verse $verse';
+    return 'Câu $verse';
   }
 
   @override
   String fullChapterReference(Object bookName, Object chapter) {
-    return 'Full chapter: $bookName $chapter';
+    return 'Toàn bộ chương: $bookName $chapter';
   }
 
   @override
@@ -465,34 +467,34 @@ class AppLocalizationsVi extends AppLocalizations {
   String get languageModuleInstalled => 'Đã cài đặt';
 
   @override
-  String get languageModulePending => 'Machine translation pending';
+  String get languageModulePending => 'Đang chờ bản dịch máy';
 
   @override
-  String get languageNoMatches => 'Không có ngôn ngữ phù hợp với tìm kiếm.';
+  String get languageNoMatches =>
+      'Không có ngôn ngữ nào khớp với nội dung tìm kiếm.';
 
   @override
   String get languageCatalogDescription =>
-      'Languages marked as installed work offline. Other languages will be added as machine-translated modules.';
+      'Các ngôn ngữ đã cài đặt hoạt động ngoại tuyến. Những ngôn ngữ khác sẽ được thêm sau dưới dạng mô-đun dịch máy.';
 
   @override
-  String get saveBookmarkSemantics => 'Save bookmark';
+  String get saveBookmarkSemantics => 'Lưu dấu trang';
 
   @override
-  String get couldNotLoadChapter =>
-      'Could not load the chapter. Please try again.';
+  String get couldNotLoadChapter => 'Không thể tải chương. Vui lòng thử lại.';
 
   @override
   String get couldNotLoadChapters =>
-      'Could not load chapters. Please try again.';
+      'Không thể tải các chương. Vui lòng thử lại.';
 
   @override
   String verseWithText(Object text, Object verse) {
-    return 'Verse $verse: $text';
+    return 'Câu $verse: $text';
   }
 
   @override
   String accentSwatchSemantics(Object name, Object selected) {
-    return '$name accent colour$selected';
+    return 'Mẫu màu nhấn $name$selected';
   }
 
   @override

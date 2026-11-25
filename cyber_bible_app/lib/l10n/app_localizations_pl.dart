@@ -18,8 +18,7 @@ class AppLocalizationsPl extends AppLocalizations {
   String get useSystemLanguage => 'Używaj języka systemowego';
 
   @override
-  String get useSystemLanguageSubtitle =>
-      'Match the device language by default.';
+  String get useSystemLanguageSubtitle => 'Domyślnie używaj języka urządzenia.';
 
   @override
   String get currentLanguage => 'Bieżący język';
@@ -73,21 +72,21 @@ class AppLocalizationsPl extends AppLocalizations {
   String get chooseTheme => 'Wybierz motyw';
 
   @override
-  String get customisableThemes => 'Customisable Themes';
+  String get customisableThemes => 'Motywy z możliwością dostosowania';
 
   @override
   String get customisableThemesSubtitle =>
-      'Tap a card to choose an accent colour. \"Classic White\" also supports Light, Dark and System modes.';
+      'Dotknij karty, aby wybrać kolor akcentu. „Classic White” obsługuje także tryby Jasny, Ciemny i Systemowy.';
 
   @override
-  String get setThemes => 'SET THEMES';
+  String get setThemes => 'USTAW MOTYWY';
 
   @override
   String get setThemesSubtitle =>
-      'Fixed, hand-crafted palettes. No customisation needed — just tap to apply.';
+      'Stałe, ręcznie przygotowane palety. Nie wymagają dostosowania — dotknij, aby zastosować.';
 
   @override
-  String get deleteBookmarkQuestion => 'Delete bookmark?';
+  String get deleteBookmarkQuestion => 'Usunąć zakładkę?';
 
   @override
   String get cancel => 'Anuluj';
@@ -96,22 +95,22 @@ class AppLocalizationsPl extends AppLocalizations {
   String get delete => 'Usuń';
 
   @override
-  String get bookmarkSaved => 'Bookmark saved';
+  String get bookmarkSaved => 'Zakładka została zapisana';
 
   @override
-  String get couldNotDeleteBookmark => 'Could not delete bookmark.';
+  String get couldNotDeleteBookmark => 'Nie udało się usunąć zakładki.';
 
   @override
   String couldNotNavigate(Object reference) {
-    return 'Could not navigate to $reference.';
+    return 'Nie można przejść do $reference.';
   }
 
   @override
-  String get pageNotFound => 'Page Not Found';
+  String get pageNotFound => 'Nie znaleziono strony';
 
   @override
   String noRouteDefined(Object routeName) {
-    return 'No route defined for \"$routeName\"';
+    return 'Nie zdefiniowano trasy dla „$routeName”';
   }
 
   @override
@@ -121,34 +120,35 @@ class AppLocalizationsPl extends AppLocalizations {
   String get spanish => 'Español';
 
   @override
-  String get systemDefault => 'System default';
+  String get systemDefault => 'Domyślne ustawienie systemowe';
 
   @override
-  String get languageStatusEnglish => 'English fallback active';
+  String get languageStatusEnglish => 'Aktywny język zapasowy: angielski';
 
   @override
-  String get languageStatusSystem => 'Using system language';
+  String get languageStatusSystem => 'Używany jest język systemowy';
 
   @override
   String languageStatusSelected(Object languageName) {
-    return 'Selected language: $languageName';
+    return 'Wybrany język: $languageName';
   }
 
   @override
   String get themeLabel => 'Motyw';
 
   @override
-  String get notFoundTitle => 'Page Not Found';
+  String get notFoundTitle => 'Nie znaleziono strony';
 
   @override
-  String get loadingCyberBible => 'Loading Cyber Bible...';
+  String get loadingCyberBible => 'Ładowanie Cyber Bible…';
 
   @override
   String get couldNotOpenDatabase =>
-      'Could not open the Bible database. Please try again.';
+      'Nie można otworzyć bazy Biblii. Spróbuj ponownie.';
 
   @override
-  String get homeTagline => 'A free and open source Bible study app';
+  String get homeTagline =>
+      'Bezpłatna aplikacja open source do studiowania Biblii';
 
   @override
   String get readTheBible => 'Czytaj Biblię';
@@ -160,38 +160,39 @@ class AppLocalizationsPl extends AppLocalizations {
   String get themeChoose => 'Wybierz motyw';
 
   @override
-  String get customThemes => 'Customisable Themes';
+  String get customThemes => 'Motywy niestandardowe';
 
   @override
   String get customThemesSubtitle =>
-      'Tap a card to choose an accent colour. \"Classic White\" also supports Light, Dark and System modes.';
+      'Dotknij karty, aby wybrać kolor akcentu. „Classic White” obsługuje także tryby Jasny, Ciemny i Systemowy.';
 
   @override
-  String get setThemesLabel => 'SET THEMES';
+  String get setThemesLabel => 'USTAW MOTYWY';
 
   @override
-  String get deleteBookmarkDialog => 'Delete bookmark?';
+  String get deleteBookmarkDialog => 'Usunąć zakładkę?';
 
   @override
   String removeBookmarkMessage(Object details, Object reference) {
-    return 'Remove \"$reference\"$details?\n\nThis cannot be undone.';
+    return 'Usunąć „$reference”$details?\n\nTej operacji nie można cofnąć.';
   }
 
   @override
   String get couldNotLoadBookmarks =>
-      'Could not load bookmarks. Please try again.';
+      'Nie udało się wczytać zakładek. Spróbuj ponownie.';
 
   @override
-  String get bookmarkSavedMessage => 'Bookmark saved';
+  String get bookmarkSavedMessage => 'Zakładka została zapisana';
 
   @override
-  String get couldNotSaveBookmark => 'Could not save bookmark.';
+  String get couldNotSaveBookmark => 'Nie udało się zapisać zakładki.';
 
   @override
-  String get noBookmarksMatchFilter => 'No bookmarks match this filter.';
+  String get noBookmarksMatchFilter =>
+      'Żadna zakładka nie pasuje do tego filtra.';
 
   @override
-  String get clearFilter => 'Clear filter';
+  String get clearFilter => 'Wyczyść filtr';
 
   @override
   String get traditionalOrderLabel => 'Kolejność tradycyjna';
@@ -225,22 +226,22 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String verseTitle(Object verse) {
-    return 'Verse $verse';
+    return 'Werset $verse';
   }
 
   @override
   String chapterTitle(Object chapter) {
-    return 'Chapter $chapter';
+    return 'Rozdział $chapter';
   }
 
   @override
-  String get switchToFullChapter => 'Switch to full chapter bookmark';
+  String get switchToFullChapter => 'Przełącz na zakładkę całego rozdziału';
 
   @override
-  String get bookmarkSheetCancel => 'Cancel, close bookmark sheet';
+  String get bookmarkSheetCancel => 'Anuluj i zamknij panel zakładek';
 
   @override
-  String get pickCustomAccent => 'Choose a custom accent';
+  String get pickCustomAccent => 'Wybierz własny kolor akcentu';
 
   @override
   String get apply => 'Zastosuj';
@@ -261,16 +262,16 @@ class AppLocalizationsPl extends AppLocalizations {
   String get selectBook => 'Wybierz księgę';
 
   @override
-  String get bookmarkFilterAll => 'All';
+  String get bookmarkFilterAll => 'Wszystkie';
 
   @override
-  String get bookmarkFilterUnlabeled => 'Unlabeled';
+  String get bookmarkFilterUnlabeled => 'Bez etykiety';
 
   @override
-  String get bookmarkSortRecent => 'Recent first';
+  String get bookmarkSortRecent => 'Od najnowszych';
 
   @override
-  String get bookmarkSortCanonical => 'Canonical order';
+  String get bookmarkSortCanonical => 'Kolejność kanoniczna';
 
   @override
   String get chapterRetry => 'Ponów';
@@ -284,32 +285,33 @@ class AppLocalizationsPl extends AppLocalizations {
   }
 
   @override
-  String get fontSizeSlider => 'Font size slider';
+  String get fontSizeSlider => 'Suwak rozmiaru czcionki';
 
   @override
-  String get fontSizeSliderHint => 'Swipe to adjust from 12 to 28';
+  String get fontSizeSliderHint => 'Przesuń, aby ustawić rozmiar od 12 do 28';
 
   @override
   String get fontPreview =>
-      '\"In the beginning God created the heavens and the earth.\" — Gen 1:1';
+      '„Na początku Bóg stworzył niebo i ziemię”. — Rdz 1,1';
 
   @override
   String get showVerseNumbersSubtitle =>
-      'Show verse number superscripts in the reading screen.';
+      'Pokazuj numery wersetów jako indeksy górne na ekranie czytania.';
 
   @override
   String get showSectionHeadingsSubtitle =>
-      'Show section and Psalm headings between passages.';
+      'Pokazuj nagłówki sekcji i Psalmów między fragmentami.';
 
   @override
   String get wordsOfChristSubtitle =>
-      'Show Jesus\' words in red. Disable for a single text color.';
+      'Pokazuj słowa Jezusa na czerwono. Wyłącz, aby używać jednego koloru tekstu.';
 
   @override
-  String get verseFormatTitle => 'Verse Format';
+  String get verseFormatTitle => 'Format wersetów';
 
   @override
-  String get verseFormatSubtitle => 'Choose how scripture text is laid out.';
+  String get verseFormatSubtitle =>
+      'Wybierz sposób układu tekstu Pisma Świętego.';
 
   @override
   String get paragraphMode => 'Akapit';
@@ -318,138 +320,139 @@ class AppLocalizationsPl extends AppLocalizations {
   String get verseListMode => 'Lista wersetów';
 
   @override
-  String get paragraphModeTooltip => 'Paragraph mode';
+  String get paragraphModeTooltip => 'Tryb akapitów';
 
   @override
-  String get verseListModeTooltip => 'Verse-list mode';
+  String get verseListModeTooltip => 'Tryb listy wersetów';
 
   @override
   String get paragraphModeDescription =>
-      'Text flows continuously with indented paragraphs, like a printed Bible.';
+      'Tekst płynie ciągle z wciętymi akapitami, jak w drukowanej Biblii.';
 
   @override
   String get verseListModeDescription =>
-      'Each scripture paragraph begins on its own line, making verse groups easy to spot.';
+      'Każdy akapit Pisma Świętego zaczyna się w osobnym wierszu, co ułatwia rozpoznawanie grup wersetów.';
 
   @override
-  String get deleteBookmarkTooltip => 'Delete bookmark';
+  String get deleteBookmarkTooltip => 'Usuń zakładkę';
 
   @override
   String deleteBookmarkSemantics(Object reference) {
-    return 'Delete bookmark $reference';
+    return 'Usuń zakładkę $reference';
   }
 
   @override
   String sortBookmarksTooltip(Object sortOrder) {
-    return 'Sort: $sortOrder';
+    return 'Sortuj: $sortOrder';
   }
 
   @override
-  String get noBookmarksYet => 'No bookmarks yet.';
+  String get noBookmarksYet => 'Nie ma jeszcze żadnych zakładek.';
 
   @override
   String get noBookmarksYetHint =>
-      'Tap the bookmark icon while reading to save a location.';
+      'Podczas czytania dotknij ikony zakładki, aby zapisać miejsce.';
 
   @override
   String bookmarkReferenceNavigationError(Object reference) {
-    return 'Could not navigate to $reference.';
+    return 'Nie można przejść do $reference.';
   }
 
   @override
   String themeCardSemantics(Object description, Object name, Object selected) {
-    return '$name theme$selected. $description';
+    return 'Motyw $name$selected. $description';
   }
 
   @override
-  String get selectedThemeSuffix => ', currently selected';
+  String get selectedThemeSuffix => ', obecnie wybrany';
 
   @override
-  String get customisableAccentDescription => 'Customisable accent colour.';
+  String get customisableAccentDescription => 'Dostosowywalny kolor akcentu.';
 
   @override
-  String get fixedPaletteDescription => 'Fixed palette.';
+  String get fixedPaletteDescription => 'Stała paleta.';
 
   @override
   String accentColourTitle(Object themeName) {
-    return 'Accent Colour — $themeName';
+    return 'Kolor akcentu — $themeName';
   }
 
   @override
-  String get brightnessMode => 'BRIGHTNESS MODE';
+  String get brightnessMode => 'TRYB JASNOŚCI';
 
   @override
-  String get lightMode => 'Light mode';
+  String get lightMode => 'Tryb jasny';
 
   @override
-  String get followSystemMode => 'Follow system mode';
+  String get followSystemMode => 'Zgodnie z systemem';
 
   @override
-  String get darkMode => 'Dark mode';
+  String get darkMode => 'Tryb ciemny';
 
   @override
-  String get customColourPicker => 'Custom colour picker';
+  String get customColourPicker => 'Wybór własnego koloru';
 
   @override
-  String get customColourTooltip => 'Custom color…';
+  String get customColourTooltip => 'Kolor niestandardowy…';
 
   @override
   String get couldNotLoadBooks =>
-      'Could not load the books list. Please try again.';
+      'Nie udało się wczytać listy ksiąg. Spróbuj ponownie.';
 
   @override
   String chapterLabel(Object chapter) {
-    return 'Chapter $chapter';
+    return 'Rozdział $chapter';
   }
 
   @override
-  String get traditionalOrderBooks => 'Traditional order books';
+  String get traditionalOrderBooks => 'Księgi w tradycyjnej kolejności';
 
   @override
-  String get alphabeticalOrderBooks => 'Alphabetical order books';
+  String get alphabeticalOrderBooks => 'Księgi w kolejności alfabetycznej';
 
   @override
   String get home => 'Strona główna';
 
   @override
-  String get addBookmarkTooltip => 'Add bookmark';
+  String get addBookmarkTooltip => 'Dodaj zakładkę';
 
   @override
-  String get chooseBookChapter => 'Choose book and chapter';
+  String get chooseBookChapter => 'Wybierz księgę i rozdział';
 
   @override
-  String get chooseVerse => 'Choose verse';
+  String get chooseVerse => 'Wybierz werset';
 
   @override
-  String get bookChapterQuickNavigation => 'Book and chapter quick navigation';
+  String get bookChapterQuickNavigation =>
+      'Szybka nawigacja do księgi i rozdziału';
 
   @override
-  String get verseQuickNavigation => 'Verse quick navigation';
+  String get verseQuickNavigation => 'Szybka nawigacja do wersetu';
 
   @override
-  String get backToBooks => 'Back to books';
+  String get backToBooks => 'Wróć do ksiąg';
 
   @override
-  String get selectBookTitle => 'Select Book';
+  String get selectBookTitle => 'Wybierz księgę';
 
   @override
   String selectChapterTitle(Object bookName) {
-    return 'Select Chapter ($bookName)';
+    return 'Wybierz rozdział ($bookName)';
   }
 
   @override
   String chapterSelectionLabel(Object chapter) {
-    return 'Chapter $chapter';
+    return 'Rozdział $chapter';
   }
 
   @override
   String verseSelectionLabel(Object verse) {
-    return 'Verse $verse';
+    return 'Werset $verse';
   }
 
   @override
   String fullChapterReference(Object bookName, Object chapter) {
-    return 'Full chapter: $bookName $chapter';
+    return 'Cały rozdział: $bookName $chapter';
   }
 
   @override
@@ -462,37 +465,37 @@ class AppLocalizationsPl extends AppLocalizations {
   String get languageSearchHint => 'Szukaj języków';
 
   @override
-  String get languageModuleInstalled => 'Zainstalowano';
+  String get languageModuleInstalled => 'Zainstalowany';
 
   @override
-  String get languageModulePending => 'Machine translation pending';
+  String get languageModulePending => 'Oczekuje na tłumaczenie maszynowe';
 
   @override
-  String get languageNoMatches => 'Brak języków pasujących do wyszukiwania.';
+  String get languageNoMatches => 'Żaden język nie pasuje do wyszukiwania.';
 
   @override
   String get languageCatalogDescription =>
-      'Languages marked as installed work offline. Other languages will be added as machine-translated modules.';
+      'Zainstalowane języki działają offline. Pozostałe języki zostaną później dodane jako moduły tłumaczenia maszynowego.';
 
   @override
-  String get saveBookmarkSemantics => 'Save bookmark';
+  String get saveBookmarkSemantics => 'Zapisz zakładkę';
 
   @override
   String get couldNotLoadChapter =>
-      'Could not load the chapter. Please try again.';
+      'Nie udało się wczytać rozdziału. Spróbuj ponownie.';
 
   @override
   String get couldNotLoadChapters =>
-      'Could not load chapters. Please try again.';
+      'Nie udało się wczytać rozdziałów. Spróbuj ponownie.';
 
   @override
   String verseWithText(Object text, Object verse) {
-    return 'Verse $verse: $text';
+    return 'Werset $verse: $text';
   }
 
   @override
   String accentSwatchSemantics(Object name, Object selected) {
-    return '$name accent colour$selected';
+    return 'Próbka koloru akcentu $name$selected';
   }
 
   @override

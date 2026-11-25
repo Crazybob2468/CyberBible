@@ -12,6 +12,61 @@ import 'package:cyber_bible_app/l10n/localization_helpers.dart';
 import 'package:cyber_bible_app/services/settings_service.dart';
 
 void main() {
+  // Pending draft ARBs remain discoverable for review but are not generated
+  // into runtime localization classes until their content is ready.
+  test('pending locales are not included in generated runtime localizations', () {
+    const pendingCodes = <String>[
+      'agq',
+      'blo',
+      'mas',
+      'mer',
+      'mgh',
+      'nd',
+      'nnh',
+      'nqo',
+      'chr',
+      'csw',
+      'lkt',
+      'ii',
+      'yav',
+      'kkj',
+      'khq',
+      'ses',
+      'twq',
+      'jgo',
+      'ksf',
+      'kde',
+      'mgo',
+      'vun',
+      'guz',
+      'vmw',
+      'xog',
+      'ebu',
+      'ksb',
+      'lag',
+      'jmc',
+      'naq',
+      'teo',
+      'dua',
+      'dyo',
+      'rof',
+      'rwk',
+      'raj',
+      'kxv',
+      'xnr',
+      'prg',
+      'wae',
+      'zgh',
+    ];
+    final supportedCodes = AppLocalizations.supportedLocales
+        .map((locale) => locale.languageCode)
+        .toSet();
+
+    for (final code in pendingCodes) {
+      expect(supportedCodes, isNot(contains(code)), reason: code);
+    }
+  });
+
   // Ossetian uses Cyrillic ӕ; the Latin æ in this label was accidental.
   test('Ossetian pending status uses the Ossetian Cyrillic character', () {
     expect(
@@ -74,11 +129,6 @@ void main() {
 
   testWidgets('AI-generated locales reach MaterialApp', (tester) async {
     for (final code in <String>[
-      'tr',
-      'uk',
-      'vi',
-      'pl',
-      'nl',
       'af',
       'am',
       'ca',
@@ -178,45 +228,20 @@ void main() {
       'dav',
       'dje',
       'dsb',
-      'dua',
-      'dyo',
-      'ebu',
-      'guz',
       'hsb',
-      'ii',
-      'jgo',
-      'jmc',
-      'kde',
       'kgp',
-      'khq',
-      'kkj',
       'kl',
       'kok',
       'ks',
-      'ksb',
-      'ksf',
-      'kxv',
-      'lag',
-      'mgo',
       'mni',
       'mzn',
-      'naq',
-      'pcm',
-      'prg',
-      'raj',
-      'rof',
-      'rwk',
-      'ses',
       'syr',
-      'teo',
-      'twq',
-      'vmw',
-      'vun',
-      'wae',
-      'xnr',
-      'xog',
-      'yav',
-      'zgh',
+      'nl',
+      'pl',
+      'pcm',
+      'tr',
+      'uk',
+      'vi',
     ]) {
       await SettingsService.instance.setUseSystemLanguage(false);
       await SettingsService.instance.setSelectedLanguageCode(code);

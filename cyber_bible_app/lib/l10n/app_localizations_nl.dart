@@ -19,7 +19,7 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get useSystemLanguageSubtitle =>
-      'Match the device language by default.';
+      'Stel standaard de taal van je apparaat in.';
 
   @override
   String get currentLanguage => 'Huidige taal';
@@ -73,21 +73,21 @@ class AppLocalizationsNl extends AppLocalizations {
   String get chooseTheme => 'Kies thema';
 
   @override
-  String get customisableThemes => 'Customisable Themes';
+  String get customisableThemes => 'Aanpasbare thema’s';
 
   @override
   String get customisableThemesSubtitle =>
-      'Tap a card to choose an accent colour. \"Classic White\" also supports Light, Dark and System modes.';
+      'Tik op een kaart om een accentkleur te kiezen. „Classic White” ondersteunt ook de modi Licht, Donker en Systeem.';
 
   @override
-  String get setThemes => 'SET THEMES';
+  String get setThemes => 'MOTYWEN INSTELLEN';
 
   @override
   String get setThemesSubtitle =>
-      'Fixed, hand-crafted palettes. No customisation needed — just tap to apply.';
+      'Vaste, met de hand gemaakte paletten. Aanpassen is niet nodig — tik om toe te passen.';
 
   @override
-  String get deleteBookmarkQuestion => 'Delete bookmark?';
+  String get deleteBookmarkQuestion => 'Bladwijzer verwijderen?';
 
   @override
   String get cancel => 'Annuleren';
@@ -96,22 +96,23 @@ class AppLocalizationsNl extends AppLocalizations {
   String get delete => 'Verwijderen';
 
   @override
-  String get bookmarkSaved => 'Bookmark saved';
+  String get bookmarkSaved => 'Bladwijzer opgeslagen';
 
   @override
-  String get couldNotDeleteBookmark => 'Could not delete bookmark.';
+  String get couldNotDeleteBookmark =>
+      'De bladwijzer kon niet worden verwijderd.';
 
   @override
   String couldNotNavigate(Object reference) {
-    return 'Could not navigate to $reference.';
+    return 'Kon niet navigeren naar $reference.';
   }
 
   @override
-  String get pageNotFound => 'Page Not Found';
+  String get pageNotFound => 'Pagina niet gevonden';
 
   @override
   String noRouteDefined(Object routeName) {
-    return 'No route defined for \"$routeName\"';
+    return 'Geen route gedefinieerd voor „$routeName”';
   }
 
   @override
@@ -121,34 +122,34 @@ class AppLocalizationsNl extends AppLocalizations {
   String get spanish => 'Español';
 
   @override
-  String get systemDefault => 'System default';
+  String get systemDefault => 'Systeemstandaard';
 
   @override
-  String get languageStatusEnglish => 'English fallback active';
+  String get languageStatusEnglish => 'Engelse terugvaltaal actief';
 
   @override
-  String get languageStatusSystem => 'Using system language';
+  String get languageStatusSystem => 'Systeemtaal wordt gebruikt';
 
   @override
   String languageStatusSelected(Object languageName) {
-    return 'Selected language: $languageName';
+    return 'Geselecteerde taal: $languageName';
   }
 
   @override
   String get themeLabel => 'Thema';
 
   @override
-  String get notFoundTitle => 'Page Not Found';
+  String get notFoundTitle => 'Pagina niet gevonden';
 
   @override
-  String get loadingCyberBible => 'Loading Cyber Bible...';
+  String get loadingCyberBible => 'Cyber Bible wordt geladen…';
 
   @override
   String get couldNotOpenDatabase =>
-      'Could not open the Bible database. Please try again.';
+      'De Bijbeldatabase kon niet worden geopend. Probeer het opnieuw.';
 
   @override
-  String get homeTagline => 'A free and open source Bible study app';
+  String get homeTagline => 'Een gratis en open source Bijbelstudie-app';
 
   @override
   String get readTheBible => 'Lees de Bijbel';
@@ -160,38 +161,40 @@ class AppLocalizationsNl extends AppLocalizations {
   String get themeChoose => 'Kies thema';
 
   @override
-  String get customThemes => 'Customisable Themes';
+  String get customThemes => 'Aanpasbare thema’s';
 
   @override
   String get customThemesSubtitle =>
-      'Tap a card to choose an accent colour. \"Classic White\" also supports Light, Dark and System modes.';
+      'Tik op een kaart om een accentkleur te kiezen. „Classic White” ondersteunt ook de modi Licht, Donker en Systeem.';
 
   @override
-  String get setThemesLabel => 'SET THEMES';
+  String get setThemesLabel => 'MOTYWEN INSTELLEN';
 
   @override
-  String get deleteBookmarkDialog => 'Delete bookmark?';
+  String get deleteBookmarkDialog => 'Bladwijzer verwijderen?';
 
   @override
   String removeBookmarkMessage(Object details, Object reference) {
-    return 'Remove \"$reference\"$details?\n\nThis cannot be undone.';
+    return '„$reference”$details verwijderen?\n\nDit kan niet ongedaan worden gemaakt.';
   }
 
   @override
   String get couldNotLoadBookmarks =>
-      'Could not load bookmarks. Please try again.';
+      'De bladwijzers konden niet worden geladen. Probeer het opnieuw.';
 
   @override
-  String get bookmarkSavedMessage => 'Bookmark saved';
+  String get bookmarkSavedMessage => 'Bladwijzer opgeslagen';
 
   @override
-  String get couldNotSaveBookmark => 'Could not save bookmark.';
+  String get couldNotSaveBookmark =>
+      'De bladwijzer kon niet worden opgeslagen.';
 
   @override
-  String get noBookmarksMatchFilter => 'No bookmarks match this filter.';
+  String get noBookmarksMatchFilter =>
+      'Geen bladwijzers komen overeen met dit filter.';
 
   @override
-  String get clearFilter => 'Clear filter';
+  String get clearFilter => 'Filter wissen';
 
   @override
   String get traditionalOrderLabel => 'Traditionele volgorde';
@@ -225,22 +228,23 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String verseTitle(Object verse) {
-    return 'Verse $verse';
+    return 'Vers $verse';
   }
 
   @override
   String chapterTitle(Object chapter) {
-    return 'Chapter $chapter';
+    return 'Hoofdstuk $chapter';
   }
 
   @override
-  String get switchToFullChapter => 'Switch to full chapter bookmark';
+  String get switchToFullChapter =>
+      'Overschakelen naar bladwijzer voor volledig hoofdstuk';
 
   @override
-  String get bookmarkSheetCancel => 'Cancel, close bookmark sheet';
+  String get bookmarkSheetCancel => 'Annuleren en bladwijzerpaneel sluiten';
 
   @override
-  String get pickCustomAccent => 'Choose a custom accent';
+  String get pickCustomAccent => 'Aangepaste accentkleur kiezen';
 
   @override
   String get apply => 'Toepassen';
@@ -261,16 +265,16 @@ class AppLocalizationsNl extends AppLocalizations {
   String get selectBook => 'Kies een boek';
 
   @override
-  String get bookmarkFilterAll => 'All';
+  String get bookmarkFilterAll => 'Alle';
 
   @override
-  String get bookmarkFilterUnlabeled => 'Unlabeled';
+  String get bookmarkFilterUnlabeled => 'Zonder label';
 
   @override
-  String get bookmarkSortRecent => 'Recent first';
+  String get bookmarkSortRecent => 'Nieuwste eerst';
 
   @override
-  String get bookmarkSortCanonical => 'Canonical order';
+  String get bookmarkSortCanonical => 'Bijbelvolgorde';
 
   @override
   String get chapterRetry => 'Opnieuw proberen';
@@ -284,32 +288,34 @@ class AppLocalizationsNl extends AppLocalizations {
   }
 
   @override
-  String get fontSizeSlider => 'Font size slider';
+  String get fontSizeSlider => 'Schuifregelaar voor lettergrootte';
 
   @override
-  String get fontSizeSliderHint => 'Swipe to adjust from 12 to 28';
+  String get fontSizeSliderHint =>
+      'Veeg om de grootte aan te passen van 12 tot 28';
 
   @override
   String get fontPreview =>
-      '\"In the beginning God created the heavens and the earth.\" — Gen 1:1';
+      '„In het begin schiep God de hemel en de aarde.” — Gen 1:1';
 
   @override
   String get showVerseNumbersSubtitle =>
-      'Show verse number superscripts in the reading screen.';
+      'Toon superscript versnummers in het leesscherm.';
 
   @override
   String get showSectionHeadingsSubtitle =>
-      'Show section and Psalm headings between passages.';
+      'Toon tussen passages de koppen van gedeelten en Psalmen.';
 
   @override
   String get wordsOfChristSubtitle =>
-      'Show Jesus\' words in red. Disable for a single text color.';
+      'Toon de woorden van Jezus in rood. Schakel dit uit voor één tekstkleur.';
 
   @override
-  String get verseFormatTitle => 'Verse Format';
+  String get verseFormatTitle => 'Versnotatie';
 
   @override
-  String get verseFormatSubtitle => 'Choose how scripture text is laid out.';
+  String get verseFormatSubtitle =>
+      'Kies hoe de Bijbeltekst wordt weergegeven.';
 
   @override
   String get paragraphMode => 'Alinea';
@@ -318,138 +324,139 @@ class AppLocalizationsNl extends AppLocalizations {
   String get verseListMode => 'Verslijst';
 
   @override
-  String get paragraphModeTooltip => 'Paragraph mode';
+  String get paragraphModeTooltip => 'Alineamodus';
 
   @override
-  String get verseListModeTooltip => 'Verse-list mode';
+  String get verseListModeTooltip => 'Verslijstmodus';
 
   @override
   String get paragraphModeDescription =>
-      'Text flows continuously with indented paragraphs, like a printed Bible.';
+      'De tekst loopt door met ingesprongen alinea’s, zoals in een gedrukte Bijbel.';
 
   @override
   String get verseListModeDescription =>
-      'Each scripture paragraph begins on its own line, making verse groups easy to spot.';
+      'Elke alinea uit de Bijbel begint op een eigen regel, zodat versgroepen makkelijk te herkennen zijn.';
 
   @override
-  String get deleteBookmarkTooltip => 'Delete bookmark';
+  String get deleteBookmarkTooltip => 'Bladwijzer verwijderen';
 
   @override
   String deleteBookmarkSemantics(Object reference) {
-    return 'Delete bookmark $reference';
+    return 'Bladwijzer $reference verwijderen';
   }
 
   @override
   String sortBookmarksTooltip(Object sortOrder) {
-    return 'Sort: $sortOrder';
+    return 'Sorteren: $sortOrder';
   }
 
   @override
-  String get noBookmarksYet => 'No bookmarks yet.';
+  String get noBookmarksYet => 'Nog geen bladwijzers.';
 
   @override
   String get noBookmarksYetHint =>
-      'Tap the bookmark icon while reading to save a location.';
+      'Tik tijdens het lezen op het bladwijzerpictogram om een locatie op te slaan.';
 
   @override
   String bookmarkReferenceNavigationError(Object reference) {
-    return 'Could not navigate to $reference.';
+    return 'Kon niet navigeren naar $reference.';
   }
 
   @override
   String themeCardSemantics(Object description, Object name, Object selected) {
-    return '$name theme$selected. $description';
+    return 'Thema $name$selected. $description';
   }
 
   @override
-  String get selectedThemeSuffix => ', currently selected';
+  String get selectedThemeSuffix => ', momenteel geselecteerd';
 
   @override
-  String get customisableAccentDescription => 'Customisable accent colour.';
+  String get customisableAccentDescription => 'Aanpasbare accentkleur.';
 
   @override
-  String get fixedPaletteDescription => 'Fixed palette.';
+  String get fixedPaletteDescription => 'Vast kleurenpalet.';
 
   @override
   String accentColourTitle(Object themeName) {
-    return 'Accent Colour — $themeName';
+    return 'Accentkleur — $themeName';
   }
 
   @override
-  String get brightnessMode => 'BRIGHTNESS MODE';
+  String get brightnessMode => 'HELDERHEIDSMODUS';
 
   @override
-  String get lightMode => 'Light mode';
+  String get lightMode => 'Lichte modus';
 
   @override
-  String get followSystemMode => 'Follow system mode';
+  String get followSystemMode => 'Systeem volgen';
 
   @override
-  String get darkMode => 'Dark mode';
+  String get darkMode => 'Donkere modus';
 
   @override
-  String get customColourPicker => 'Custom colour picker';
+  String get customColourPicker => 'Aangepaste kleurenkiezer';
 
   @override
-  String get customColourTooltip => 'Custom color…';
+  String get customColourTooltip => 'Aangepaste kleur…';
 
   @override
   String get couldNotLoadBooks =>
-      'Could not load the books list. Please try again.';
+      'De boekenlijst kon niet worden geladen. Probeer het opnieuw.';
 
   @override
   String chapterLabel(Object chapter) {
-    return 'Chapter $chapter';
+    return 'Hoofdstuk $chapter';
   }
 
   @override
-  String get traditionalOrderBooks => 'Traditional order books';
+  String get traditionalOrderBooks => 'Boeken in traditionele volgorde';
 
   @override
-  String get alphabeticalOrderBooks => 'Alphabetical order books';
+  String get alphabeticalOrderBooks => 'Boeken in alfabetische volgorde';
 
   @override
-  String get home => 'Home';
+  String get home => 'Startpagina';
 
   @override
-  String get addBookmarkTooltip => 'Add bookmark';
+  String get addBookmarkTooltip => 'Bladwijzer toevoegen';
 
   @override
-  String get chooseBookChapter => 'Choose book and chapter';
+  String get chooseBookChapter => 'Kies een boek en hoofdstuk';
 
   @override
-  String get chooseVerse => 'Choose verse';
+  String get chooseVerse => 'Kies een vers';
 
   @override
-  String get bookChapterQuickNavigation => 'Book and chapter quick navigation';
+  String get bookChapterQuickNavigation =>
+      'Snel navigeren naar boek en hoofdstuk';
 
   @override
-  String get verseQuickNavigation => 'Verse quick navigation';
+  String get verseQuickNavigation => 'Snel navigeren naar een vers';
 
   @override
-  String get backToBooks => 'Back to books';
+  String get backToBooks => 'Terug naar boeken';
 
   @override
-  String get selectBookTitle => 'Select Book';
+  String get selectBookTitle => 'Boek selecteren';
 
   @override
   String selectChapterTitle(Object bookName) {
-    return 'Select Chapter ($bookName)';
+    return 'Hoofdstuk selecteren ($bookName)';
   }
 
   @override
   String chapterSelectionLabel(Object chapter) {
-    return 'Chapter $chapter';
+    return 'Hoofdstuk $chapter';
   }
 
   @override
   String verseSelectionLabel(Object verse) {
-    return 'Verse $verse';
+    return 'Vers $verse';
   }
 
   @override
   String fullChapterReference(Object bookName, Object chapter) {
-    return 'Full chapter: $bookName $chapter';
+    return 'Heel hoofdstuk: $bookName $chapter';
   }
 
   @override
@@ -465,7 +472,7 @@ class AppLocalizationsNl extends AppLocalizations {
   String get languageModuleInstalled => 'Geïnstalleerd';
 
   @override
-  String get languageModulePending => 'Machine translation pending';
+  String get languageModulePending => 'Machinevertaling in afwachting';
 
   @override
   String get languageNoMatches =>
@@ -473,27 +480,27 @@ class AppLocalizationsNl extends AppLocalizations {
 
   @override
   String get languageCatalogDescription =>
-      'Languages marked as installed work offline. Other languages will be added as machine-translated modules.';
+      'Geïnstalleerde talen werken offline. Andere talen worden later als machinevertaalde modules toegevoegd.';
 
   @override
-  String get saveBookmarkSemantics => 'Save bookmark';
+  String get saveBookmarkSemantics => 'Bladwijzer opslaan';
 
   @override
   String get couldNotLoadChapter =>
-      'Could not load the chapter. Please try again.';
+      'Het hoofdstuk kon niet worden geladen. Probeer het opnieuw.';
 
   @override
   String get couldNotLoadChapters =>
-      'Could not load chapters. Please try again.';
+      'De hoofdstukken konden niet worden geladen. Probeer het opnieuw.';
 
   @override
   String verseWithText(Object text, Object verse) {
-    return 'Verse $verse: $text';
+    return 'Vers $verse: $text';
   }
 
   @override
   String accentSwatchSemantics(Object name, Object selected) {
-    return '$name accent colour$selected';
+    return 'Accentkleur $name$selected';
   }
 
   @override
