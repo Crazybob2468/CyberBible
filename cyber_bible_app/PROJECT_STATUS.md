@@ -92,6 +92,8 @@ All 225 AOSP base-language codes are represented in the catalog, but
 regional/script variants remain future work. See the
 [Phase 1.17 localization report](docs/phase-1.17-localization-report.md) for
 decisions, detailed coverage, known issues, and verification.
+Current validation: 275 tests pass, `flutter analyze` is clean, and the Web
+build succeeds.
 
 The rest of this status document retains the previous step-by-step completion
 history and the development roadmap so prior implementation context remains
@@ -122,7 +124,7 @@ Step 1.16 ✅ COMPLETE. The session after Step 1.16 resolved four user-reported 
 `customWidgetBuilder` in `flutter_widget_from_html_core` ALWAYS creates `WidgetBit.block()` — no CSS override is possible. The only correct approach for verse-position markers is `<div data-cbv="N">` placed as a **block sibling before** each `<p>`, never inside one.
 
 ### Key numbers
-- **273 tests passing**, `flutter analyze` → No issues.
+- **Step 1.16 validation:** 273 tests passed and `flutter analyze` reported no issues.
 
 Step 1.17 localization foundation is complete. Remaining localization follow-up
 is tracked in the report above. The next numbered roadmap task is Phase 2,

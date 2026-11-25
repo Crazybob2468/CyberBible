@@ -144,7 +144,7 @@ and activating the six best-effort drafts noted above:
 - The searchable catalog contains 226 entries; the installed-module registry contains 185.
 - AOSP base-language catalog audit: 225 of 225 represented, including pending entries.
 - No active locale reuses another active locale's complete message catalog.
-- `flutter test`: 274 tests passed.
+- `flutter test`: 275 tests passed.
 - `flutter analyze`: no issues.
 - `flutter build web`: succeeded.
 - `git diff --check`: clean.

@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cyber_bible_app/app.dart';
 import 'package:cyber_bible_app/l10n/app_localizations.dart';
 import 'package:cyber_bible_app/l10n/app_localizations_os.dart';
+import 'package:cyber_bible_app/l10n/global_localizations_fallback.dart';
 import 'package:cyber_bible_app/l10n/localization_helpers.dart';
 import 'package:cyber_bible_app/services/settings_service.dart';
 
@@ -306,6 +307,43 @@ void main() {
 
     final context = tester.element(find.byType(Scaffold).first);
     expect(MaterialLocalizations.of(context).okButtonLabel, 'Iawn');
+  });
+
+  testWidgets('Syriac uses English framework strings with RTL direction', (
+    tester,
+  ) async {
+    late String okButtonLabel;
+    late TextDirection widgetTextDirection;
+    late TextDirection layoutDirection;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('syr'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: <LocalizationsDelegate<dynamic>>[
+          AppLocalizations.delegate,
+          const MaterialLocalizationsFallbackDelegate(),
+          const WidgetsLocalizationsFallbackDelegate(),
+          const CupertinoLocalizationsFallbackDelegate(),
+          ...AppLocalizations.localizationsDelegates.skip(1),
+        ],
+        home: Builder(
+          builder: (context) {
+            okButtonLabel = MaterialLocalizations.of(context).okButtonLabel;
+            widgetTextDirection = WidgetsLocalizations.of(
+              context,
+            ).textDirection;
+            layoutDirection = Directionality.of(context);
+            return const SizedBox.shrink();
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(okButtonLabel, 'OK');
+    expect(widgetTextDirection, TextDirection.rtl);
+    expect(layoutDirection, TextDirection.rtl);
   });
 
   testWidgets('unsupported isolated locale falls back to English', (tester) async {

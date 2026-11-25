@@ -116,7 +116,8 @@ const Set<String> _frameworkFallbackLocaleCodes = <String>{
 };
 
 /// Supplies English Material control strings when Flutter has no native data.
-class MaterialLocalizationsFallbackDelegate extends LocalizationsDelegate<MaterialLocalizations> {
+class MaterialLocalizationsFallbackDelegate
+    extends LocalizationsDelegate<MaterialLocalizations> {
   /// Creates the constant fallback delegate used by [MaterialApp].
   const MaterialLocalizationsFallbackDelegate();
 
@@ -136,7 +137,8 @@ class MaterialLocalizationsFallbackDelegate extends LocalizationsDelegate<Materi
 
 /// Supplies English widget direction and text-editing strings when Flutter has
 /// no native `WidgetsLocalizations` data for an installed app locale.
-class WidgetsLocalizationsFallbackDelegate extends LocalizationsDelegate<WidgetsLocalizations> {
+class WidgetsLocalizationsFallbackDelegate
+    extends LocalizationsDelegate<WidgetsLocalizations> {
   /// Creates the constant fallback delegate used by [MaterialApp].
   const WidgetsLocalizationsFallbackDelegate();
 
@@ -147,6 +149,11 @@ class WidgetsLocalizationsFallbackDelegate extends LocalizationsDelegate<Widgets
 
   @override
   Future<WidgetsLocalizations> load(Locale locale) {
+    if (locale.languageCode == 'syr') {
+      return Future<WidgetsLocalizations>.value(
+        const _RtlEnglishWidgetsLocalizations(),
+      );
+    }
     return GlobalWidgetsLocalizations.delegate.load(const Locale('en'));
   }
 
@@ -154,8 +161,18 @@ class WidgetsLocalizationsFallbackDelegate extends LocalizationsDelegate<Widgets
   bool shouldReload(WidgetsLocalizationsFallbackDelegate old) => false;
 }
 
+/// Keeps English widget labels while setting Syriac's right-to-left direction.
+class _RtlEnglishWidgetsLocalizations extends DefaultWidgetsLocalizations {
+  /// Creates the English widget strings with RTL layout direction.
+  const _RtlEnglishWidgetsLocalizations();
+
+  @override
+  TextDirection get textDirection => TextDirection.rtl;
+}
+
 /// Supplies English Cupertino control strings when Flutter has no native data.
-class CupertinoLocalizationsFallbackDelegate extends LocalizationsDelegate<CupertinoLocalizations> {
+class CupertinoLocalizationsFallbackDelegate
+    extends LocalizationsDelegate<CupertinoLocalizations> {
   /// Creates the constant fallback delegate used by [MaterialApp].
   const CupertinoLocalizationsFallbackDelegate();
 
