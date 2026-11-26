@@ -5,8 +5,26 @@
 class BibleSchema {
   BibleSchema._();
 
-  /// Current schema version. Increment when making breaking changes.
-  static const int version = 1;
+  /// Current schema version. Increment whenever existing databases need upgrades.
+  static const int version = 2;
+
+  /// SQL to create the verse-associated footnotes table.
+  ///
+  /// Kept separate so existing Bible databases can add the new table during
+  /// their one-time schema upgrade without recreating their other content.
+  static const String createFootnotes = '''
+    CREATE TABLE IF NOT EXISTS footnotes (
+      book_code TEXT NOT NULL,
+      chapter   INTEGER NOT NULL,
+      verse     TEXT NOT NULL,
+      ordinal   INTEGER NOT NULL CHECK (ordinal >= 0),
+      caller    TEXT NOT NULL,
+      raw_usfx  TEXT NOT NULL,
+      PRIMARY KEY (book_code, chapter, verse, ordinal),
+      FOREIGN KEY (book_code, chapter)
+        REFERENCES chapters(book_code, number)
+    )
+    ''';
 
   /// SQL to create all tables for a Bible module database.
   static const List<String> createStatements = [
@@ -63,6 +81,8 @@ class BibleSchema {
       PRIMARY KEY (book_code, chapter, verse)
     )
     ''',
+
+    createFootnotes,
 
     // Full-text search index on verse plain text.
     '''
