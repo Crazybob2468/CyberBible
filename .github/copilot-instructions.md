@@ -87,8 +87,24 @@ wait for confirmation before proceeding.
    must leave an explicit note in `PROJECT_STATUS.md` identifying the deferred tests.
    Tests that can be written must be written before the PR is opened.
 
-3. **[AGENT] All tests pass** — Run `flutter test` from `cyber_bible_app/`. Every
-   test — both pre-existing and newly written — must pass before continuing.
+3. **[AGENT] All tests pass** — Run `flutter test` from `cyber_bible_app/` for
+   the unit/widget suite. Then run each browser integration test separately
+   from that directory, with a matching ChromeDriver running on port 4444. For
+   the current IndexedDB migration test, use:
+
+   ```sh
+   flutter drive \
+     --driver=test_driver/integration_test.dart \
+     --target=integration_test/bible_database_migrator_web_test.dart \
+     -d web-server
+   ```
+
+   `flutter test` does not discover or execute the `integration_test/` suite.
+   Run the `flutter drive` command for every integration test file added in
+   the future. Do not report the test suite as fully passing if ChromeDriver is
+   unavailable or a browser test was skipped. Resolve the setup issue or
+   explicitly mark validation blocked and get developer guidance before
+   handoff.
 
 4. **[AGENT] App runs** — Confirm the app still builds and launches without errors.
    For most steps, run `flutter analyze` as a minimum; for UI steps, do a full

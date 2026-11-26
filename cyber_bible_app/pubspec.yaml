@@ -56,6 +56,10 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  # integration_test runs the focused IndexedDB migration regression in a
+  # real browser rather than a native SQLite test environment.
+  integration_test:
+    sdk: flutter
   flutter_lints: ^6.0.0
   # flutter_launcher_icons: generates platform launcher icons from a single
   # source image so Android/iOS/web/desktop stay visually consistent.

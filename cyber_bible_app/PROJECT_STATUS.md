@@ -93,10 +93,12 @@ from searchable verse text, and the reading UI is unchanged in this step.
 
 The database schema is version 2. Existing local Bible databases are upgraded
 before opening read-only; the migration backfills footnotes from chapter USFX
-in a single transaction on native and Web. The bundled WEB database contains
-1,854 footnote records. The next step is **2.2 — Footnotes UI**, including
-opening the associated note from its inline marker and navigating only
-structurally identified scripture references within the note.
+in a single transaction on native and Web. A Chrome integration test verifies
+the Web migration against IndexedDB and confirms that migrated data remains
+available through a fresh read-only connection. The bundled WEB database
+contains 1,854 footnote records. The next step is **2.2 — Footnotes UI**,
+including opening the associated note from its inline marker and navigating
+only structurally identified scripture references within the note.
 
 Phase 1.17 UI localization remains complete. Its searchable catalog contains
 226 language codes; 185 modules are selectable and 41 incomplete, duplicated,
@@ -105,8 +107,13 @@ codes are represented, while regional/script variants remain future work. See
 the [Phase 1.17 localization report](docs/phase-1.17-localization-report.md)
 for decisions and detailed coverage.
 
-Current validation: 289 tests pass, `flutter analyze` is clean, and the
-Web build succeeds.
+Current validation: 289 unit/widget tests pass, `dart analyze` is clean, and
+the Web build succeeds. The browser integration suite is run separately from
+`flutter test`: its Chrome test upgrades a schema-v1 database in IndexedDB,
+verifies chapter and footnote data through a read-only open, then closes and
+reopens a fresh database handle to confirm persistence. The checklist in
+`.github/copilot-instructions.md` requires both test commands for future
+validation runs.
 
 The rest of this status document retains the previous step-by-step completion
 history and the development roadmap so prior implementation context remains

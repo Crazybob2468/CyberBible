@@ -192,7 +192,7 @@ Each translation's usfx.xml file and metadata.xml file provide most of what's ne
 
 **Footnote data (Phase 2.1):** Each USFX `<f>` element is stored separately with its complete raw fragment, caller, source order within its verse, and exact string verse ID. Notes within verse milestones inherit that verse ID; notes in headings or other locations use an unambiguous same-chapter `<fr>` label, including the source's chapter-level `0` label. Footnotes remain outside canonical verse text and its search index. Phase 2.2 owns tap-to-view presentation; a scripture reference inside a note is navigable only when the source provides a structurally identifiable target.
 
-Existing local Bible databases are upgraded transactionally before read-only access. The version-2 migration backfills footnotes from chapter USFX in bounded chapter batches; full Bible-content refresh for previously cached Web databases remains part of Phase 3.2.
+Existing local Bible databases are upgraded transactionally before read-only access. The version-2 migration backfills footnotes from chapter USFX in bounded chapter batches. A Chrome integration test seeds a legacy database in IndexedDB, exercises the production Web database opener, verifies chapter preservation and footnote backfill through a read-only handle, then closes and reopens a fresh handle to confirm the data persists. Full Bible-content refresh for previously cached Web databases remains part of Phase 3.2.
 
 Some translations are very sparse (e.g. only Luke 2). Others are full Bibles plus Deuterocanon/Apocrypha. Most are New Testaments.
 
