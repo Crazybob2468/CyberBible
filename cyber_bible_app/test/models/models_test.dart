@@ -5,6 +5,7 @@
 ///   - [Book] — toMap() / fromMap() round trip, including testament enum
 ///   - [Testament] — label getter returns correct display string for each value
 ///   - [Chapter] — toMap() / fromMap() round trip
+///   - [Footnote] — preserves verse association and raw USFX through map conversion
 ///   - [Verse] — toMap() / fromMap() round trip, plus [Verse.reference] getter
 ///   - [BibleSchema] — verifies table names and required SQL are present
 ///
@@ -18,6 +19,7 @@ import 'package:cyber_bible_app/models/bible_info.dart';
 import 'package:cyber_bible_app/models/bible_schema.dart';
 import 'package:cyber_bible_app/models/book.dart';
 import 'package:cyber_bible_app/models/chapter.dart';
+import 'package:cyber_bible_app/models/footnote.dart';
 import 'package:cyber_bible_app/models/verse.dart';
 
 void main() {
@@ -281,6 +283,46 @@ void main() {
   });
 
   // ---------------------------------------------------------------------------
+  // Footnote
+  // ---------------------------------------------------------------------------
+
+  group('Footnote', () {
+    const footnote = Footnote(
+      bookCode: 'GEN',
+      chapter: 1,
+      verse: '1a',
+      ordinal: 1,
+      caller: '+',
+      rawUsfx: '<f caller="+"><fr>1:1</fr><ft><it>Note</it> body.</ft></f>',
+    );
+
+    test('toMap contains the complete database record', () {
+      final map = footnote.toMap();
+      expect(map['book_code'], 'GEN');
+      expect(map['chapter'], 1);
+      expect(map['verse'], '1a');
+      expect(map['ordinal'], 1);
+      expect(map['caller'], '+');
+      expect(map['raw_usfx'], contains('<it>Note</it> body.'));
+    });
+
+    test('fromMap recreates an equivalent Footnote', () {
+      final restored = Footnote.fromMap(footnote.toMap());
+
+      expect(restored.bookCode, footnote.bookCode);
+      expect(restored.chapter, footnote.chapter);
+      expect(restored.verse, footnote.verse);
+      expect(restored.ordinal, footnote.ordinal);
+      expect(restored.caller, footnote.caller);
+      expect(restored.rawUsfx, footnote.rawUsfx);
+    });
+
+    test('toString displays a one-based human-readable note number', () {
+      expect(footnote.toString(), 'Footnote(GEN 1:1a #2 +)');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // BibleSchema
   // ---------------------------------------------------------------------------
 
@@ -311,6 +353,18 @@ void main() {
       expect(
         BibleSchema.createStatements.any((s) => s.contains('verses')),
         isTrue,
+      );
+    });
+
+    test('createStatements includes verse-associated footnotes table', () {
+      final footnotesStatement = BibleSchema.createStatements.firstWhere(
+        (statement) =>
+            statement.contains('CREATE TABLE IF NOT EXISTS footnotes'),
+      );
+      expect(footnotesStatement, contains('raw_usfx'));
+      expect(
+        footnotesStatement,
+        contains('PRIMARY KEY (book_code, chapter, verse, ordinal)'),
       );
     });
 

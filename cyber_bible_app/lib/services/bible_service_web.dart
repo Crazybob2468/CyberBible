@@ -50,10 +50,13 @@ import 'dart:typed_data' show Uint8List;
 
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:path/path.dart' as p;
-import 'package:sqflite/sqflite.dart' show Database, openReadOnlyDatabase;
+import 'package:sqflite/sqflite.dart'
+    show Database, openDatabase, openReadOnlyDatabase;
 import 'package:sqflite_common/sqflite.dart' show databaseFactory;
 import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart'
     show databaseFactoryFfiWebNoWebWorker;
+
+import 'bible_database_migrator.dart';
 
 // No hardcoded filename constant here — the stored name is derived from
 // assetPath at call time via p.basename(), so that this function works
@@ -101,12 +104,11 @@ Future<Database> platformOpenDatabase(String assetPath) async {
   // subsequent cold starts fast (no need to reload the 28.9 MB asset).
   // On the very first load the write takes 1-3 seconds.
   //
-  // KNOWN LIMITATION (Phase 1): if a future app release ships an updated
-  // eng-web.db, the databaseExists() guard will prevent the new bytes from
-  // being written — existing web users will silently keep the stale copy.
-  // Phase 3.2 (Bible library download infrastructure) will replace this with
-  // a versioned strategy: compare a bundled version marker against the stored
-  // one and re-seed when the app-bundled DB is newer.
+  // KNOWN LIMITATION: this guard can leave existing Web users with stale Bible
+  // content when a later release changes chapter data. The schema migrator
+  // below handles schema additions such as the Phase 2.1 footnote table, but it
+  // does not replace changed Bible content. Phase 3.2 will add versioned asset
+  // refresh as part of Bible-module update management.
   if (!await databaseFactory.databaseExists(fullPath)) {
     // Load the bundled .db file from the Flutter asset bundle as raw bytes.
     final byteData = await rootBundle.load(assetPath);
@@ -118,6 +120,15 @@ Future<Database> platformOpenDatabase(String assetPath) async {
     // Write the bytes into IndexedDB through the sqflite ffi web layer.
     // The factory handles the IndexedDB transaction and flush internally.
     await databaseFactory.writeDatabaseBytes(fullPath, bytes);
+  }
+
+  // Upgrade an IndexedDB copy from an earlier app version before reopening it
+  // read-only. The migrator is a no-op when the bundled DB is already current.
+  final writableDatabase = await openDatabase(fullPath);
+  try {
+    await BibleDatabaseMigrator.ensureCurrent(writableDatabase);
+  } finally {
+    await writableDatabase.close();
   }
 
   // -- Step 4: Open the database read-only and return the handle -------------

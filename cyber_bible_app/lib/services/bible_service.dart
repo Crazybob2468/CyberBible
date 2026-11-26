@@ -64,11 +64,13 @@ import 'package:sqflite/sqflite.dart';
 // reference browser-only APIs. Confining them to this conditionally-imported
 // file keeps the native build clean.
 import 'bible_service_web.dart'
-    if (dart.library.io) 'bible_service_io.dart' as platform_impl;
+    if (dart.library.io) 'bible_service_io.dart'
+    as platform_impl;
 
 import '../models/bible_info.dart';
 import '../models/book.dart';
 import '../models/chapter.dart';
+import '../models/footnote.dart';
 import '../models/verse.dart';
 import 'bible_setup_service.dart';
 
@@ -202,10 +204,7 @@ class BibleService {
   /// The returned list is ordered by [Book.sortOrder] (ascending), which follows
   /// the canonical Bible book order as stored in the `books` table.
   static Future<List<Book>> getBooks() async {
-    final rows = await _database.query(
-      'books',
-      orderBy: 'sort_order ASC',
-    );
+    final rows = await _database.query('books', orderBy: 'sort_order ASC');
     return rows.map(Book.fromMap).toList();
   }
 
@@ -240,10 +239,7 @@ class BibleService {
   /// The [Chapter.contentUsfx] field contains the raw USFX XML fragment for
   /// the chapter, which the rendering layer will convert to HTML at display
   /// time. This field can be 10–100 KB; avoid loading many chapters at once.
-  static Future<Chapter?> getChapter(
-    String bookCode,
-    int chapterNumber,
-  ) async {
+  static Future<Chapter?> getChapter(String bookCode, int chapterNumber) async {
     final rows = await _database.query(
       'chapters',
       where: 'book_code = ? AND number = ?',
@@ -282,5 +278,29 @@ class BibleService {
       orderBy: 'rowid ASC',
     );
     return rows.map(Verse.fromMap).toList();
+  }
+
+  /// Returns footnotes attached to one exact verse, in source order.
+  ///
+  /// [bookCode] is the 3-letter USFX/Paratext book identifier, such as `GEN`.
+  /// [chapterNumber] is the 1-based chapter number.
+  /// [verseId] is the exact string verse identifier; segmented or bridged
+  /// identifiers such as `1a` and `1-2` are not normalized.
+  ///
+  /// The returned records retain each complete footnote USFX fragment. This
+  /// method only reads data; displaying or activating footnote markers belongs
+  /// to the later footnote UI step.
+  static Future<List<Footnote>> getFootnotes(
+    String bookCode,
+    int chapterNumber,
+    String verseId,
+  ) async {
+    final rows = await _database.query(
+      'footnotes',
+      where: 'book_code = ? AND chapter = ? AND verse = ?',
+      whereArgs: [bookCode, chapterNumber, verseId],
+      orderBy: 'ordinal ASC',
+    );
+    return rows.map(Footnote.fromMap).toList();
   }
 }

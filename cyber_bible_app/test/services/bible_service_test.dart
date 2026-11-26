@@ -10,7 +10,8 @@
 ///
 /// The methods [BibleService.getBooks], [BibleService.getChapters],
 /// [BibleService.getChapter], [BibleService.getVerses], and
-/// [BibleService.getBibleInfo] all require an open sqflite database, which
+/// [BibleService.getBibleInfo], and [BibleService.getFootnotes] all require
+/// an open sqflite database, which
 /// depends on [BibleSetupService.ensureReady] and [path_provider] — platform
 /// plugins that cannot be exercised in plain unit tests without channel
 /// mocking. Full integration coverage of these query methods requires an
@@ -89,6 +90,16 @@ void main() {
       () async {
         expect(
           () async => BibleService.getVerses('GEN', 1),
+          throwsA(isA<StateError>()),
+        );
+      },
+    );
+
+    test(
+      'getFootnotes throws StateError before ensureOpen is called',
+      () async {
+        expect(
+          () async => BibleService.getFootnotes('GEN', 1, '1a'),
           throwsA(isA<StateError>()),
         );
       },

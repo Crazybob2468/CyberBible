@@ -59,7 +59,7 @@ Very nice apps, but limited to one or two predetermined Bible translations. Free
 | Book marks | 1 | Keep track of reading; mark passages for study or sermon |
 | UI language support | 1 | Easier to do initially than to retrofit hard coded constants |
 | Pick a Bible to read or listen to | 1 | App should come preloaded with at least one Bible (WEB); 1,535 translations available on eBible.org |
-| Display Bible footnotes | 2 | Good for serious study; self-defense for translators |
+| Display Bible footnotes | 2 | Step 2.1 stores verse-associated footnote data; Step 2.2 displays it on tap and can navigate structurally identified scripture references within a note |
 | Search Bible text | 2 | Very important to find a passage or for topical study |
 | Display cross references with hot links | 2 | Display target verse with link to navigate; easy to get back |
 | Navigation history | 2 | Work your way back through a sermon or study trail |
@@ -189,6 +189,10 @@ Semantic markup approach (USFX) rather than presentational. USFX can be merged w
 **USFX** is the chosen format (see https://ebible.org/usfx/). Easily converted to/from USFM and USX (the two most common Bible markup formats). Used as the hub format for all Bible conversions on eBible.org.
 
 Each translation's usfx.xml file and metadata.xml file provide most of what's needed. What's lacking: a rapid index to convert native and standard BCV triples to offsets into the usfx.xml file (two offsets per verse: start and end). The native BCV offset is derived from the markup; the standard BCV offset is usually the same but varies when versification differs or translation lacks a verse.
+
+**Footnote data (Phase 2.1):** Each USFX `<f>` element is stored separately with its complete raw fragment, caller, source order within its verse, and exact string verse ID. Notes within verse milestones inherit that verse ID; notes in headings or other locations use an unambiguous same-chapter `<fr>` label, including the source's chapter-level `0` label. Footnotes remain outside canonical verse text and its search index. Phase 2.2 owns tap-to-view presentation; a scripture reference inside a note is navigable only when the source provides a structurally identifiable target.
+
+Existing local Bible databases are upgraded transactionally before read-only access. The version-2 migration backfills footnotes from chapter USFX in bounded chapter batches; full Bible-content refresh for previously cached Web databases remains part of Phase 3.2.
 
 Some translations are very sparse (e.g. only Luke 2). Others are full Bibles plus Deuterocanon/Apocrypha. Most are New Testaments.
 

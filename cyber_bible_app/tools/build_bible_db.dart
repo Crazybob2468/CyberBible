@@ -22,6 +22,7 @@ import 'package:cyber_bible_app/models/bible_info.dart';
 import 'package:cyber_bible_app/models/bible_schema.dart';
 import 'package:cyber_bible_app/models/book.dart';
 import 'package:cyber_bible_app/models/chapter.dart';
+import 'package:cyber_bible_app/models/footnote.dart';
 import 'package:cyber_bible_app/models/verse.dart';
 import 'package:cyber_bible_app/utils/usfx_utils.dart';
 
@@ -53,12 +54,14 @@ class ParseResult {
   final BibleInfo bibleInfo;
   final List<Book> books;
   final List<Chapter> chapters;
+  final List<Footnote> footnotes;
   final List<Verse> verses;
 
   const ParseResult({
     required this.bibleInfo,
     required this.books,
     required this.chapters,
+    required this.footnotes,
     required this.verses,
   });
 }
@@ -162,8 +165,8 @@ Map<String, _BookName> _parseBookNames(File bookNamesFile) {
 ///   2. bookNamesFile — display names for each book (short, long, abbreviation)
 ///   3. usfxFile      — the actual Bible text in USFX XML format
 ///
-/// Returns a [ParseResult] containing [BibleInfo], [Book]s, [Chapter]s (as raw
-/// USFX fragments), and [Verse]s (as plain text for FTS5 search).
+/// Returns a [ParseResult] containing metadata, books, raw chapter USFX,
+/// verse-associated footnotes, and plain-text verses for FTS5 search.
 ParseResult parseUsfx(
   File usfxFile,
   File metadataFile,
@@ -183,6 +186,7 @@ ParseResult parseUsfx(
 
   final books = <Book>[];
   final chapters = <Chapter>[];
+  final footnotes = <Footnote>[];
   final verses = <Verse>[];
   var sortOrder = 0;
 
@@ -230,6 +234,10 @@ ParseResult parseUsfx(
         contentUsfx: contentUsfx,
       ));
 
+      // Keep footnotes in their own records so they can be looked up by verse
+      // without adding editorial note text to the searchable verse content.
+      footnotes.addAll(extractFootnotes(code, chapterNum, contentUsfx));
+
       // Extract verse plain text from the USFX fragment using the shared utility.
       final chapterVerses = extractVerses(code, chapterNum, contentUsfx);
       verses.addAll(chapterVerses);
@@ -248,6 +256,7 @@ ParseResult parseUsfx(
     bibleInfo: bibleInfo,
     books: books,
     chapters: chapters,
+    footnotes: footnotes,
     verses: verses,
   );
 }
@@ -318,6 +327,7 @@ void writeSqlite(ParseResult result, String outputPath) {
     for (final stmt in BibleSchema.createIndexes) {
       db.execute(stmt);
     }
+    db.execute('PRAGMA user_version = ${BibleSchema.version}');
     stdout.writeln(' done');
 
     // -------------------------------------------------------------------------
@@ -417,6 +427,39 @@ void writeSqlite(ParseResult result, String outputPath) {
     } finally {
       // Close exactly once, whether inserts/COMMIT succeeded or failed.
       chapterStmt.close();
+    }
+    stdout.writeln(' done');
+
+    // -------------------------------------------------------------------------
+    // Insert footnote records after chapters so their chapter foreign keys
+    // refer to rows that already exist. Verse text remains separate and clean.
+    // -------------------------------------------------------------------------
+    stdout.write('Inserting ${result.footnotes.length} footnotes...');
+    final footnoteStmt = db.prepare('''
+      INSERT INTO footnotes
+        (book_code, chapter, verse, ordinal, caller, raw_usfx)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ''');
+    try {
+      db.execute('BEGIN');
+      try {
+        for (final footnote in result.footnotes) {
+          footnoteStmt.execute([
+            footnote.bookCode,
+            footnote.chapter,
+            footnote.verse,
+            footnote.ordinal,
+            footnote.caller,
+            footnote.rawUsfx,
+          ]);
+        }
+        db.execute('COMMIT');
+      } catch (e) {
+        db.execute('ROLLBACK');
+        rethrow;
+      }
+    } finally {
+      footnoteStmt.close();
     }
     stdout.writeln(' done');
 
@@ -533,6 +576,7 @@ void main(List<String> args) {
   stdout.writeln('Books:    ${result.books.length} total '
       '(${otBooks.length} OT, ${ntBooks.length} NT, ${dcBooks.length} DC)');
   stdout.writeln('Chapters: ${result.chapters.length}');
+  stdout.writeln('Footnotes: ${result.footnotes.length}');
   stdout.writeln('Verses:   ${result.verses.length}');
   stdout.writeln('');
   stdout.writeln('Parsed in ${stopwatch.elapsedMilliseconds} ms');

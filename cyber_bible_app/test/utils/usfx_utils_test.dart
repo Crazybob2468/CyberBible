@@ -1,9 +1,10 @@
 /// Unit tests for the USFX utility functions in lib/utils/usfx_utils.dart.
 ///
-/// Tests cover all four public functions:
+/// Tests cover the public extraction and normalization functions:
 ///   - [classifyBook] — maps 3-letter book codes to their testament
 ///   - [stripToPlainText] — strips USFX markup to searchable plain text
 ///   - [extractVerses] — extracts [Verse] objects from a USFX chapter fragment
+///   - [extractFootnotes] — extracts verse-associated USFX footnotes
 ///   - [extractChapters] — splits a USFX book element into per-chapter fragments
 ///
 /// These tests run without any file I/O or database access.
@@ -242,6 +243,76 @@ void main() {
       const usfx = '<h>Genesis</h><toc1>Genesis</toc1>';
       final verses = extractVerses('GEN', 1, usfx);
       expect(verses, isEmpty);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // extractFootnotes
+  // ---------------------------------------------------------------------------
+
+  group('extractFootnotes', () {
+    /// Extract footnotes without flattening their USFX body or verse IDs.
+    test('retains the raw note and associates it with its exact verse', () {
+      const usfx =
+          '<p><v id="1a"/>Text'
+          '<f caller="+"><fr>1:1</fr><ft><it>Note</it> body.</ft></f>'
+          '<ve/></p>';
+
+      final footnotes = extractFootnotes('GEN', 4, usfx);
+
+      expect(footnotes, hasLength(1));
+      expect(footnotes.single.bookCode, 'GEN');
+      expect(footnotes.single.chapter, 4);
+      expect(footnotes.single.verse, '1a');
+      expect(footnotes.single.ordinal, 0);
+      expect(footnotes.single.caller, '+');
+      expect(footnotes.single.rawUsfx, contains('<f caller="+">'));
+      expect(footnotes.single.rawUsfx, contains('<fr>1:1</fr>'));
+      expect(footnotes.single.rawUsfx, contains('<it>Note</it> body.'));
+    });
+
+    /// Multiple notes on one verse retain their source order. Ordinals restart
+    /// for each distinct verse, including non-integer USFX verse identifiers.
+    test('orders notes per verse and preserves bridged verse IDs', () {
+      const usfx =
+          '<p><v id="1-2"/>Text'
+          '<f caller="a"><ft>First.</ft></f>'
+          '<f caller="b"><ft>Second.</ft></f><ve/>'
+          '<v id="3"/>More'
+          '<f caller=""><ft>Third.</ft></f><ve/></p>';
+
+      final footnotes = extractFootnotes('GEN', 1, usfx);
+
+      expect(footnotes, hasLength(3));
+      expect(footnotes.map((note) => note.verse), ['1-2', '1-2', '3']);
+      expect(footnotes.map((note) => note.ordinal), [0, 1, 0]);
+      expect(footnotes.map((note) => note.caller), ['a', 'b', '*']);
+    });
+
+    /// Footnotes in headings are associated through a same-chapter USFX
+    /// reference label. Verse zero is retained for chapter-level notes.
+    test('uses the footnote reference for notes outside verse milestones', () {
+      const usfx =
+          '<p><v id="23"/>Text<ve/></p>'
+          '<s><f caller="+"><fr>3:24</fr><ft>Heading note.</ft></f></s>'
+          '<p><f caller="*"><fr>3:0</fr><ft>Chapter note.</ft></f></p>';
+
+      final footnotes = extractFootnotes('DAG', 3, usfx);
+
+      expect(footnotes.map((note) => note.verse).toList(), ['24', '0']);
+    });
+
+    /// Reject malformed source placement instead of silently losing the
+    /// verse association required by storage and runtime lookup.
+    test('rejects footnotes outside a verse milestone range', () {
+      expect(
+        () => extractFootnotes(
+          'GEN',
+          1,
+          '<p><f caller="+"><ft>Unassociated.</ft></f></p>',
+        ),
+        throwsA(isA<FormatException>()),
+      );
     });
   });
 

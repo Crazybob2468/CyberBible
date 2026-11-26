@@ -82,18 +82,31 @@ cyber_bible_app/
 
 ## Current Status
 
-**Phase 1 — Step 1.17 UI localization (foundation complete)**
+**Phase 2 — Step 2.1 Footnotes data layer (complete)**
 
-The localization foundation is implemented: system-language selection, a
-persisted manual override, a searchable local catalog, and offline UI-language
-modules. The catalog contains 226 language codes; 185 modules are selectable
-and 41 incomplete, duplicated, or otherwise unverified bundles remain pending.
-All 225 AOSP base-language codes are represented in the catalog, but
-regional/script variants remain future work. See the
-[Phase 1.17 localization report](docs/phase-1.17-localization-report.md) for
-decisions, detailed coverage, known issues, and verification.
-Current validation: 275 tests pass, `flutter analyze` is clean, and the Web
-build succeeds.
+The USFX build pipeline now extracts footnotes into separate Bible database
+records, retaining the complete `<f>` fragment, caller, zero-based order, and
+exact string verse ID. Notes embedded in a verse inherit that verse ID; notes
+outside verse milestones use an unambiguous same-chapter `<fr>` label. The
+chapter-level label `0` is preserved when present. Footnotes remain excluded
+from searchable verse text, and the reading UI is unchanged in this step.
+
+The database schema is version 2. Existing local Bible databases are upgraded
+before opening read-only; the migration backfills footnotes from chapter USFX
+in a single transaction on native and Web. The bundled WEB database contains
+1,854 footnote records. The next step is **2.2 — Footnotes UI**, including
+opening the associated note from its inline marker and navigating only
+structurally identified scripture references within the note.
+
+Phase 1.17 UI localization remains complete. Its searchable catalog contains
+226 language codes; 185 modules are selectable and 41 incomplete, duplicated,
+or otherwise unverified bundles remain pending. All 225 AOSP base-language
+codes are represented, while regional/script variants remain future work. See
+the [Phase 1.17 localization report](docs/phase-1.17-localization-report.md)
+for decisions and detailed coverage.
+
+Current validation: 289 tests pass, `flutter analyze` is clean, and the
+Web build succeeds.
 
 The rest of this status document retains the previous step-by-step completion
 history and the development roadmap so prior implementation context remains
@@ -127,8 +140,8 @@ Step 1.16 ✅ COMPLETE. The session after Step 1.16 resolved four user-reported 
 - **Step 1.16 validation:** 273 tests passed and `flutter analyze` reported no issues.
 
 Step 1.17 localization foundation is complete. Remaining localization follow-up
-is tracked in the report above. The next numbered roadmap task is Phase 2,
-Step 2.1: Footnotes — data layer.
+is tracked in the report above. Phase 2, Step 2.1 (footnotes data layer) is
+complete; the next numbered roadmap task is Step 2.2: Footnotes — UI.
 
 ---
 
@@ -541,7 +554,7 @@ Step 1.11 implementation:
   - `<v id="N">` — verse number → inline `<sup>` with colour/size inline styles
   - `<ve/>` — verse end milestone (no output)
   - `<wj>` — words of Jesus → `<span style="color:#e53935;">` (red, always on)
-  - `<f>` — footnote → caller superscript only (not tappable — Step 2.1)
+  - `<f>` — footnote → caller superscript only; structured storage is Step 2.1 and tap-to-view UI is Step 2.2
   - `<w s="...">` — Strong's words → strip tag, keep text (linking in Phase 4)
   - `<add>` — supplied text → `<em>` italic
   - `<nd>` — divine names → `<span style="font-variant:small-caps;">`
@@ -549,7 +562,7 @@ Step 1.11 implementation:
 - **Updated `ReadingScreen`**: `_loadVerses()` + `getVerses()` replaced by `_loadChapter()` + `getChapter()`. `HtmlWidget` renders the output HTML. `_colorToCss()` helper converts `Color` → CSS hex/rgba.
 - **Section heading toggle**: always shown; toggle deferred to Step 1.16.
 - **Words of Jesus toggle**: always red; deferred to Step 1.16.
-- **Footnote interactivity**: marker only; tappable popups in Step 2.1.
+- **Footnote interactivity**: this renderer currently shows only the caller marker. Step 2.1 adds verse-associated footnote data to the Bible database; Step 2.2 adds tap-to-view presentation.
 
 **Tests (Step 1.11):**
 - New `test/utils/usfx_renderer_test.dart` — 35 unit tests covering every USFX element type, HTML escaping, empty input, multi-block chapters, and colour/font passthrough (including `<b>` stanza separator and `<qs>` Selah marker added in inline-style fix pass).
@@ -683,10 +696,10 @@ Step 1.7 implementation:
 - Created `lib/services/bible_service_io.dart` — thin native stub (throws `UnsupportedError`; the main `bible_service.dart` handles native opening directly).
 - Uses the same conditional-import pattern as `BibleSetupService` to keep platform-specific packages out of cross-platform builds.
 
-**Web implementation (IndexedDB-backed):** On the first page load, `eng-web.db` bytes are written into browser IndexedDB (takes ~1-3 seconds). On subsequent page loads the write is skipped — only WASM loading + IndexedDB open (~0.5s). Data persists across page reloads. **Known limitation (Phase 1):** if a future app release ships an updated `eng-web.db`, the `databaseExists()` guard will prevent re-seeding — existing web users keep the stale copy. Phase 3.2 will replace this with a versioned strategy (compare a bundled version marker against the stored one, re-seed when the app DB is newer).
+**Web implementation (IndexedDB-backed):** On the first page load, `eng-web.db` bytes are written into browser IndexedDB (takes ~1-3 seconds). On subsequent page loads the write is skipped — only WASM loading + IndexedDB open (~0.5s). Data persists across page reloads. The Phase 2.1 schema migrator upgrades existing copies, but the `databaseExists()` guard can still leave Web users with stale Bible content when a later release changes chapter data; Phase 3.2 will add versioned asset refresh.
 
 **Tests:**
-- `test/services/bible_service_test.dart` — 5 unit tests: each query method throws `StateError` when called before `ensureOpen()`.
+- `test/services/bible_service_test.dart` — unit tests verify query methods throw `StateError` when called before `ensureOpen()`.
 - **Deferred integration tests:** Methods like `getBooks()` and `getVerses()` require an open sqflite database, which in turn requires `BibleSetupService.ensureReady()` and platform plugins. Full integration coverage requires a device/emulator test via `flutter test integration_test/`. Will be added when the integration-test scaffold is set up.
 - **Deferred concurrency tests:** The `_openFuture` retry-on-failure behavior (reset when `_doOpen()` throws) requires either a `@visibleForTesting` reset hook or platform-plugin mocking to simulate a failed open. Deferred to the same integration-test step.
 
@@ -728,8 +741,8 @@ The goal: open the app, pick a book and chapter, and read formatted Bible text.
 
 | Step | Task | Description |
 |------|------|-------------|
-| 2.1 | **Footnotes — data layer** | Extend the USFX parser and DB schema to capture footnotes. Store footnote markers with verse associations. |
-| 2.2 | **Footnotes — UI** | Display footnote markers inline with text. Tapping a marker shows the footnote in a popup or bottom sheet. |
+| 2.1 ✅ | **Footnotes — data layer** | Extract one record per USFX `<f>` element and store it in the Bible database with its book, chapter, exact string verse ID, caller, order within the verse, and complete raw USFX fragment. Notes outside verse milestones use an unambiguous same-chapter `<fr>` label, preserving special verse ID `0`. Add runtime lookup by verse and upgrade older local databases. Keep this step data-only: do not change the reader UI or search-index behavior; footnote text remains excluded from searchable verse text. |
+| 2.2 | **Footnotes — UI** | Render tappable inline markers and open the associated footnote in a popup or bottom sheet. Where a footnote contains a structurally identifiable scripture reference, make that reference navigable to its target passage; verify the USFX representation before implementation rather than assuming references in prose can be linked. Navigation history remains Step 2.7, and general cross-reference data/UI remains Steps 2.5–2.6. |
 | 2.3 | **Search — indexing** | Build a full-text search index (SQLite FTS5) for the Bible text at DB creation time. |
 | 2.4 | **Search — UI** | Build a search screen with a text input. Display results as a list of matching verses with context. Tapping a result navigates to that verse. |
 | 2.5 | **Cross references — data layer** | Extract cross-reference data from USFX and store in the DB. |

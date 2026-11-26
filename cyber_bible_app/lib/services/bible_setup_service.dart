@@ -7,8 +7,8 @@
 /// bundle in a read-only, compressed form. SQLite — and therefore `sqflite` —
 /// needs a regular, writable file on disk in order to open a database. This
 /// service bridges the gap: on first launch it reads the asset bytes and writes
-/// them to the app's writable support directory, then on every subsequent
-/// launch it simply returns the path to that already-copied file.
+/// them to the app's writable support directory, then applies any required
+/// schema upgrade before returning the database path.
 ///
 /// ## Why conditional imports are used
 ///
@@ -46,8 +46,8 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'bible_setup_service_stub.dart'
     if (dart.library.io) 'bible_setup_service_io.dart' as platform_impl;
 
-/// Manages the one-time copy of the bundled Bible asset database to writable
-/// app storage, and exposes the resulting file path for use by [BibleService].
+/// Copies the bundled Bible database to writable app storage, applies schema
+/// upgrades, and exposes its path for use by [BibleService].
 class BibleSetupService {
   // ---------------------------------------------------------------------------
   // Constants
@@ -115,8 +115,8 @@ class BibleSetupService {
   ///   3. Writes the raw bytes to a `.tmp` sibling file (non-destructive).
   ///   4. Renames the `.tmp` file to the final path (atomic on POSIX systems).
   ///
-  /// On **subsequent launches** the file already exists, so the copy is
-  /// skipped and this method returns almost immediately.
+  /// On **subsequent launches** an already-current database is not rewritten;
+  /// required schema upgrades are applied before returning its path.
   ///
   /// After this method completes, [dbPath] is safe to use on non-web platforms.
   static Future<void> ensureReady() async {

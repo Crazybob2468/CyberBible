@@ -11,6 +11,7 @@ library;
 import 'package:xml/xml.dart';
 
 import 'package:cyber_bible_app/models/book.dart';
+import 'package:cyber_bible_app/models/footnote.dart';
 import 'package:cyber_bible_app/models/verse.dart';
 
 // ---------------------------------------------------------------------------
@@ -162,6 +163,97 @@ List<Verse> extractVerses(String bookCode, int chapter, String usfx) {
   }
 
   return verses;
+}
+
+/// Extracts complete USFX footnotes and associates each with its current verse.
+///
+/// USFX verse boundaries are represented by `<v id="…"/>` and `<ve/>`
+/// milestones. The traversal follows document order, retaining the exact
+/// string verse ID and assigning a zero-based [Footnote.ordinal] per verse.
+/// A footnote outside an active verse uses its USFX `<fr>` label when that
+/// label unambiguously identifies a verse in this chapter. This supports
+/// chapter-level notes such as verse `0` and notes attached to section
+/// headings. Ambiguous source placement is rejected rather than silently lost.
+///
+/// [bookCode] — 3-letter book code (e.g. `GEN`).
+/// [chapter] — 1-based chapter number.
+/// [usfx] — raw USFX fragment for the chapter.
+List<Footnote> extractFootnotes(String bookCode, int chapter, String usfx) {
+  final document = XmlDocument.parse('<root>$usfx</root>');
+  final footnotes = <Footnote>[];
+  final nextOrdinalByVerse = <String, int>{};
+  String? currentVerse;
+
+  // Walk the chapter as a stream so verse milestone state naturally carries
+  // across paragraph and inline-element boundaries.
+  void visit(XmlNode node) {
+    if (node is! XmlElement) return;
+
+    switch (node.name.local) {
+      case 'v':
+        currentVerse = node.getAttribute('id');
+        return;
+      case 've':
+        currentVerse = null;
+        return;
+      case 'f':
+        // Most notes appear within a verse's milestone range. Some USFX sources
+        // place notes in headings or before verse 1, where <fr> is the only
+        // explicit source association (for example "3:24" or "1:0").
+        final verse =
+            currentVerse ?? _verseIdFromFootnoteReference(node, chapter);
+        if (verse == null || verse.isEmpty) {
+          throw FormatException(
+            'Could not associate a USFX footnote with a verse in '
+            '$bookCode $chapter.',
+            node.toXmlString(),
+          );
+        }
+
+        final ordinal = nextOrdinalByVerse[verse] ?? 0;
+        nextOrdinalByVerse[verse] = ordinal + 1;
+        final sourceCaller = node.getAttribute('caller');
+        final caller = sourceCaller == null || sourceCaller.trim().isEmpty
+            ? '*'
+            : sourceCaller;
+        footnotes.add(
+          Footnote(
+            bookCode: bookCode,
+            chapter: chapter,
+            verse: verse,
+            ordinal: ordinal,
+            caller: caller,
+            rawUsfx: node.toXmlString(),
+          ),
+        );
+        // The entire element is retained above; nested nodes are part of the
+        // note body, not additional chapter-level footnotes.
+        return;
+    }
+
+    for (final child in node.children) {
+      visit(child);
+    }
+  }
+
+  visit(document.rootElement);
+  return footnotes;
+}
+
+/// Reads the verse suffix from an unambiguous same-chapter `<fr>` label.
+///
+/// The returned ID remains a string so source-specific IDs such as `0`, `1a`,
+/// and `1-2` are preserved without numeric normalization.
+String? _verseIdFromFootnoteReference(XmlElement footnote, int chapter) {
+  final reference = footnote.findElements('fr').firstOrNull?.innerText;
+  if (reference == null) return null;
+
+  final normalized = reference.replaceAll(_whitespacePattern, ' ').trim();
+  final match = RegExp(
+    '^${RegExp.escape(chapter.toString())}:'
+    r'([0-9]+[a-zA-Z]?(?:-[0-9]+[a-zA-Z]?)?)$',
+  ).firstMatch(normalized);
+  return match?.group(1);
 }
 
 /// Strips USFX XML markup down to plain canonical text suitable for indexing.

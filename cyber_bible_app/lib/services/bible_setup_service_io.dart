@@ -16,7 +16,8 @@
 /// ## Atomic write strategy
 ///
 /// The first-launch copy writes to a `.tmp` sibling file and then renames it
-/// into the final database path. This means:
+/// into the final database path. Existing database copies are schema-upgraded
+/// in place before they are returned. This means:
 ///   - If the app is killed mid-copy, the final path either does not exist
 ///     (rename not yet done) or is fully intact (rename already done). A
 ///     partially written temp file is detected and removed on the next launch.
@@ -30,6 +31,9 @@ import 'dart:io';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:sqflite/sqflite.dart' show openDatabase;
+
+import 'bible_database_migrator.dart';
 
 /// Ensures the bundled Bible database file is present in app support storage.
 ///
@@ -40,8 +44,8 @@ import 'package:path_provider/path_provider.dart';
 ///   3. Writes the asset bytes to a `.tmp` sibling file.
 ///   4. Renames the fully written `.tmp` file to the final database filename.
 ///
-/// On **subsequent launches** the final file already exists and this function
-/// returns the cached path almost immediately.
+/// On **subsequent launches** the final file already exists. The schema version
+/// is checked before returning so an older copy can be upgraded once.
 ///
 /// Returns the absolute path to the database file, ready for `openDatabase()`.
 Future<String?> platformEnsureReady(
@@ -87,6 +91,15 @@ Future<String?> platformEnsureReady(
     // atomic on POSIX (Android, iOS, macOS, Linux) and safe on Windows because
     // the destination file does not exist at this point.
     await tempFile.rename(dbPath);
+  }
+
+  // Upgrade databases copied by earlier app versions before BibleService
+  // opens them read-only. This is a no-op for a current bundled database.
+  final database = await openDatabase(dbPath);
+  try {
+    await BibleDatabaseMigrator.ensureCurrent(database);
+  } finally {
+    await database.close();
   }
 
   // Return the absolute path so BibleSetupService can cache it in _dbPath.
