@@ -52,7 +52,7 @@
 /// build and web-only packages out of native builds.
 library;
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:sqflite/sqflite.dart';
 
 // Conditional import: selects the sqflite_common_ffi_web implementation on
@@ -111,6 +111,18 @@ class BibleService {
   /// even if [ensureOpen] is called from multiple places before it completes.
   static Future<void>? _openFuture;
 
+  /// Overrides the native database path in isolated tests only.
+  @visibleForTesting
+  static String? testDbPath;
+
+  /// Closes the test database and resets the lazy-open state.
+  @visibleForTesting
+  static Future<void> closeForTesting() async {
+    await _db?.close();
+    _db = null;
+    _openFuture = null;
+  }
+
   // ---------------------------------------------------------------------------
   // Lifecycle
   // ---------------------------------------------------------------------------
@@ -161,7 +173,7 @@ class BibleService {
       // BibleSetupService.ensureReady in main()). Open it as a read-only
       // single-instance database for efficiency.
       _db = await openReadOnlyDatabase(
-        BibleSetupService.dbPath,
+        testDbPath ?? BibleSetupService.dbPath,
         singleInstance: true,
       );
     }
@@ -287,9 +299,7 @@ class BibleService {
   /// [verseId] is the exact string verse identifier; segmented or bridged
   /// identifiers such as `1a` and `1-2` are not normalized.
   ///
-  /// The returned records retain each complete footnote USFX fragment. This
-  /// method only reads data; displaying or activating footnote markers belongs
-  /// to the later footnote UI step.
+  /// The returned records retain each complete footnote USFX fragment.
   static Future<List<Footnote>> getFootnotes(
     String bookCode,
     int chapterNumber,
@@ -300,6 +310,23 @@ class BibleService {
       where: 'book_code = ? AND chapter = ? AND verse = ?',
       whereArgs: [bookCode, chapterNumber, verseId],
       orderBy: 'ordinal ASC',
+    );
+    return rows.map(Footnote.fromMap).toList();
+  }
+
+  /// Returns every footnote in one chapter in source insertion order.
+  ///
+  /// The reader uses this chapter-level query to label markers and display
+  /// their corresponding notes without querying each verse separately.
+  static Future<List<Footnote>> getChapterFootnotes(
+    String bookCode,
+    int chapterNumber,
+  ) async {
+    final rows = await _database.query(
+      'footnotes',
+      where: 'book_code = ? AND chapter = ?',
+      whereArgs: [bookCode, chapterNumber],
+      orderBy: 'rowid ASC',
     );
     return rows.map(Footnote.fromMap).toList();
   }

@@ -147,4 +147,13 @@
   "oldTestament": "Eski Ahit",
   "newTestament": "Yeni Ahit",
   "deuterocanonApocrypha": "Deuterokanon / Apokrifa"
+,
+  "footnoteTitle": "Dipnot {caller}"
+,
+  "closeFootnote": "Dipnotu kapat"
+,
+  "couldNotOpenFootnote": "{reference} dipnotu açılamadı.",
+  "chapterFootnotesTitle": "Footnotes",
+  "openScriptureReference": "Open {reference}",
+  "couldNotLoadFootnotes": "Could not load footnotes. Please try again."
 }

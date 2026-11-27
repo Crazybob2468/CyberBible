@@ -487,4 +487,28 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get deuterocanonApocrypha => '次经 / 外典';
+
+  @override
+  String footnoteTitle(Object caller) {
+    return '脚注 $caller';
+  }
+
+  @override
+  String get closeFootnote => '关闭脚注';
+
+  @override
+  String couldNotOpenFootnote(Object reference) {
+    return '无法打开脚注 $reference。';
+  }
+
+  @override
+  String get chapterFootnotesTitle => '脚注';
+
+  @override
+  String openScriptureReference(Object reference) {
+    return '打开 $reference';
+  }
+
+  @override
+  String get couldNotLoadFootnotes => '无法加载脚注。请重试。';
 }

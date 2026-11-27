@@ -148,4 +148,13 @@
   "oldTestament": "पुराना नियम",
   "newTestament": "नया नियम",
   "deuterocanonApocrypha": "द्वितीय-कानून / अपोक्रिफा"
+,
+  "footnoteTitle": "पाद-टिप्पणी {caller}"
+,
+  "closeFootnote": "पाद-टिप्पणी बंद करें"
+,
+  "couldNotOpenFootnote": "{reference} पाद-टिप्पणी नहीं खोली जा सकी।",
+  "chapterFootnotesTitle": "Footnotes",
+  "openScriptureReference": "Open {reference}",
+  "couldNotLoadFootnotes": "Could not load footnotes. Please try again."
 }

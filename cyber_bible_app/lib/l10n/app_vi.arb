@@ -147,4 +147,13 @@
   "oldTestament": "Cựu Ước",
   "newTestament": "Tân Ước",
   "deuterocanonApocrypha": "Đệ nhị kinh / Ngụy thư"
+,
+  "footnoteTitle": "Chú thích chân trang {caller}"
+,
+  "closeFootnote": "Đóng chú thích"
+,
+  "couldNotOpenFootnote": "Không thể mở chú thích {reference}.",
+  "chapterFootnotesTitle": "Footnotes",
+  "openScriptureReference": "Open {reference}",
+  "couldNotLoadFootnotes": "Could not load footnotes. Please try again."
 }

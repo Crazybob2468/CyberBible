@@ -89,22 +89,19 @@ wait for confirmation before proceeding.
 
 3. **[AGENT] All tests pass** — Run `flutter test` from `cyber_bible_app/` for
    the unit/widget suite. Then run each browser integration test separately
-   from that directory, with a matching ChromeDriver running on port 4444. For
-   the current IndexedDB migration test, use:
+   from that directory. Use the local runner so Chrome and ChromeDriver versions
+   are checked and the driver process is managed consistently:
 
    ```sh
-   flutter drive \
-     --driver=test_driver/integration_test.dart \
-     --target=integration_test/bible_database_migrator_web_test.dart \
-     -d web-server
+   bash tools/run_web_integration_test.sh
    ```
 
    `flutter test` does not discover or execute the `integration_test/` suite.
-   Run the `flutter drive` command for every integration test file added in
-   the future. Do not report the test suite as fully passing if ChromeDriver is
-   unavailable or a browser test was skipped. Resolve the setup issue or
-   explicitly mark validation blocked and get developer guidance before
-   handoff.
+   Pass another integration-test path to the script when needed. See
+   `cyber_bible_app/docs/web-integration-testing.md` for first-time setup.
+   Do not report the test suite as fully passing if ChromeDriver is unavailable
+   or a browser test was skipped. Resolve the setup issue or explicitly mark
+   validation blocked and get developer guidance before handoff.
 
 4. **[AGENT] App runs** — Confirm the app still builds and launches without errors.
    For most steps, run `flutter analyze` as a minimum; for UI steps, do a full

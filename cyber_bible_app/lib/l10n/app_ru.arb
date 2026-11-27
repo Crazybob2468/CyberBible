@@ -148,4 +148,13 @@
   "oldTestament": "Ветхий Завет",
   "newTestament": "Новый Завет",
   "deuterocanonApocrypha": "Второканонические книги / апокрифы"
+,
+  "footnoteTitle": "Сноска {caller}"
+,
+  "closeFootnote": "Закрыть сноску"
+,
+  "couldNotOpenFootnote": "Не удалось открыть сноску {reference}.",
+  "chapterFootnotesTitle": "Сноски",
+  "openScriptureReference": "Открыть {reference}",
+  "couldNotLoadFootnotes": "Не удалось загрузить сноски. Попробуйте ещё раз."
 }

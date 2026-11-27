@@ -505,4 +505,29 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get deuterocanonApocrypha => 'Deuterokanon / Apokrifa';
+
+  @override
+  String footnoteTitle(Object caller) {
+    return 'Dipnot $caller';
+  }
+
+  @override
+  String get closeFootnote => 'Dipnotu kapat';
+
+  @override
+  String couldNotOpenFootnote(Object reference) {
+    return '$reference dipnotu açılamadı.';
+  }
+
+  @override
+  String get chapterFootnotesTitle => 'Footnotes';
+
+  @override
+  String openScriptureReference(Object reference) {
+    return 'Open $reference';
+  }
+
+  @override
+  String get couldNotLoadFootnotes =>
+      'Could not load footnotes. Please try again.';
 }

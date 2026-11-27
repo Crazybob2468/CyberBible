@@ -147,4 +147,13 @@
   "oldTestament": "পুৰণি নিয়ম",
   "newTestament": "নতুন নিয়ম",
   "deuterocanonApocrypha": "ডিউটেৰ'কেনন / এপ'ক্ৰিফা"
+,
+  "footnoteTitle": "Footnote {caller}"
+,
+  "closeFootnote": "Close footnote"
+,
+  "couldNotOpenFootnote": "Could not open footnote {reference}.",
+  "chapterFootnotesTitle": "Footnotes",
+  "openScriptureReference": "Open {reference}",
+  "couldNotLoadFootnotes": "Could not load footnotes. Please try again."
 }

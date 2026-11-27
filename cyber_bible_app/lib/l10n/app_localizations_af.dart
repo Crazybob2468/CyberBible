@@ -505,4 +505,29 @@ class AppLocalizationsAf extends AppLocalizations {
 
   @override
   String get deuterocanonApocrypha => 'Deuterokanon / Apokriewe';
+
+  @override
+  String footnoteTitle(Object caller) {
+    return 'Voetnoot $caller';
+  }
+
+  @override
+  String get closeFootnote => 'Maak voetnoot toe';
+
+  @override
+  String couldNotOpenFootnote(Object reference) {
+    return 'Kon nie voetnoot $reference oopmaak nie.';
+  }
+
+  @override
+  String get chapterFootnotesTitle => 'Footnotes';
+
+  @override
+  String openScriptureReference(Object reference) {
+    return 'Open $reference';
+  }
+
+  @override
+  String get couldNotLoadFootnotes =>
+      'Could not load footnotes. Please try again.';
 }

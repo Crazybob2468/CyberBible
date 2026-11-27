@@ -148,4 +148,16 @@
   "oldTestament": "Antiguo Testamento",
   "newTestament": "Nuevo Testamento",
   "deuterocanonApocrypha": "Deuterocanónicos / Apócrifos"
+,
+  "footnoteTitle": "Nota al pie {caller}"
+,
+  "closeFootnote": "Cerrar nota al pie"
+,
+  "couldNotOpenFootnote": "No se pudo abrir la nota al pie {reference}."
+,
+  "chapterFootnotesTitle": "Notas al pie"
+,
+  "openScriptureReference": "Abrir {reference}"
+,
+  "couldNotLoadFootnotes": "No se pudieron cargar las notas al pie. Inténtalo de nuevo."
 }

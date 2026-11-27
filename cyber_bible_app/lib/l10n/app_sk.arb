@@ -147,4 +147,13 @@
   "oldTestament": "Starý zákon",
   "newTestament": "Nový zákon",
   "deuterocanonApocrypha": "Deuterokánon / apokryfy"
+,
+  "footnoteTitle": "Footnote {caller}"
+,
+  "closeFootnote": "Close footnote"
+,
+  "couldNotOpenFootnote": "Could not open footnote {reference}.",
+  "chapterFootnotesTitle": "Footnotes",
+  "openScriptureReference": "Open {reference}",
+  "couldNotLoadFootnotes": "Could not load footnotes. Please try again."
 }

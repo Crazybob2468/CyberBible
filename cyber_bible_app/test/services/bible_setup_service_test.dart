@@ -12,10 +12,10 @@
 ///   - `getApplicationSupportDirectory()` from `path_provider`
 ///   - `rootBundle.load()` from `package:flutter/services.dart`
 ///
-/// Coverage of `ensureReady()` requires integration tests (run on a real
-/// device or emulator via `flutter test integration_test/`).  Those will be
-/// added in a future step once the integration-test scaffold is in place.
-/// See PROJECT_STATUS.md for the deferred-test note.
+/// Coverage of `ensureReady()` requires a platform integration test. The
+/// current browser integration test covers the Web database schema migration,
+/// not this service's asset-copy and path-provider behavior. See
+/// PROJECT_STATUS.md for the deferred-test note.
 library;
 
 import 'package:flutter_test/flutter_test.dart';

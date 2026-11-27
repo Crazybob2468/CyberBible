@@ -148,4 +148,13 @@
   "oldTestament": "구약",
   "newTestament": "신약",
   "deuterocanonApocrypha": "제2경전 / 외경"
+,
+  "footnoteTitle": "각주 {caller}"
+,
+  "closeFootnote": "각주 닫기"
+,
+  "couldNotOpenFootnote": "{reference} 각주를 열 수 없습니다.",
+  "chapterFootnotesTitle": "각주",
+  "openScriptureReference": "{reference} 열기",
+  "couldNotLoadFootnotes": "각주를 불러올 수 없습니다. 다시 시도해 주세요."
 }

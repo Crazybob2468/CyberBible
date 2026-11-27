@@ -147,5 +147,11 @@
   "accentSwatchSemantics": "{name} accent colour{selected}",
   "oldTestament": "Old Testament",
   "newTestament": "New Testament",
-  "deuterocanonApocrypha": "Deuterocanon / Apocrypha"
+  "deuterocanonApocrypha": "Deuterocanon / Apocrypha",
+  "footnoteTitle": "Footnote {caller}",
+  "closeFootnote": "Close footnote",
+  "couldNotOpenFootnote": "Could not open footnote {reference}.",
+  "chapterFootnotesTitle": "Footnotes",
+  "openScriptureReference": "Open {reference}",
+  "couldNotLoadFootnotes": "Could not load footnotes. Please try again."
 }

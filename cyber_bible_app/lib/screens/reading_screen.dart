@@ -21,7 +21,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart'
-  show TargetPlatform, defaultTargetPlatform, kIsWeb;
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart'; // RenderAbstractViewport
 import 'package:flutter/services.dart'; // SemanticsService, SystemNavigator
@@ -31,6 +31,7 @@ import 'package:cyber_bible_app/l10n/localization_helpers.dart';
 import '../app_routes.dart';
 import '../models/book.dart';
 import '../models/bookmark.dart';
+import '../models/footnote.dart';
 import '../models/verse.dart';
 import '../services/bible_service.dart';
 import '../services/settings_service.dart';
@@ -168,8 +169,14 @@ class _ReadingScreenState extends State<ReadingScreen> {
   /// Non-null for transient technical load/render failures.
   String? _errorMessage;
 
-  /// Plain-text verse rows used for picker options and accessibility labels.
+  /// Plain-text verse rows used for picker options and navigation.
   List<Verse>? _verses;
+
+  /// Stored notes for this chapter, or null if the lookup could not complete.
+  List<Footnote>? _chapterFootnotes;
+
+  /// Shows a retry state when supplemental note loading fails.
+  bool _footnotesLoadFailed = false;
 
   // ---- Header/scroll state ----
 
@@ -179,13 +186,17 @@ class _ReadingScreenState extends State<ReadingScreen> {
   /// Whether the SliverAppBar is currently collapsed.
   bool _isCollapsed = false;
 
+  /// Current expanded height, cached so scrolling does not remeasure text.
+  double _currentExpandedHeight = _expandedHeight;
+
   /// Current generation for in-flight loads; older completions are discarded.
   int _loadGeneration = 0;
 
   // ---- Quick-nav verse tracking state ----
 
   /// Key to access HtmlWidgetState for anchor operations if needed.
-  final GlobalKey<HtmlWidgetState> _htmlWidgetKey = GlobalKey<HtmlWidgetState>();
+  final GlobalKey<HtmlWidgetState> _htmlWidgetKey =
+      GlobalKey<HtmlWidgetState>();
 
   /// Key attached to the top-left content container around HtmlWidget.
   final GlobalKey _contentTopKey = GlobalKey(debugLabel: 'reading-content-top');
@@ -323,7 +334,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
   /// Updates collapsed-header state, verse tracking, and chapter nav bar.
   void _onScroll() {
-    const collapseThreshold = _expandedHeight - kToolbarHeight;
+    final collapseThreshold = _currentExpandedHeight - kToolbarHeight;
     final collapsed = _scrollController.offset > collapseThreshold;
     if (collapsed != _isCollapsed) {
       setState(() => _isCollapsed = collapsed);
@@ -360,6 +371,8 @@ class _ReadingScreenState extends State<ReadingScreen> {
       _contentUsfx = null;
       _html = null;
       _verses = null;
+      _chapterFootnotes = null;
+      _footnotesLoadFailed = false;
       _topVerse = null;
       _highlightedVerseId = null;
     });
@@ -367,7 +380,10 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
     try {
       await BibleService.ensureOpen();
-      final chapter = await BibleService.getChapter(widget.book.code, widget.chapter);
+      final chapter = await BibleService.getChapter(
+        widget.book.code,
+        widget.chapter,
+      );
       if (!mounted || generation != _loadGeneration) return;
 
       if (chapter == null) {
@@ -375,15 +391,35 @@ class _ReadingScreenState extends State<ReadingScreen> {
         return;
       }
 
-      _contentUsfx = chapter.contentUsfx;
+      List<Verse>? verses;
       try {
-        _verses = await BibleService.getVerses(widget.book.code, widget.chapter);
+        verses = await BibleService.getVerses(widget.book.code, widget.chapter);
       } catch (e) {
-        _verses = null;
+        verses = null;
+      }
+      List<Footnote>? footnotes;
+      var footnotesLoadFailed = false;
+      try {
+        footnotes = await BibleService.getChapterFootnotes(
+          widget.book.code,
+          widget.chapter,
+        );
+      } catch (error) {
+        // Scripture remains readable if supplemental note data cannot load.
+        debugPrint(
+          'Could not load footnotes for ${widget.book.code} '
+          '${widget.chapter}: $error',
+        );
+        footnotesLoadFailed = true;
       }
 
       if (!mounted || generation != _loadGeneration) return;
 
+      // Commit results together only if this is still the active request.
+      _contentUsfx = chapter.contentUsfx;
+      _verses = verses;
+      _chapterFootnotes = footnotes;
+      _footnotesLoadFailed = footnotesLoadFailed;
       _verseOrder = _verses?.map((v) => v.verse).toList() ?? const <String>[];
       _verseIndexById = <String, int>{
         for (var i = 0; i < _verseOrder.length; i++) _verseOrder[i]: i,
@@ -397,7 +433,9 @@ class _ReadingScreenState extends State<ReadingScreen> {
       try {
         await UserDataService.ensureOpen();
         final verseSet = await UserDataService.getBookmarkedVerses(
-            widget.book.code, widget.chapter);
+          widget.book.code,
+          widget.chapter,
+        );
         if (mounted && generation == _loadGeneration) {
           setState(() => _bookmarkedVerses = verseSet);
         }
@@ -405,18 +443,20 @@ class _ReadingScreenState extends State<ReadingScreen> {
         // Bookmark indicator failure is non-fatal — the chapter still renders.
       }
 
+      if (!mounted || generation != _loadGeneration) return;
       _rebuildHtml();
 
       // If an initial verse was provided (e.g. navigation from BookmarksTab),
       // jump to it after a short delay to let layout complete.  The pending-
       // jump retry system will keep trying for up to 5 s if HtmlWidget is
       // still building asynchronously.
-      if (_initialJumpTarget != null) {
+      final initialJumpTarget = _initialJumpTarget;
+      if (initialJumpTarget != null) {
         WidgetsBinding.instance.addPostFrameCallback((_) async {
-          if (!mounted) return;
+          if (!mounted || generation != _loadGeneration) return;
           await Future<void>.delayed(const Duration(milliseconds: 300));
-          if (mounted) {
-            await _jumpToVerse(_initialJumpTarget!, manualSelection: false);
+          if (mounted && generation == _loadGeneration) {
+            await _jumpToVerse(initialJumpTarget, manualSelection: false);
           }
         });
       }
@@ -426,6 +466,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
         setState(() {
           _contentUsfx = null;
           _verses = null;
+          _chapterFootnotes = null;
           _errorMessage = l10n.couldNotLoadChapter;
         });
       }
@@ -433,6 +474,10 @@ class _ReadingScreenState extends State<ReadingScreen> {
   }
 
   // ---- HTML rendering ----
+
+  /// Builds a collision-safe lookup key for a verse and its note ordinal.
+  String _footnoteMarkerKey(String verseId, int ordinal) =>
+      '$verseId\u0000$ordinal';
 
   /// Rebuilds themed HTML from [_contentUsfx] and active color scheme.
   void _rebuildHtml() {
@@ -452,8 +497,23 @@ class _ReadingScreenState extends State<ReadingScreen> {
         ? '#e53935'
         : _colorToCss(colorScheme.onSurface);
 
+    final chapterFootnotes = _chapterFootnotes ?? const <Footnote>[];
+    final footnoteLabels = <String, String>{
+      for (var index = 0; index < chapterFootnotes.length; index++)
+        _footnoteMarkerKey(
+          chapterFootnotes[index].verse,
+          chapterFootnotes[index].ordinal,
+        ): footnoteLabelForIndex(
+          index,
+        ),
+    };
+
     final html = renderChapterToHtml(
       _contentUsfx!,
+      bookCode: widget.book.code,
+      chapterNumber: widget.chapter,
+      footnoteLabelBuilder: (verseId, ordinal) =>
+          footnoteLabels[_footnoteMarkerKey(verseId, ordinal)],
       bodyColorCss: _colorToCss(colorScheme.onSurface),
       verseNumColorCss: _colorToCss(colorScheme.primary),
       headingColorCss: _colorToCss(colorScheme.onSurface.withAlpha(153)),
@@ -461,7 +521,9 @@ class _ReadingScreenState extends State<ReadingScreen> {
       footnoteColorCss: _colorToCss(colorScheme.primary),
       baseFontSizePx: settings.fontSizePx,
       highlightedVerseId: _highlightedVerseId,
-      highlightedVerseBackgroundCss: _colorToCss(colorScheme.tertiaryContainer.withAlpha(191)),
+      highlightedVerseBackgroundCss: _colorToCss(
+        colorScheme.tertiaryContainer.withAlpha(191),
+      ),
       bookmarkedVerses: _bookmarkedVerses,
       wjColorCss: wjColor,
       showSectionHeadings: settings.showSectionHeadings,
@@ -519,7 +581,9 @@ class _ReadingScreenState extends State<ReadingScreen> {
   /// async widget construction, which may clamp the scroll position to top on
   /// some Android launches. This helper keeps the reader anchored.
   void _rebuildHtmlPreservingScrollOffset() {
-    final targetOffset = _scrollController.hasClients ? _scrollController.offset : 0.0;
+    final targetOffset = _scrollController.hasClients
+        ? _scrollController.offset
+        : 0.0;
     _rebuildHtml();
     _restoreScrollOffsetAfterHtmlRebuild(targetOffset);
   }
@@ -549,10 +613,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
         _scrollController.jumpTo(clampedTarget);
       }
 
-      _restoreScrollOffsetAfterHtmlRebuild(
-        clampedTarget,
-        attempt: attempt + 1,
-      );
+      _restoreScrollOffsetAfterHtmlRebuild(clampedTarget, attempt: attempt + 1);
     });
   }
 
@@ -609,7 +670,6 @@ class _ReadingScreenState extends State<ReadingScreen> {
     // the header verse tracker does not briefly snap back to verse 1.
     _verseTopOffsets.addAll(collected);
 
-
     // Keep collecting while only a partial marker set is available.
     // Without this, the first non-empty snapshot (often containing verse 1
     // only) would stop retries and freeze the header tracker on early verses.
@@ -652,7 +712,9 @@ class _ReadingScreenState extends State<ReadingScreen> {
       return;
     }
 
-    final currentOffset = _scrollController.hasClients ? _scrollController.offset : 0.0;
+    final currentOffset = _scrollController.hasClients
+        ? _scrollController.offset
+        : 0.0;
     final fullyVisibleTop = currentOffset + _topFullyVisibleInsetPx;
 
     String? lastBeforeTop;
@@ -692,7 +754,9 @@ class _ReadingScreenState extends State<ReadingScreen> {
     // Paragraph mode can have sparse marker coverage. If the reader has
     // scrolled beyond the last known marker, estimate within the unresolved
     // tail only (prevents both plateau and bottom-biased jumps).
-    final tailEstimatedIndex = _estimateTailVerseIndexAfterLastMarker(currentOffset);
+    final tailEstimatedIndex = _estimateTailVerseIndexAfterLastMarker(
+      currentOffset,
+    );
     if (tailEstimatedIndex != null) {
       final exactTopIndex = _verseIndexById[top] ?? 0;
       if (tailEstimatedIndex > exactTopIndex) {
@@ -751,8 +815,8 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
     // Fractional progress within this scroll span (0 = at previous marker,
     // 1 = at next marker).
-    final progress =
-        ((currentOffset - prevOffset) / (nextOffset - prevOffset)).clamp(0.0, 1.0);
+    final progress = ((currentOffset - prevOffset) / (nextOffset - prevOffset))
+        .clamp(0.0, 1.0);
 
     // Compute total text length for all verses in this range so we can
     // distribute scroll space proportionally to rendered height.
@@ -774,7 +838,8 @@ class _ReadingScreenState extends State<ReadingScreen> {
       final text = (_verses != null && i < _verses!.length)
           ? _verses![i].textPlain
           : '';
-      cumulative += (text.isEmpty ? 30.0 : text.length.toDouble()) / totalLength;
+      cumulative +=
+          (text.isEmpty ? 30.0 : text.length.toDouble()) / totalLength;
       if (progress < cumulative) {
         // If we're basically at this verse start, it's fully visible.
         if (progress <= verseStart + _fullyVisibleStartTolerance) {
@@ -837,9 +902,8 @@ class _ReadingScreenState extends State<ReadingScreen> {
         ((currentOffset - lastKnownOffset) / (maxOffset - lastKnownOffset))
             .clamp(0.0, 1.0);
     final unresolvedSpan = finalVerseIndex - lastKnownIndex;
-    final estimated =
-        (lastKnownIndex + (tailProgress * unresolvedSpan).floor())
-            .clamp(lastKnownIndex, finalVerseIndex);
+    final estimated = (lastKnownIndex + (tailProgress * unresolvedSpan).floor())
+        .clamp(lastKnownIndex, finalVerseIndex);
     return estimated;
   }
 
@@ -869,7 +933,9 @@ class _ReadingScreenState extends State<ReadingScreen> {
     try {
       await UserDataService.ensureOpen();
       final verses = await UserDataService.getBookmarkedVerses(
-          widget.book.code, widget.chapter);
+        widget.book.code,
+        widget.chapter,
+      );
       if (mounted) {
         setState(() => _bookmarkedVerses = verses);
         _rebuildHtml();
@@ -896,9 +962,8 @@ class _ReadingScreenState extends State<ReadingScreen> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      builder: (_) => _BookChapterQuickNavSheet(
-        currentBookCode: widget.book.code,
-      ),
+      builder: (_) =>
+          _BookChapterQuickNavSheet(currentBookCode: widget.book.code),
     );
 
     if (!mounted || result == null) return;
@@ -944,7 +1009,8 @@ class _ReadingScreenState extends State<ReadingScreen> {
     if (kIsWeb) return false;
 
     final shortestSide = MediaQuery.of(context).size.shortestSide;
-    final isMobilePlatform = defaultTargetPlatform == TargetPlatform.android ||
+    final isMobilePlatform =
+        defaultTargetPlatform == TargetPlatform.android ||
         defaultTargetPlatform == TargetPlatform.iOS;
 
     return isMobilePlatform && shortestSide < 700;
@@ -973,10 +1039,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
     // temporarily expose only a subset of markers; retry via post-frame passes
     // instead of immediately falling back to a nearby verse.
     if (_verseTopOffsets[requestedVerse] == null) {
-      _queuePendingVerseJump(
-        requestedVerse,
-        manualSelection: manualSelection,
-      );
+      _queuePendingVerseJump(requestedVerse, manualSelection: manualSelection);
       _scheduleMarkerCollection(resetRetryCounter: true);
       return;
     }
@@ -992,10 +1055,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
     // Layout/scroll clients are not ready yet — retry once the next marker
     // collection pass runs.
-    _queuePendingVerseJump(
-      requestedVerse,
-      manualSelection: manualSelection,
-    );
+    _queuePendingVerseJump(requestedVerse, manualSelection: manualSelection);
     _scheduleMarkerCollection(resetRetryCounter: true);
   }
 
@@ -1041,8 +1101,9 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
     // Lock the label to the landed verse until the user scrolls away.
     _jumpLockedVerse = verseId;
-    _jumpLockOriginOffset =
-        _scrollController.hasClients ? _scrollController.offset : 0.0;
+    _jumpLockOriginOffset = _scrollController.hasClients
+        ? _scrollController.offset
+        : 0.0;
 
     // Verify that anchor scrolling actually moved near the requested verse.
     // On some async-build timings, scrollToAnchor can return true before the
@@ -1113,10 +1174,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
   }
 
   /// Stores an unresolved jump request and starts retry scheduling.
-  void _queuePendingVerseJump(
-    String verseId, {
-    required bool manualSelection,
-  }) {
+  void _queuePendingVerseJump(String verseId, {required bool manualSelection}) {
     _pendingJumpVerseId = verseId;
     _pendingJumpManualSelection = manualSelection;
     _pendingJumpRetryCount = 0;
@@ -1264,7 +1322,10 @@ class _ReadingScreenState extends State<ReadingScreen> {
       }
     }
 
-    if (prevIndex == null || nextIndex == null || prevOffset == null || nextOffset == null) {
+    if (prevIndex == null ||
+        nextIndex == null ||
+        prevOffset == null ||
+        nextOffset == null) {
       return null;
     }
     if (targetIndex <= prevIndex || targetIndex >= nextIndex) return null;
@@ -1272,14 +1333,18 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
     double total = 0.0;
     for (int i = prevIndex; i < nextIndex; i++) {
-      final text = (_verses != null && i < _verses!.length) ? _verses![i].textPlain : '';
+      final text = (_verses != null && i < _verses!.length)
+          ? _verses![i].textPlain
+          : '';
       total += text.isEmpty ? 30.0 : text.length.toDouble();
     }
     if (total <= 0) return null;
 
     double beforeTarget = 0.0;
     for (int i = prevIndex; i < targetIndex; i++) {
-      final text = (_verses != null && i < _verses!.length) ? _verses![i].textPlain : '';
+      final text = (_verses != null && i < _verses!.length)
+          ? _verses![i].textPlain
+          : '';
       beforeTarget += text.isEmpty ? 30.0 : text.length.toDouble();
     }
 
@@ -1348,8 +1413,9 @@ class _ReadingScreenState extends State<ReadingScreen> {
       return requestedVerse;
     }
 
-    final availableVerses =
-        _verseOrder.where((verse) => _verseTopOffsets.containsKey(verse)).toList();
+    final availableVerses = _verseOrder
+        .where((verse) => _verseTopOffsets.containsKey(verse))
+        .toList();
     if (availableVerses.isEmpty) return null;
 
     final requestedIndex = _verseIndexById[requestedVerse] ?? -1;
@@ -1385,12 +1451,9 @@ class _ReadingScreenState extends State<ReadingScreen> {
   /// Announces successful verse navigation for screen-reader users.
   void _announceVerseJump(String verseId) {
     final direction = Directionality.of(context);
-    final message = 'Moved to ${widget.book.nameShort} ${widget.chapter}:$verseId';
-    SemanticsService.sendAnnouncement(
-      View.of(context),
-      message,
-      direction,
-    );
+    final message =
+        'Moved to ${widget.book.nameShort} ${widget.chapter}:$verseId';
+    SemanticsService.sendAnnouncement(View.of(context), message, direction);
   }
 
   /// Writes manual verse jump events into route information for browser history.
@@ -1400,7 +1463,9 @@ class _ReadingScreenState extends State<ReadingScreen> {
     // Route-information updates can trigger route churn on some web launches.
     // Only touch route info when this screen is the current reading route.
     final route = ModalRoute.of(context);
-    if (route == null || !route.isCurrent || route.settings.name != AppRoutes.reading) {
+    if (route == null ||
+        !route.isCurrent ||
+        route.settings.name != AppRoutes.reading) {
       return;
     }
 
@@ -1446,8 +1511,9 @@ class _ReadingScreenState extends State<ReadingScreen> {
       final chaptersByBook = <String, List<int>>{};
 
       // Always fetch the current book's chapters.
-      chaptersByBook[widget.book.code] =
-          await BibleService.getChapters(widget.book.code);
+      chaptersByBook[widget.book.code] = await BibleService.getChapters(
+        widget.book.code,
+      );
       if (!mounted) return;
 
       final currentChapters = chaptersByBook[widget.book.code]!;
@@ -1457,8 +1523,9 @@ class _ReadingScreenState extends State<ReadingScreen> {
       // the current book (so we can offer navigation to the prev book's end).
       if (chapterIdx <= 0 && bookIdx > 0) {
         final prevBook = books[bookIdx - 1];
-        chaptersByBook[prevBook.code] =
-            await BibleService.getChapters(prevBook.code);
+        chaptersByBook[prevBook.code] = await BibleService.getChapters(
+          prevBook.code,
+        );
         if (!mounted) return;
       }
 
@@ -1467,8 +1534,9 @@ class _ReadingScreenState extends State<ReadingScreen> {
       if ((chapterIdx < 0 || chapterIdx >= currentChapters.length - 1) &&
           bookIdx < books.length - 1) {
         final nextBook = books[bookIdx + 1];
-        chaptersByBook[nextBook.code] =
-            await BibleService.getChapters(nextBook.code);
+        chaptersByBook[nextBook.code] = await BibleService.getChapters(
+          nextBook.code,
+        );
         if (!mounted) return;
       }
 
@@ -1544,11 +1612,7 @@ class _ReadingScreenState extends State<ReadingScreen> {
   /// widget is no longer mounted.
   void _navigateToChapter(ReadingArgs? args) {
     if (args == null || !mounted) return;
-    Navigator.pushNamed(
-      context,
-      AppRoutes.reading,
-      arguments: args,
-    );
+    Navigator.pushNamed(context, AppRoutes.reading, arguments: args);
   }
 
   /// Handles a completed horizontal drag gesture to trigger chapter navigation.
@@ -1596,8 +1660,10 @@ class _ReadingScreenState extends State<ReadingScreen> {
     //   Ctrl+Left/Right — word-by-word cursor movement on desktop
     //   Shift+Page Down — extend text selection
     final HardwareKeyboard kb = HardwareKeyboard.instance;
-    if (kb.isAltPressed || kb.isControlPressed ||
-        kb.isMetaPressed || kb.isShiftPressed) {
+    if (kb.isAltPressed ||
+        kb.isControlPressed ||
+        kb.isMetaPressed ||
+        kb.isShiftPressed) {
       return KeyEventResult.ignored;
     }
 
@@ -1752,7 +1818,9 @@ class _ReadingScreenState extends State<ReadingScreen> {
             // contrast tokens for foreground text/icons and the border.
             // This ensures legibility across all Material 3 custom themes.
             foregroundColor: colorScheme.onPrimaryContainer,
-            side: BorderSide(color: colorScheme.onPrimaryContainer.withAlpha(80)),
+            side: BorderSide(
+              color: colorScheme.onPrimaryContainer.withAlpha(80),
+            ),
             alignment: isNext ? Alignment.centerRight : Alignment.centerLeft,
             visualDensity: VisualDensity.compact,
           ),
@@ -1794,11 +1862,69 @@ class _ReadingScreenState extends State<ReadingScreen> {
 
   // ---- Header ----
 
+  /// Reserves enough space for wrapped, scaled book and chapter headings.
+  double _expandedHeaderHeight() {
+    final l10n = appLocalizations(context);
+    final testament = switch (widget.book.testament) {
+      Testament.ot => l10n.oldTestament,
+      Testament.nt => l10n.newTestament,
+      Testament.dc => l10n.deuterocanonApocrypha,
+    };
+    final width = (MediaQuery.sizeOf(context).width - 40).clamp(
+      1.0,
+      double.infinity,
+    );
+    final direction = Directionality.of(context);
+    final scaler = MediaQuery.textScalerOf(context);
+
+    double textHeight(String text, TextStyle style) {
+      final painter = TextPainter(
+        text: TextSpan(
+          text: text,
+          style: DefaultTextStyle.of(context).style.merge(style),
+        ),
+        textDirection: direction,
+        textScaler: scaler,
+      )..layout(maxWidth: width);
+      final height = painter.height;
+      painter.dispose();
+      return height;
+    }
+
+    final contentHeight =
+        textHeight(
+          testament.toUpperCase(),
+          const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 1.4,
+          ),
+        ) +
+        4 +
+        textHeight(
+          widget.book.nameShort,
+          const TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.w800,
+            height: 1.1,
+          ),
+        ) +
+        2 +
+        textHeight(
+          l10n.chapterLabel(widget.chapter),
+          const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+        );
+    final needed = kToolbarHeight + _quickNavBarHeight + 12 + contentHeight;
+    return needed > _expandedHeight ? needed : _expandedHeight;
+  }
+
   /// Builds collapsible top app bar plus sticky quick-nav controls.
   SliverAppBar _buildSliverAppBar(ColorScheme colorScheme) {
     final l10n = appLocalizations(context);
+    final expandedHeight = _expandedHeaderHeight();
+    _currentExpandedHeight = expandedHeight;
     return SliverAppBar(
-      expandedHeight: _expandedHeight,
+      expandedHeight: expandedHeight,
       pinned: true,
       backgroundColor: colorScheme.primaryContainer,
       foregroundColor: colorScheme.onPrimaryContainer,
@@ -1848,7 +1974,16 @@ class _ReadingScreenState extends State<ReadingScreen> {
       ],
       flexibleSpace: FlexibleSpaceBar(
         titlePadding: EdgeInsets.zero,
-        background: _buildExpandedHeader(colorScheme),
+        // Keep the expanded layout's height while the flexible space clips it
+        // during collapse; otherwise the heading overflows as it shrinks.
+        background: ClipRect(
+          child: OverflowBox(
+            alignment: Alignment.bottomLeft,
+            minHeight: expandedHeight,
+            maxHeight: expandedHeight,
+            child: _buildExpandedHeader(colorScheme),
+          ),
+        ),
       ),
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(_quickNavBarHeight),
@@ -1997,7 +2132,11 @@ class _ReadingScreenState extends State<ReadingScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error_outline_rounded, size: 48, color: colorScheme.error),
+            Icon(
+              Icons.error_outline_rounded,
+              size: 48,
+              color: colorScheme.error,
+            ),
             const SizedBox(height: 16),
             Text(
               _errorMessage!,
@@ -2016,78 +2155,206 @@ class _ReadingScreenState extends State<ReadingScreen> {
     );
   }
 
+  /// Opens a structurally targeted note reference after verifying that its
+  /// book, chapter, and exact verse exist in the active translation.
+  Future<void> _navigateToFootnoteReference(
+    FootnoteScriptureTarget target,
+  ) async {
+    final targetText = '${target.bookCode}.${target.chapter}.${target.verse}';
+    try {
+      final targetBook = await _findTargetBook(target.bookCode);
+      if (targetBook == null ||
+          !(await BibleService.getChapters(
+            target.bookCode,
+          )).contains(target.chapter)) {
+        _showFootnoteError(targetText);
+        return;
+      }
+
+      final verses = await BibleService.getVerses(
+        target.bookCode,
+        target.chapter,
+      );
+      if (!verses.any((verse) => verse.verse == target.verse)) {
+        _showFootnoteError(targetText);
+        return;
+      }
+
+      if (!mounted) return;
+      await Navigator.of(context).pushNamed(
+        AppRoutes.reading,
+        arguments: ReadingArgs(
+          book: targetBook,
+          chapter: target.chapter,
+          initialVerse: target.verse,
+        ),
+      );
+    } catch (error) {
+      debugPrint(
+        'Could not navigate to footnote reference $targetText: $error',
+      );
+      _showFootnoteError(targetText);
+    }
+  }
+
+  /// Looks up a Bible book by its stable USFX code.
+  Future<Book?> _findTargetBook(String bookCode) async {
+    final books = await BibleService.getBooks();
+    for (final book in books) {
+      if (book.code == bookCode) return book;
+    }
+    return null;
+  }
+
+  /// Reports a missing scripture target without blocking chapter reading.
+  void _showFootnoteError(String reference) {
+    if (!mounted) return;
+    final l10n = appLocalizations(context);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.couldNotNavigate(reference))));
+  }
+
   // ---- HTML content ----
 
-  /// Builds rendered chapter content and invisible per-verse semantics overlay.
+  /// Builds scripture and chapter-end footnotes in their reading order.
   Widget _buildHtmlContent(String html) {
     return SliverToBoxAdapter(
       child: Padding(
         key: _contentTopKey,
         // Bottom padding is extended by [_chapterNavBarHeight] so the last
-        // verse is never hidden behind the overlaid chapter navigation bar.
+        // note is never hidden behind the overlaid chapter navigation bar.
         padding: const EdgeInsets.fromLTRB(16, 16, 16, _contentBottomPadding),
-        child: Stack(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ExcludeSemantics(
-              child: HtmlWidget(
-                html,
-                key: _htmlWidgetKey,
-                // `textStyle` sets the Flutter-level base font size for ALL
-                // rendered text.  Without it, flutter_widget_from_html_core
-                // inherits the ambient Material theme size (typically 14 sp)
-                // and ignores the `body { font-size }` CSS rule for plain
-                // paragraph text.  Explicit inline styles (verse numbers,
-                // headings) already carry absolute px values computed from
-                // baseFontSizePx, so they continue to scale correctly.
-                // `line-height:1.65` keeps the same comfortable reading
-                // rhythm regardless of which font-size the user chose.
-                textStyle: TextStyle(
-                  fontSize: SettingsService.instance.fontSizePx,
-                  height: 1.65,
-                ),
-                customWidgetBuilder: _buildCustomHtmlWidget,
-                // Ensure the <div data-cbv="N"> block markers take up exactly
-                // zero vertical space so they don't introduce visual gaps.
-                customStylesBuilder: (element) {
-                  final attrs = element.attributes as Map?;
-                  if (element.localName == 'div' &&
-                      attrs != null &&
-                      attrs.containsKey('data-cbv')) {
-                    return {
-                      'padding': '0',
-                      'margin': '0',
-                      'line-height': '0',
-                      'height': '0',
-                      'overflow': 'hidden',
-                    };
-                  }
-                  return null;
-                },
+            // Use the rendered text's real layout and semantics. Zero-sized
+            // invisible verse labels are omitted by platform accessibility trees.
+            HtmlWidget(
+              html,
+              key: _htmlWidgetKey,
+              factoryBuilder: _ScriptureWidgetFactory.new,
+              textStyle: TextStyle(
+                fontSize: SettingsService.instance.fontSizePx,
+                height: 1.65,
               ),
+              customWidgetBuilder: _buildCustomHtmlWidget,
+              // Verse-position markers must not create visible gaps.
+              customStylesBuilder: (element) {
+                final attrs = element.attributes as Map?;
+                if (element.localName == 'div' &&
+                    attrs != null &&
+                    attrs.containsKey('data-cbv')) {
+                  return {
+                    'padding': '0',
+                    'margin': '0',
+                    'line-height': '0',
+                    'height': '0',
+                    'overflow': 'hidden',
+                  };
+                }
+                return null;
+              },
             ),
-            if (_verses != null && _verses!.isNotEmpty)
-              Visibility(
-                visible: false,
-                maintainState: true,
-                maintainAnimation: true,
-                maintainSize: true,
-                maintainSemantics: true,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: _verses!
-                      .map(
-                        (v) => Semantics(
-                            label: appLocalizations(context)
-                                .verseWithText(v.textPlain, v.verse),
-                          excludeSemantics: true,
-                          child: const SizedBox.shrink(),
-                        ),
-                      )
-                      .toList(),
-                ),
-              ),
+            if ((_chapterFootnotes?.isNotEmpty ?? false) ||
+                _footnotesLoadFailed)
+              _buildChapterFootnotes(),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Places ordered, static markers after the chapter and uses full-size
+  /// buttons for scripture references nested in note text.
+  Widget _buildChapterFootnotes() {
+    final l10n = appLocalizations(context);
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Semantics(
+            header: true,
+            child: Text(
+              l10n.chapterFootnotesTitle,
+              style: theme.textTheme.headlineSmall,
+            ),
+          ),
+          if (_footnotesLoadFailed) ...[
+            const SizedBox(height: 8),
+            Text(l10n.couldNotLoadFootnotes),
+            const SizedBox(height: 8),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(minimumSize: const Size(0, 48)),
+              onPressed: _loadChapter,
+              icon: const Icon(Icons.refresh_rounded),
+              label: Text(l10n.retry),
+            ),
+          ] else ...[
+            const Divider(height: 24),
+            for (
+              var index = 0;
+              index < (_chapterFootnotes?.length ?? 0);
+              index++
+            )
+              _buildChapterFootnote(
+                _chapterFootnotes![index],
+                footnoteLabelForIndex(index),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Builds one labeled note, its source verse, body text, and any supported
+  /// scripture-reference actions.
+  Widget _buildChapterFootnote(Footnote footnote, String label) {
+    final l10n = appLocalizations(context);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final sourceReference = footnote.verse == '0'
+        ? '${widget.book.nameShort} ${widget.chapter}'
+        : '${widget.book.nameShort} ${widget.chapter}:${footnote.verse}';
+    final html = renderFootnoteToHtml(
+      footnote.rawUsfx,
+      bodyColorCss: _colorToCss(colorScheme.onSurface),
+    );
+    final references = extractFootnoteScriptureReferences(footnote.rawUsfx);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            '${l10n.footnoteTitle(label)} — $sourceReference',
+            style: theme.textTheme.titleMedium,
+          ),
+          const SizedBox(height: 4),
+          HtmlWidget(html, textStyle: theme.textTheme.bodyLarge),
+          for (final reference in references)
+            Padding(
+              padding: const EdgeInsetsDirectional.only(top: 8),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(0, 48),
+                    alignment: AlignmentDirectional.centerStart,
+                  ),
+                  onPressed: () =>
+                      _navigateToFootnoteReference(reference.target),
+                  icon: const Icon(Icons.open_in_new),
+                  label: Text(l10n.openScriptureReference(reference.label)),
+                ),
+              ),
+            ),
+          const Divider(height: 24),
+        ],
       ),
     );
   }
@@ -2142,6 +2409,28 @@ class _ReadingScreenState extends State<ReadingScreen> {
   }
 }
 
+/// Gives static inline note markers descriptive screen-reader labels without
+/// changing their visual size or turning them into interactive controls.
+class _ScriptureWidgetFactory extends WidgetFactory {
+  @override
+  Widget? buildText(
+    BuildTree tree,
+    InheritedProperties resolved,
+    InlineSpan text,
+  ) {
+    final child = super.buildText(tree, resolved, text);
+    final marker = tree.element.attributes['data-cb-footnote'];
+    if (child == null || marker == null) return child;
+    return Builder(
+      builder: (context) => Semantics(
+        label: appLocalizations(context).footnoteTitle(marker),
+        excludeSemantics: true,
+        child: child,
+      ),
+    );
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Shared quick-nav button
 // ---------------------------------------------------------------------------
@@ -2173,11 +2462,7 @@ class _QuickNavButton extends StatelessWidget {
         child: OutlinedButton.icon(
           onPressed: onPressed,
           icon: Icon(icon, size: 18),
-          label: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
+          label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
           style: OutlinedButton.styleFrom(
             visualDensity: VisualDensity.compact,
             alignment: Alignment.centerLeft,
@@ -2197,7 +2482,10 @@ class _BookChapterSelectionResult {
   final Book book;
   final int chapter;
 
-  const _BookChapterSelectionResult({required this.book, required this.chapter});
+  const _BookChapterSelectionResult({
+    required this.book,
+    required this.chapter,
+  });
 }
 
 /// Two-step bottom sheet:
@@ -2206,12 +2494,11 @@ class _BookChapterSelectionResult {
 class _BookChapterQuickNavSheet extends StatefulWidget {
   final String currentBookCode;
 
-  const _BookChapterQuickNavSheet({
-    required this.currentBookCode,
-  });
+  const _BookChapterQuickNavSheet({required this.currentBookCode});
 
   @override
-  State<_BookChapterQuickNavSheet> createState() => _BookChapterQuickNavSheetState();
+  State<_BookChapterQuickNavSheet> createState() =>
+      _BookChapterQuickNavSheetState();
 }
 
 class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
@@ -2281,8 +2568,7 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
       _scrollCurrentBookIntoView(books);
     } catch (e) {
       if (!mounted) return;
-        setState(() =>
-          _error = appLocalizations(context).couldNotLoadBooks);
+      setState(() => _error = appLocalizations(context).couldNotLoadBooks);
     }
   }
 
@@ -2322,8 +2608,9 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
     // Pre-sort the alphabetical list and find the current book's index.
     final alphabeticalBooks = [...books]
       ..sort((a, b) => a.nameShort.compareTo(b.nameShort));
-    final alphabeticalIndex =
-        alphabeticalBooks.indexWhere((b) => b.code == widget.currentBookCode);
+    final alphabeticalIndex = alphabeticalBooks.indexWhere(
+      (b) => b.code == widget.currentBookCode,
+    );
 
     // Scrolls the Traditional list using computed offset math from fixed
     // extents, so off-screen rows can be reached without mounted row contexts.
@@ -2358,7 +2645,8 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
       if (!_alphabeticalScrollController.hasClients) return;
 
       // Alphabetical list uses fixed itemExtent, so index→offset is exact.
-      final target = (index * _alphabeticalBookRowExtent) -
+      final target =
+          (index * _alphabeticalBookRowExtent) -
           (_alphabeticalBookRowExtent * 1.5);
       final clamped = target.clamp(
         0.0,
@@ -2489,7 +2777,9 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
               Text(_error!, textAlign: TextAlign.center),
               const SizedBox(height: 12),
               FilledButton.icon(
-                onPressed: _selectedBook == null ? _loadBooks : () => _selectBook(_selectedBook!),
+                onPressed: _selectedBook == null
+                    ? _loadBooks
+                    : () => _selectBook(_selectedBook!),
                 icon: const Icon(Icons.refresh_rounded),
                 label: Text(l10n.retry),
               ),
@@ -2571,14 +2861,12 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
       const SizedBox(height: 16),
     ];
 
-    return ListView(
-      controller: _traditionalScrollController,
-      children: items,
-    );
+    return ListView(controller: _traditionalScrollController, children: items);
   }
 
   Widget _buildAlphabeticalBooksTab(ThemeData theme, List<Book> books) {
-    final sorted = [...books]..sort((a, b) => a.nameShort.compareTo(b.nameShort));
+    final sorted = [...books]
+      ..sort((a, b) => a.nameShort.compareTo(b.nameShort));
 
     return ListView.builder(
       controller: _alphabeticalScrollController,
@@ -2595,16 +2883,14 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
   }) {
     final isCurrent = book.code == widget.currentBookCode;
     final tile = ListTile(
-      title: Text(
-        book.nameShort,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
+      title: Text(book.nameShort, maxLines: 1, overflow: TextOverflow.ellipsis),
       trailing: Icon(
         Icons.chevron_right_rounded,
         color: theme.colorScheme.onSurfaceVariant,
       ),
-      tileColor: isCurrent ? theme.colorScheme.secondaryContainer.withAlpha(90) : null,
+      tileColor: isCurrent
+          ? theme.colorScheme.secondaryContainer.withAlpha(90)
+          : null,
       shape: isCurrent
           ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
           : null,
@@ -2615,10 +2901,7 @@ class _BookChapterQuickNavSheetState extends State<_BookChapterQuickNavSheet>
       return tile;
     }
 
-    return SizedBox(
-      height: _traditionalBookRowExtent,
-      child: tile,
-    );
+    return SizedBox(height: _traditionalBookRowExtent, child: tile);
   }
 
   Widget _buildChapterGrid(ThemeData theme, Book book, List<int> chapters) {
@@ -2709,7 +2992,10 @@ class _VerseWheelPickerSheet extends StatefulWidget {
   final List<Verse> verses;
   final String currentVerse;
 
-  const _VerseWheelPickerSheet({required this.verses, required this.currentVerse});
+  const _VerseWheelPickerSheet({
+    required this.verses,
+    required this.currentVerse,
+  });
 
   @override
   State<_VerseWheelPickerSheet> createState() => _VerseWheelPickerSheetState();
@@ -2722,7 +3008,9 @@ class _VerseWheelPickerSheetState extends State<_VerseWheelPickerSheet> {
   @override
   void initState() {
     super.initState();
-    final index = widget.verses.indexWhere((v) => v.verse == widget.currentVerse);
+    final index = widget.verses.indexWhere(
+      (v) => v.verse == widget.currentVerse,
+    );
     _selectedIndex = index >= 0 ? index : 0;
     _controller = FixedExtentScrollController(initialItem: _selectedIndex);
   }
@@ -2745,7 +3033,9 @@ class _VerseWheelPickerSheetState extends State<_VerseWheelPickerSheet> {
           const SizedBox(height: 8),
           Text(
             l10n.selectVerse,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
           Expanded(
@@ -2792,7 +3082,10 @@ class _VerseListPickerSheet extends StatelessWidget {
   final List<Verse> verses;
   final String currentVerse;
 
-  const _VerseListPickerSheet({required this.verses, required this.currentVerse});
+  const _VerseListPickerSheet({
+    required this.verses,
+    required this.currentVerse,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -2807,7 +3100,9 @@ class _VerseListPickerSheet extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             l10n.selectVerse,
-            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 8),
           Expanded(
@@ -2823,8 +3118,9 @@ class _VerseListPickerSheet extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  tileColor:
-                      isCurrent ? theme.colorScheme.secondaryContainer.withAlpha(80) : null,
+                  tileColor: isCurrent
+                      ? theme.colorScheme.secondaryContainer.withAlpha(80)
+                      : null,
                   onTap: () => Navigator.pop(context, verse.verse),
                 );
               },
@@ -2976,9 +3272,9 @@ class _AddBookmarkSheetState extends State<AddBookmarkSheet> {
       if (mounted) {
         final l10n = appLocalizations(context);
         setState(() => _saving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.couldNotSaveBookmark)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.couldNotSaveBookmark)));
       }
     }
   }
@@ -2993,7 +3289,7 @@ class _AddBookmarkSheetState extends State<AddBookmarkSheet> {
 
     // Display label for the current verse selection.
     final verseLabel = _selectedVerse.isEmpty
-      ? l10n.fullChapterReference(widget.book.nameShort, widget.chapter)
+        ? l10n.fullChapterReference(widget.book.nameShort, widget.chapter)
         : '${widget.book.nameShort} ${widget.chapter}:$_selectedVerse';
 
     return Padding(
@@ -3036,16 +3332,22 @@ class _AddBookmarkSheetState extends State<AddBookmarkSheet> {
                 borderRadius: BorderRadius.circular(8),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     border: Border.all(
-                        color: colorScheme.outline.withAlpha(128)),
+                      color: colorScheme.outline.withAlpha(128),
+                    ),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.bookmark_outline_rounded,
-                          color: colorScheme.primary, size: 20),
+                      Icon(
+                        Icons.bookmark_outline_rounded,
+                        color: colorScheme.primary,
+                        size: 20,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
@@ -3057,8 +3359,10 @@ class _AddBookmarkSheetState extends State<AddBookmarkSheet> {
                         ),
                       ),
                       if (widget.verses.isNotEmpty)
-                        Icon(Icons.chevron_right_rounded,
-                            color: colorScheme.onSurfaceVariant),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
                     ],
                   ),
                 ),
@@ -3091,7 +3395,9 @@ class _AddBookmarkSheetState extends State<AddBookmarkSheet> {
                   hintText: l10n.memorizeHint,
                   border: const OutlineInputBorder(),
                   contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                 ),
                 textCapitalization: TextCapitalization.words,
                 maxLines: 1,
@@ -3109,7 +3415,9 @@ class _AddBookmarkSheetState extends State<AddBookmarkSheet> {
                   hintText: l10n.addNoteHint,
                   border: const OutlineInputBorder(),
                   contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   alignLabelWithHint: true,
                 ),
                 maxLines: 4,
@@ -3146,8 +3454,7 @@ class _AddBookmarkSheetState extends State<AddBookmarkSheet> {
                           ? const SizedBox(
                               width: 18,
                               height: 18,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2),
+                              child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : Text(l10n.save),
                     ),
@@ -3161,4 +3468,3 @@ class _AddBookmarkSheetState extends State<AddBookmarkSheet> {
     );
   }
 }
-

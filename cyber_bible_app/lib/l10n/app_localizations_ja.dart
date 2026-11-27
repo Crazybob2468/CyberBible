@@ -489,4 +489,28 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get deuterocanonApocrypha => '第二正典／外典';
+
+  @override
+  String footnoteTitle(Object caller) {
+    return '脚注 $caller';
+  }
+
+  @override
+  String get closeFootnote => '脚注を閉じる';
+
+  @override
+  String couldNotOpenFootnote(Object reference) {
+    return '脚注 $reference を開けませんでした。';
+  }
+
+  @override
+  String get chapterFootnotesTitle => '脚注';
+
+  @override
+  String openScriptureReference(Object reference) {
+    return '$referenceを開く';
+  }
+
+  @override
+  String get couldNotLoadFootnotes => '脚注を読み込めませんでした。もう一度お試しください。';
 }

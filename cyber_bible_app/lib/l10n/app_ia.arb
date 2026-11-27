@@ -148,4 +148,13 @@
   "oldTestament": "Testamento Ancian",
   "newTestament": "Nove Testamento",
   "deuterocanonApocrypha": "Deuterocanone / Apocrypha"
+,
+  "footnoteTitle": "Footnote {caller}"
+,
+  "closeFootnote": "Close footnote"
+,
+  "couldNotOpenFootnote": "Could not open footnote {reference}.",
+  "chapterFootnotesTitle": "Footnotes",
+  "openScriptureReference": "Open {reference}",
+  "couldNotLoadFootnotes": "Could not load footnotes. Please try again."
 }

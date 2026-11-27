@@ -147,4 +147,13 @@
   "oldTestament": "Oude Testament",
   "newTestament": "Nieuwe Testament",
   "deuterocanonApocrypha": "Deuterocanon / Apocriefen"
+,
+  "footnoteTitle": "Voetnoot {caller}"
+,
+  "closeFootnote": "Voetnoot sluiten"
+,
+  "couldNotOpenFootnote": "Voetnoot {reference} kan niet worden geopend.",
+  "chapterFootnotesTitle": "Voetnoten",
+  "openScriptureReference": "{reference} openen",
+  "couldNotLoadFootnotes": "Voetnoten konden niet worden geladen. Probeer het opnieuw."
 }

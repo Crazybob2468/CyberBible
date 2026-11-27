@@ -148,4 +148,13 @@
   "oldTestament": "العهد القديم",
   "newTestament": "العهد الجديد",
   "deuterocanonApocrypha": "الأسفار القانونية الثانية / الأبوكريفا"
+,
+  "footnoteTitle": "حاشية {caller}"
+,
+  "closeFootnote": "إغلاق الحاشية"
+,
+  "couldNotOpenFootnote": "تعذر فتح الحاشية {reference}.",
+  "chapterFootnotesTitle": "الحواشي",
+  "openScriptureReference": "فتح {reference}",
+  "couldNotLoadFootnotes": "تعذر تحميل الحواشي. حاول مرة أخرى."
 }

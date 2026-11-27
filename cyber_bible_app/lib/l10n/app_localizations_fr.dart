@@ -509,4 +509,29 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get deuterocanonApocrypha => 'Deutérocanoniques / Apocryphes';
+
+  @override
+  String footnoteTitle(Object caller) {
+    return 'Note de bas de page $caller';
+  }
+
+  @override
+  String get closeFootnote => 'Fermer la note de bas de page';
+
+  @override
+  String couldNotOpenFootnote(Object reference) {
+    return 'Impossible d’ouvrir la note de bas de page $reference.';
+  }
+
+  @override
+  String get chapterFootnotesTitle => 'Notes de bas de page';
+
+  @override
+  String openScriptureReference(Object reference) {
+    return 'Ouvrir $reference';
+  }
+
+  @override
+  String get couldNotLoadFootnotes =>
+      'Impossible de charger les notes de bas de page. Réessayez.';
 }

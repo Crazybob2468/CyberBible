@@ -147,4 +147,13 @@
   "oldTestament": "പഴയ നിയമം",
   "newTestament": "പുതിയ നിയമം",
   "deuterocanonApocrypha": "ഡ്യൂട്ടറോകാനോൺ / അപ്പോക്രിഫ"
+,
+  "footnoteTitle": "Footnote {caller}"
+,
+  "closeFootnote": "Close footnote"
+,
+  "couldNotOpenFootnote": "Could not open footnote {reference}.",
+  "chapterFootnotesTitle": "Footnotes",
+  "openScriptureReference": "Open {reference}",
+  "couldNotLoadFootnotes": "Could not load footnotes. Please try again."
 }

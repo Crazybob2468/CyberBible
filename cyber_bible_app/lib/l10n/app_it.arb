@@ -148,4 +148,13 @@
   "oldTestament": "Antico Testamento",
   "newTestament": "Nuovo Testamento",
   "deuterocanonApocrypha": "Deuterocanone / Apocrifi"
+,
+  "footnoteTitle": "Nota a piè di pagina {caller}"
+,
+  "closeFootnote": "Chiudi nota a piè di pagina"
+,
+  "couldNotOpenFootnote": "Impossibile aprire la nota a piè di pagina {reference}.",
+  "chapterFootnotesTitle": "Note a piè di pagina",
+  "openScriptureReference": "Apri {reference}",
+  "couldNotLoadFootnotes": "Impossibile caricare le note a piè di pagina. Riprova."
 }

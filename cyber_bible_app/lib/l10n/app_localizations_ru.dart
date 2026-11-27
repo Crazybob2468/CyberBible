@@ -505,4 +505,29 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get deuterocanonApocrypha => 'Второканонические книги / апокрифы';
+
+  @override
+  String footnoteTitle(Object caller) {
+    return 'Сноска $caller';
+  }
+
+  @override
+  String get closeFootnote => 'Закрыть сноску';
+
+  @override
+  String couldNotOpenFootnote(Object reference) {
+    return 'Не удалось открыть сноску $reference.';
+  }
+
+  @override
+  String get chapterFootnotesTitle => 'Сноски';
+
+  @override
+  String openScriptureReference(Object reference) {
+    return 'Открыть $reference';
+  }
+
+  @override
+  String get couldNotLoadFootnotes =>
+      'Не удалось загрузить сноски. Попробуйте ещё раз.';
 }

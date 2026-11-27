@@ -1,11 +1,8 @@
 /// Browser-backed regression test for upgrading an existing IndexedDB Bible.
 ///
-/// With a matching ChromeDriver running on port 4444, run:
+/// Run with the version-checking local helper:
 /// ```sh
-/// flutter drive \
-///   --driver=test_driver/integration_test.dart \
-///   --target=integration_test/bible_database_migrator_web_test.dart \
-///   -d web-server
+/// bash tools/run_web_integration_test.sh
 /// ```
 library;
 

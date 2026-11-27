@@ -147,4 +147,13 @@
   "oldTestament": "Старий Завіт",
   "newTestament": "Новий Завіт",
   "deuterocanonApocrypha": "Другоканонічні / Апокрифи"
+,
+  "footnoteTitle": "Виноска {caller}"
+,
+  "closeFootnote": "Закрити виноску"
+,
+  "couldNotOpenFootnote": "Не вдалося відкрити виноску {reference}.",
+  "chapterFootnotesTitle": "Виноски",
+  "openScriptureReference": "Відкрити {reference}",
+  "couldNotLoadFootnotes": "Не вдалося завантажити виноски. Спробуйте ще раз."
 }

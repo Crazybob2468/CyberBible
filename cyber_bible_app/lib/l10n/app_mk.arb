@@ -147,4 +147,13 @@
   "oldTestament": "Стариот завет",
   "newTestament": "Новиот Завет",
   "deuterocanonApocrypha": "Деутероканон / Апокрифи"
+,
+  "footnoteTitle": "Footnote {caller}"
+,
+  "closeFootnote": "Close footnote"
+,
+  "couldNotOpenFootnote": "Could not open footnote {reference}.",
+  "chapterFootnotesTitle": "Footnotes",
+  "openScriptureReference": "Open {reference}",
+  "couldNotLoadFootnotes": "Could not load footnotes. Please try again."
 }
