@@ -148,4 +148,13 @@
   "oldTestament": "旧约",
   "newTestament": "新约",
   "deuterocanonApocrypha": "次经 / 外典"
+,
+  "footnoteTitle": "脚注 {caller}"
+,
+  "closeFootnote": "关闭脚注"
+,
+  "couldNotOpenFootnote": "无法打开脚注 {reference}。",
+  "chapterFootnotesTitle": "脚注",
+  "openScriptureReference": "打开 {reference}",
+  "couldNotLoadFootnotes": "无法加载脚注。请重试。"
 }

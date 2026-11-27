@@ -16,8 +16,8 @@ class Footnote {
   /// Zero-based order of this footnote among footnotes associated with [verse].
   final int ordinal;
 
-  /// USFX `caller` symbol shown beside the marker, defaulting to `*` when the
-  /// source does not provide a usable caller.
+  /// Original USFX `caller` symbol, defaulting to `*` when the source does
+  /// not provide a usable caller. The reader generates its own chapter labels.
   final String caller;
 
   /// Complete serialized `<f>` element, including its body and nested markup.
@@ -60,4 +60,18 @@ class Footnote {
   @override
   String toString() =>
       'Footnote($bookCode $chapter:$verse #${ordinal + 1} $caller)';
+}
+
+/// Converts a zero-based chapter-wide footnote index to A, B, ..., Z, AA, AB.
+///
+/// The sequence continues without repeating labels in note-heavy chapters.
+String footnoteLabelForIndex(int index) {
+  RangeError.checkNotNegative(index, 'index');
+  var remaining = index;
+  final letters = <String>[];
+  do {
+    letters.add(String.fromCharCode(65 + remaining % 26));
+    remaining = remaining ~/ 26 - 1;
+  } while (remaining >= 0);
+  return letters.reversed.join();
 }

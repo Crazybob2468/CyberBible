@@ -502,4 +502,29 @@ class AppLocalizationsHi extends AppLocalizations {
 
   @override
   String get deuterocanonApocrypha => 'द्वितीय-कानून / अपोक्रिफा';
+
+  @override
+  String footnoteTitle(Object caller) {
+    return 'पाद-टिप्पणी $caller';
+  }
+
+  @override
+  String get closeFootnote => 'पाद-टिप्पणी बंद करें';
+
+  @override
+  String couldNotOpenFootnote(Object reference) {
+    return '$reference पाद-टिप्पणी नहीं खोली जा सकी।';
+  }
+
+  @override
+  String get chapterFootnotesTitle => 'Footnotes';
+
+  @override
+  String openScriptureReference(Object reference) {
+    return 'Open $reference';
+  }
+
+  @override
+  String get couldNotLoadFootnotes =>
+      'Could not load footnotes. Please try again.';
 }

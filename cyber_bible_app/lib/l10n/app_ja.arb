@@ -148,4 +148,13 @@
   "oldTestament": "旧約聖書",
   "newTestament": "新約聖書",
   "deuterocanonApocrypha": "第二正典／外典"
+,
+  "footnoteTitle": "脚注 {caller}"
+,
+  "closeFootnote": "脚注を閉じる"
+,
+  "couldNotOpenFootnote": "脚注 {reference} を開けませんでした。",
+  "chapterFootnotesTitle": "脚注",
+  "openScriptureReference": "{reference}を開く",
+  "couldNotLoadFootnotes": "脚注を読み込めませんでした。もう一度お試しください。"
 }

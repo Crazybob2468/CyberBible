@@ -491,4 +491,28 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get deuterocanonApocrypha => '제2경전 / 외경';
+
+  @override
+  String footnoteTitle(Object caller) {
+    return '각주 $caller';
+  }
+
+  @override
+  String get closeFootnote => '각주 닫기';
+
+  @override
+  String couldNotOpenFootnote(Object reference) {
+    return '$reference 각주를 열 수 없습니다.';
+  }
+
+  @override
+  String get chapterFootnotesTitle => '각주';
+
+  @override
+  String openScriptureReference(Object reference) {
+    return '$reference 열기';
+  }
+
+  @override
+  String get couldNotLoadFootnotes => '각주를 불러올 수 없습니다. 다시 시도해 주세요.';
 }

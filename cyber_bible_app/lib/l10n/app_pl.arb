@@ -147,4 +147,13 @@
   "oldTestament": "Stary Testament",
   "newTestament": "Nowy Testament",
   "deuterocanonApocrypha": "Deuterokanoniczne / Apokryfy"
+,
+  "footnoteTitle": "Przypis {caller}"
+,
+  "closeFootnote": "Zamknij przypis"
+,
+  "couldNotOpenFootnote": "Nie można otworzyć przypisu {reference}.",
+  "chapterFootnotesTitle": "Przypisy",
+  "openScriptureReference": "Otwórz {reference}",
+  "couldNotLoadFootnotes": "Nie udało się wczytać przypisów. Spróbuj ponownie."
 }

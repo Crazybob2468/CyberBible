@@ -507,4 +507,29 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get deuterocanonApocrypha => 'Deuterocanônico / Apócrifos';
+
+  @override
+  String footnoteTitle(Object caller) {
+    return 'Nota de rodapé $caller';
+  }
+
+  @override
+  String get closeFootnote => 'Fechar nota de rodapé';
+
+  @override
+  String couldNotOpenFootnote(Object reference) {
+    return 'Não foi possível abrir a nota de rodapé $reference.';
+  }
+
+  @override
+  String get chapterFootnotesTitle => 'Notas de rodapé';
+
+  @override
+  String openScriptureReference(Object reference) {
+    return 'Abrir $reference';
+  }
+
+  @override
+  String get couldNotLoadFootnotes =>
+      'Não foi possível carregar as notas de rodapé. Tente novamente.';
 }

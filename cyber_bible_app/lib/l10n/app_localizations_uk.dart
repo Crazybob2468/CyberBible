@@ -508,4 +508,29 @@ class AppLocalizationsUk extends AppLocalizations {
 
   @override
   String get deuterocanonApocrypha => 'Другоканонічні / Апокрифи';
+
+  @override
+  String footnoteTitle(Object caller) {
+    return 'Виноска $caller';
+  }
+
+  @override
+  String get closeFootnote => 'Закрити виноску';
+
+  @override
+  String couldNotOpenFootnote(Object reference) {
+    return 'Не вдалося відкрити виноску $reference.';
+  }
+
+  @override
+  String get chapterFootnotesTitle => 'Виноски';
+
+  @override
+  String openScriptureReference(Object reference) {
+    return 'Відкрити $reference';
+  }
+
+  @override
+  String get couldNotLoadFootnotes =>
+      'Не вдалося завантажити виноски. Спробуйте ще раз.';
 }

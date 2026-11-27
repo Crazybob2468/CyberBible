@@ -9,18 +9,18 @@
 /// ## Deferred integration tests
 ///
 /// The methods [BibleService.getBooks], [BibleService.getChapters],
-/// [BibleService.getChapter], [BibleService.getVerses], and
-/// [BibleService.getBibleInfo], and [BibleService.getFootnotes] all require
-/// an open sqflite database, which
-/// depends on [BibleSetupService.ensureReady] and [path_provider] — platform
+/// [BibleService.getChapter], [BibleService.getVerses],
+/// [BibleService.getBibleInfo], [BibleService.getFootnotes], and
+/// [BibleService.getChapterFootnotes] all require an open sqflite database,
+/// which depends on [BibleSetupService.ensureReady] and [path_provider] — platform
 /// plugins that cannot be exercised in plain unit tests without channel
 /// mocking. Full integration coverage of these query methods requires an
 /// integration test run on a real device or emulator via
 /// `flutter test integration_test/`.
 ///
-/// Integration tests for BibleService will be added when the
-/// integration-test scaffold is set up (Phase 1, after step 1.17 or when
-/// integration tests are first prioritized).
+/// The current Chrome integration test covers the Web database migration, not
+/// every query method; complete query coverage still requires a database-backed
+/// integration test on native and Web platforms.
 library;
 
 import 'package:flutter_test/flutter_test.dart';
@@ -55,51 +55,46 @@ void main() {
       },
     );
 
-    test(
-      'getBooks throws StateError before ensureOpen is called',
-      () async {
-        expect(
-          () async => BibleService.getBooks(),
-          throwsA(isA<StateError>()),
-        );
-      },
-    );
+    test('getBooks throws StateError before ensureOpen is called', () async {
+      expect(() async => BibleService.getBooks(), throwsA(isA<StateError>()));
+    });
 
-    test(
-      'getChapters throws StateError before ensureOpen is called',
-      () async {
-        expect(
-          () async => BibleService.getChapters('GEN'),
-          throwsA(isA<StateError>()),
-        );
-      },
-    );
+    test('getChapters throws StateError before ensureOpen is called', () async {
+      expect(
+        () async => BibleService.getChapters('GEN'),
+        throwsA(isA<StateError>()),
+      );
+    });
 
-    test(
-      'getChapter throws StateError before ensureOpen is called',
-      () async {
-        expect(
-          () async => BibleService.getChapter('GEN', 1),
-          throwsA(isA<StateError>()),
-        );
-      },
-    );
+    test('getChapter throws StateError before ensureOpen is called', () async {
+      expect(
+        () async => BibleService.getChapter('GEN', 1),
+        throwsA(isA<StateError>()),
+      );
+    });
 
-    test(
-      'getVerses throws StateError before ensureOpen is called',
-      () async {
-        expect(
-          () async => BibleService.getVerses('GEN', 1),
-          throwsA(isA<StateError>()),
-        );
-      },
-    );
+    test('getVerses throws StateError before ensureOpen is called', () async {
+      expect(
+        () async => BibleService.getVerses('GEN', 1),
+        throwsA(isA<StateError>()),
+      );
+    });
 
     test(
       'getFootnotes throws StateError before ensureOpen is called',
       () async {
         expect(
           () async => BibleService.getFootnotes('GEN', 1, '1a'),
+          throwsA(isA<StateError>()),
+        );
+      },
+    );
+
+    test(
+      'getChapterFootnotes throws StateError before ensureOpen is called',
+      () async {
+        expect(
+          () async => BibleService.getChapterFootnotes('GEN', 1),
           throwsA(isA<StateError>()),
         );
       },

@@ -499,4 +499,28 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get deuterocanonApocrypha => 'الأسفار القانونية الثانية / الأبوكريفا';
+
+  @override
+  String footnoteTitle(Object caller) {
+    return 'حاشية $caller';
+  }
+
+  @override
+  String get closeFootnote => 'إغلاق الحاشية';
+
+  @override
+  String couldNotOpenFootnote(Object reference) {
+    return 'تعذر فتح الحاشية $reference.';
+  }
+
+  @override
+  String get chapterFootnotesTitle => 'الحواشي';
+
+  @override
+  String openScriptureReference(Object reference) {
+    return 'فتح $reference';
+  }
+
+  @override
+  String get couldNotLoadFootnotes => 'تعذر تحميل الحواشي. حاول مرة أخرى.';
 }

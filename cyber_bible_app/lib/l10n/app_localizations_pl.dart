@@ -506,4 +506,29 @@ class AppLocalizationsPl extends AppLocalizations {
 
   @override
   String get deuterocanonApocrypha => 'Deuterokanoniczne / Apokryfy';
+
+  @override
+  String footnoteTitle(Object caller) {
+    return 'Przypis $caller';
+  }
+
+  @override
+  String get closeFootnote => 'Zamknij przypis';
+
+  @override
+  String couldNotOpenFootnote(Object reference) {
+    return 'Nie można otworzyć przypisu $reference.';
+  }
+
+  @override
+  String get chapterFootnotesTitle => 'Przypisy';
+
+  @override
+  String openScriptureReference(Object reference) {
+    return 'Otwórz $reference';
+  }
+
+  @override
+  String get couldNotLoadFootnotes =>
+      'Nie udało się wczytać przypisów. Spróbuj ponownie.';
 }

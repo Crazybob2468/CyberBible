@@ -148,4 +148,13 @@
   "oldTestament": "Testamenta Taloha",
   "newTestament": "Testamenta Vaovao",
   "deuterocanonApocrypha": "Deoterokanona / Apokrifa"
+,
+  "footnoteTitle": "Footnote {caller}"
+,
+  "closeFootnote": "Close footnote"
+,
+  "couldNotOpenFootnote": "Could not open footnote {reference}.",
+  "chapterFootnotesTitle": "Footnotes",
+  "openScriptureReference": "Open {reference}",
+  "couldNotLoadFootnotes": "Could not load footnotes. Please try again."
 }

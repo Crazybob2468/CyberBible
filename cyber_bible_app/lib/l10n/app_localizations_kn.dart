@@ -508,4 +508,29 @@ class AppLocalizationsKn extends AppLocalizations {
 
   @override
   String get deuterocanonApocrypha => 'ದ್ವಿತೀಯ ನಿಯಮ / ಅಪೋಕ್ರಿಫಾ';
+
+  @override
+  String footnoteTitle(Object caller) {
+    return 'Footnote $caller';
+  }
+
+  @override
+  String get closeFootnote => 'Close footnote';
+
+  @override
+  String couldNotOpenFootnote(Object reference) {
+    return 'Could not open footnote $reference.';
+  }
+
+  @override
+  String get chapterFootnotesTitle => 'Footnotes';
+
+  @override
+  String openScriptureReference(Object reference) {
+    return 'Open $reference';
+  }
+
+  @override
+  String get couldNotLoadFootnotes =>
+      'Could not load footnotes. Please try again.';
 }

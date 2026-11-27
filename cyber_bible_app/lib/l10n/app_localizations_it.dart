@@ -508,4 +508,29 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get deuterocanonApocrypha => 'Deuterocanone / Apocrifi';
+
+  @override
+  String footnoteTitle(Object caller) {
+    return 'Nota a piè di pagina $caller';
+  }
+
+  @override
+  String get closeFootnote => 'Chiudi nota a piè di pagina';
+
+  @override
+  String couldNotOpenFootnote(Object reference) {
+    return 'Impossibile aprire la nota a piè di pagina $reference.';
+  }
+
+  @override
+  String get chapterFootnotesTitle => 'Note a piè di pagina';
+
+  @override
+  String openScriptureReference(Object reference) {
+    return 'Apri $reference';
+  }
+
+  @override
+  String get couldNotLoadFootnotes =>
+      'Impossibile caricare le note a piè di pagina. Riprova.';
 }

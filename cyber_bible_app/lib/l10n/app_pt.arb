@@ -148,4 +148,13 @@
   "oldTestament": "Antigo Testamento",
   "newTestament": "Novo Testamento",
   "deuterocanonApocrypha": "Deuterocanônico / Apócrifos"
+,
+  "footnoteTitle": "Nota de rodapé {caller}"
+,
+  "closeFootnote": "Fechar nota de rodapé"
+,
+  "couldNotOpenFootnote": "Não foi possível abrir a nota de rodapé {reference}.",
+  "chapterFootnotesTitle": "Notas de rodapé",
+  "openScriptureReference": "Abrir {reference}",
+  "couldNotLoadFootnotes": "Não foi possível carregar as notas de rodapé. Tente novamente."
 }

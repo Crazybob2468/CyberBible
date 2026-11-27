@@ -147,4 +147,13 @@
   "oldTestament": "పాత నిబంధన",
   "newTestament": "కొత్త నిబంధన",
   "deuterocanonApocrypha": "డ్యూటెరోకానన్ / అపోక్రిఫా"
+,
+  "footnoteTitle": "Footnote {caller}"
+,
+  "closeFootnote": "Close footnote"
+,
+  "couldNotOpenFootnote": "Could not open footnote {reference}.",
+  "chapterFootnotesTitle": "Footnotes",
+  "openScriptureReference": "Open {reference}",
+  "couldNotLoadFootnotes": "Could not load footnotes. Please try again."
 }

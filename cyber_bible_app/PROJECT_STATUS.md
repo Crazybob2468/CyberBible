@@ -82,38 +82,70 @@ cyber_bible_app/
 
 ## Current Status
 
-**Phase 2 — Step 2.1 Footnotes data layer (complete)**
+**Phase 2 — Step 2.2 Footnotes UI (review and handoff pending)**
 
-The USFX build pipeline now extracts footnotes into separate Bible database
-records, retaining the complete `<f>` fragment, caller, zero-based order, and
-exact string verse ID. Notes embedded in a verse inherit that verse ID; notes
-outside verse milestones use an unambiguous same-chapter `<fr>` label. The
-chapter-level label `0` is preserved when present. Footnotes remain excluded
-from searchable verse text, and the reading UI is unchanged in this step.
+Footnote markers are static, compact alphabetic superscripts (A, B, ... Z, AA)
+in the scripture, distinct from verse numbers. The matching lettered note list
+appears after the chapter text and identifies each note's source verse, avoiding
+oversized inline hit areas and preserving natural paragraph flow. The rendered
+scripture and its headings are exposed to accessibility services, with inline
+note markers announced as "Footnote A" and so on. Reading units follow rendered
+paragraphs and poetry lines rather than providing separate per-verse nodes.
+Structurally identified
+scripture references inside a note are separate, full-width buttons with at
+least 48 dp height. Before
+navigating, the reader confirms the referenced book, chapter, and exact verse
+exist in the active translation; reference-like prose remains ordinary text.
+Opening a target passage pushes a reading route so Back returns to the source.
+General cross-reference UI and history remain out of scope.
 
-The database schema is version 2. Existing local Bible databases are upgraded
-before opening read-only; the migration backfills footnotes from chapter USFX
-in a single transaction on native and Web. A Chrome integration test verifies
-the Web migration against IndexedDB and confirms that migrated data remains
-available through a fresh read-only connection. The bundled WEB database
-contains 1,854 footnote records. The next step is **2.2 — Footnotes UI**,
-including opening the associated note from its inline marker and navigating
-only structurally identified scripture references within the note.
+The Phase 2.1 data layer remains unchanged: the schema is version 2 and the
+bundled WEB database contains 1,854 footnote records. Existing local databases
+are migrated before read-only access, with Web migration coverage in the
+separate Chrome/IndexedDB integration test.
 
-Phase 1.17 UI localization remains complete. Its searchable catalog contains
+The Phase 1.17 localization foundation is complete. Its searchable catalog contains
 226 language codes; 185 modules are selectable and 41 incomplete, duplicated,
 or otherwise unverified bundles remain pending. All 225 AOSP base-language
 codes are represented, while regional/script variants remain future work. See
 the [Phase 1.17 localization report](docs/phase-1.17-localization-report.md)
 for decisions and detailed coverage.
 
-Current validation: 289 unit/widget tests pass, `dart analyze` is clean, and
-the Web build succeeds. The browser integration suite is run separately from
-`flutter test`: its Chrome test upgrades a schema-v1 database in IndexedDB,
-verifies chapter and footnote data through a read-only open, then closes and
-reopens a fresh database handle to confirm persistence. The checklist in
-`.github/copilot-instructions.md` requires both test commands for future
-validation runs.
+For the three new Step 2.2 messages, 13 non-English selectable catalogs have
+best-effort translations (Spanish, French, German, Italian, Portuguese, Arabic,
+Chinese, Japanese, Korean, Russian, Dutch, Ukrainian, and Polish). These
+translations need human review. The other 171 selectable catalogs and all 41
+pending drafts currently use English for at least one of these messages; the
+pending drafts are not selectable. The developer elected to defer further
+translation to Step 2.8. Downloadable Bibles planned for a future phase can supply their
+own native-language footnote text, but these three app interface messages still
+need separate translation for complete UI coverage.
+
+Validation: all 304 Flutter tests pass, `flutter analyze` and `dart analyze`
+report no issues, and the Web build succeeds (with an existing Cupertino font
+warning). Regression tests cover footnote markers in Psalm-style headings,
+ordinal alignment when headings are hidden, and heading notes after a verse
+ends in both paragraph and verse-list modes. The prior browser accessibility
+snapshot exposed neither scripture nor verse labels because the invisible verse
+nodes had zero size. The reader now exposes the actual formatted text and
+headings instead. Database-backed widget tests cover scripture and note
+semantics, 200% text scaling on a 390-dp screen, reference target size,
+keyboard activation, navigation, and return. Browser accessibility snapshots
+expose Psalm 23's heading and poetry lines and Genesis 1's "Footnote A" marker.
+On an Android 15 Pixel emulator, the updated app built and launched, and Android's
+accessibility tree exposed Genesis 1 and "Footnote A" in reading order with
+TalkBack enabled. TalkBack was subsequently disabled at the developer's request.
+The developer confirmed that TalkBack reads Genesis 1's
+inline marker and chapter-end heading and note, and that the Deuteronomy 33:16
+reference button announces and opens Exodus 3. The developer reported an odd
+readout after navigation; its exact cause is not yet established and should be
+investigated in Step 2.8. Physical-device checks, VoiceOver checks, and a
+broader accessibility audit remain outstanding; full accessibility compliance
+is not yet confirmed. The
+browser-backed IndexedDB migration integration test also passed after this
+change using Chrome and ChromeDriver 158.0.8127.38 on macOS ARM64; the local
+runner stops the driver it starts.
+See `docs/web-integration-testing.md` for repeatable browser-test setup.
 
 The rest of this status document retains the previous step-by-step completion
 history and the development roadmap so prior implementation context remains
@@ -148,7 +180,10 @@ Step 1.16 ✅ COMPLETE. The session after Step 1.16 resolved four user-reported 
 
 Step 1.17 localization foundation is complete. Remaining localization follow-up
 is tracked in the report above. Phase 2, Step 2.1 (footnotes data layer) is
-complete; the next numbered roadmap task is Step 2.2: Footnotes — UI.
+complete. Step 2.2's
+chapter-end footnotes are implemented and the IndexedDB regression passes;
+its remaining accessibility checks are recorded above and broader polish is
+scheduled for Step 2.8. Step 2.3 is next after Step 2.2's review handoff.
 
 ---
 
@@ -561,7 +596,7 @@ Step 1.11 implementation:
   - `<v id="N">` — verse number → inline `<sup>` with colour/size inline styles
   - `<ve/>` — verse end milestone (no output)
   - `<wj>` — words of Jesus → `<span style="color:#e53935;">` (red, always on)
-  - `<f>` — footnote → caller superscript only; structured storage is Step 2.1 and tap-to-view UI is Step 2.2
+  - `<f>` — footnote → static alphabetic marker matching its chapter-end note (Step 2.2)
   - `<w s="...">` — Strong's words → strip tag, keep text (linking in Phase 4)
   - `<add>` — supplied text → `<em>` italic
   - `<nd>` — divine names → `<span style="font-variant:small-caps;">`
@@ -569,7 +604,7 @@ Step 1.11 implementation:
 - **Updated `ReadingScreen`**: `_loadVerses()` + `getVerses()` replaced by `_loadChapter()` + `getChapter()`. `HtmlWidget` renders the output HTML. `_colorToCss()` helper converts `Color` → CSS hex/rgba.
 - **Section heading toggle**: always shown; toggle deferred to Step 1.16.
 - **Words of Jesus toggle**: always red; deferred to Step 1.16.
-- **Footnote interactivity**: this renderer currently shows only the caller marker. Step 2.1 adds verse-associated footnote data to the Bible database; Step 2.2 adds tap-to-view presentation.
+- **Footnote presentation**: the Step 1.11 renderer initially showed only the caller marker. Step 2.1 added verse-associated storage; Step 2.2 uses static alphabetic markers, a chapter-end note list, and structurally targeted passage navigation.
 
 **Tests (Step 1.11):**
 - New `test/utils/usfx_renderer_test.dart` — 35 unit tests covering every USFX element type, HTML escaping, empty input, multi-block chapters, and colour/font passthrough (including `<b>` stanza separator and `<qs>` Selah marker added in inline-style fix pass).
@@ -707,7 +742,7 @@ Step 1.7 implementation:
 
 **Tests:**
 - `test/services/bible_service_test.dart` — unit tests verify query methods throw `StateError` when called before `ensureOpen()`.
-- **Deferred integration tests:** Methods like `getBooks()` and `getVerses()` require an open sqflite database, which in turn requires `BibleSetupService.ensureReady()` and platform plugins. Full integration coverage requires a device/emulator test via `flutter test integration_test/`. Will be added when the integration-test scaffold is set up.
+- **Deferred integration tests:** Methods like `getBooks()` and `getVerses()` require an open sqflite database, which in turn requires `BibleSetupService.ensureReady()` and platform plugins. The browser integration-test scaffold now exists and covers the Web schema migration, but does not yet test `ensureReady()` or these query methods.
 - **Deferred concurrency tests:** The `_openFuture` retry-on-failure behavior (reset when `_doOpen()` throws) requires either a `@visibleForTesting` reset hook or platform-plugin mocking to simulate a failed open. Deferred to the same integration-test step.
 
 `flutter analyze lib/ test/` → No issues. `flutter test` → 66 passed.
@@ -749,12 +784,13 @@ The goal: open the app, pick a book and chapter, and read formatted Bible text.
 | Step | Task | Description |
 |------|------|-------------|
 | 2.1 ✅ | **Footnotes — data layer** | Extract one record per USFX `<f>` element and store it in the Bible database with its book, chapter, exact string verse ID, caller, order within the verse, and complete raw USFX fragment. Notes outside verse milestones use an unambiguous same-chapter `<fr>` label, preserving special verse ID `0`. Add runtime lookup by verse and upgrade older local databases. Keep this step data-only: do not change the reader UI or search-index behavior; footnote text remains excluded from searchable verse text. |
-| 2.2 | **Footnotes — UI** | Render tappable inline markers and open the associated footnote in a popup or bottom sheet. Where a footnote contains a structurally identifiable scripture reference, make that reference navigable to its target passage; verify the USFX representation before implementation rather than assuming references in prose can be linked. Navigation history remains Step 2.7, and general cross-reference data/UI remains Steps 2.5–2.6. |
+| 2.2 | **Footnotes — UI** *(review and handoff pending)* | Show static alphabetic superscript markers (A–Z, AA onward) in scripture and list the matching notes after the chapter with their source verses. Present only structurally targeted `<ref>` destinations as separate, full-size buttons after confirming that the book, chapter, and exact verse exist in the active translation. Push the passage so Back returns to the source. General cross-reference data/UI remains Steps 2.5–2.6, and navigation history remains Step 2.7. |
 | 2.3 | **Search — indexing** | Build a full-text search index (SQLite FTS5) for the Bible text at DB creation time. |
 | 2.4 | **Search — UI** | Build a search screen with a text input. Display results as a list of matching verses with context. Tapping a result navigates to that verse. |
 | 2.5 | **Cross references — data layer** | Extract cross-reference data from USFX and store in the DB. |
 | 2.6 | **Cross references — UI** | Display cross-reference markers inline. Tapping shows the referenced verse(s) with a link to navigate there. |
 | 2.7 | **Navigation history** | Track visited locations in a stack. Add a back/forward navigation control. Build a history list screen. |
+| 2.8 | **Testing, bug fixes, accessibility, and localization polish** | Audit and test the reader and Phase 2 study features across supported platforms, screen sizes, text scales, keyboard navigation, and screen readers (including Android TalkBack and iOS VoiceOver). Investigate and improve the reported odd TalkBack readout after following a footnote reference, as well as reading order, announcements, focus, and return navigation. Translate and review the new Phase 2 app interface labels, including all three footnote messages, for every selectable language; review the existing best-effort translations and ensure pending language drafts receive those translations before becoming selectable. Validate placeholders and generated localizations, and add regression coverage. Fix verified defects and document any remaining limitations. Address serious accessibility issues as they are found rather than waiting for this step. |
 
 ### Phase 3 — Parallel Bible Display
 

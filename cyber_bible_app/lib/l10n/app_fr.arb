@@ -148,4 +148,13 @@
   "oldTestament": "Ancien Testament",
   "newTestament": "Nouveau Testament",
   "deuterocanonApocrypha": "Deutérocanoniques / Apocryphes"
+,
+  "footnoteTitle": "Note de bas de page {caller}"
+,
+  "closeFootnote": "Fermer la note de bas de page"
+,
+  "couldNotOpenFootnote": "Impossible d’ouvrir la note de bas de page {reference}.",
+  "chapterFootnotesTitle": "Notes de bas de page",
+  "openScriptureReference": "Ouvrir {reference}",
+  "couldNotLoadFootnotes": "Impossible de charger les notes de bas de page. Réessayez."
 }

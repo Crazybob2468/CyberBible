@@ -57,7 +57,7 @@
 /// | `<v id="N"/>`                                           | Superscript verse number       |
 /// | `<ve/>`                                                 | Verse-end — no output          |
 /// | `<wj>`                                                  | Words of Jesus — red           |
-/// | `<f caller="…">`                                        | Footnote caller only           |
+/// | `<f caller="…">`                                        | Labeled static marker; note is listed after the chapter |
 /// | `<x>`                                                   | Cross-reference — skipped      |
 /// | `<add>`                                                 | Supplied text — italic         |
 /// | `<nd>`                                                  | Divine name — small caps       |
@@ -73,9 +73,10 @@
 /// | `<w>` / `<wh>` / `<wg>` / `<wa>` / `<bk>` / `<pn>` / `<png>` | Transparent pass-through |
 /// | `<cp>`                                                  | Published chapter — suppressed |
 ///
-/// ## Deferred items
+/// ## Related features
 ///
-/// - Footnote pop-up/tap interaction for `<f>` — Step 2.1.
+/// - Footnote markers and structurally targeted note references are presented
+///   by the reading screen in Phase 2.2.
 /// - Cross-reference links for `<x>` — Phase 2.
 /// - Strong's number interactivity for `<w>` — Phase 4.
 /// - Full HTML `<table>` layout (currently linear para-per-row) — Phase 2.
@@ -106,6 +107,7 @@ import 'package:xml/xml.dart';
 /// exception and surface an appropriate error state.
 String renderChapterToHtml(
   String usfxFragment, {
+
   /// CSS color for normal verse body text (maps to `ColorScheme.onSurface`).
   required String bodyColorCss,
 
@@ -123,6 +125,17 @@ String renderChapterToHtml(
   /// CSS color for footnote superscript markers
   /// (maps to `ColorScheme.primary`).
   required String footnoteColorCss,
+
+  /// Bible book code used to identify footnote markers.
+  String? bookCode,
+
+  /// 1-based chapter number used to identify footnote markers.
+  int? chapterNumber,
+
+  /// Maps each verse and its zero-based footnote ordinal to its chapter label.
+  ///
+  /// This keeps visible markers synchronized with the chapter-end note list.
+  String? Function(String verseId, int ordinal)? footnoteLabelBuilder,
 
   /// Base font size in logical pixels for verse body text.
   double baseFontSizePx = 17.0,
@@ -208,6 +221,9 @@ String renderChapterToHtml(
     headingColorCss: headingColorCss,
     dHeadingColorCss: dHeadingColorCss,
     footnoteColorCss: footnoteColorCss,
+    bookCode: bookCode,
+    chapterNumber: chapterNumber,
+    footnoteLabelBuilder: footnoteLabelBuilder,
     baseFontSizePx: baseFontSizePx,
     highlightedVerseId: highlightedVerseId,
     highlightedVerseBackgroundCss: highlightedVerseBackgroundCss,
@@ -243,6 +259,9 @@ class _UsfxRenderer {
   final String headingColorCss;
   final String dHeadingColorCss;
   final String footnoteColorCss;
+  final String? bookCode;
+  final int? chapterNumber;
+  final String? Function(String verseId, int ordinal)? footnoteLabelBuilder;
   final double baseFontSizePx;
   final String? highlightedVerseId;
   final String highlightedVerseBackgroundCss;
@@ -294,12 +313,19 @@ class _UsfxRenderer {
   /// Allows highlights to persist across multiple paragraphs/blocks.
   String? _openHighlightVerseId;
 
+  /// Active source verse and marker ordinal counters for the current chapter.
+  String? _currentVerseId;
+  final Map<String, int> _nextFootnoteOrdinalByVerse = <String, int>{};
+
   _UsfxRenderer({
     required this.bodyColorCss,
     required this.verseNumColorCss,
     required this.headingColorCss,
     required this.dHeadingColorCss,
     required this.footnoteColorCss,
+    this.bookCode,
+    this.chapterNumber,
+    this.footnoteLabelBuilder,
     required this.baseFontSizePx,
     this.highlightedVerseId,
     this.highlightedVerseBackgroundCss = 'rgba(255, 235, 59, 0.45)',
@@ -322,7 +348,8 @@ class _UsfxRenderer {
     // Minimal <style> block: only the two universal defaults that
     // flutter_widget_from_html_core honours from a stylesheet. All per-element
     // colours, sizes, and layout are emitted as inline style= attributes.
-    final styles = '<style>'
+    final styles =
+        '<style>'
         'body{'
         'color:$bodyColorCss;'
         'font-size:${baseFontSizePx}px;'
@@ -363,7 +390,12 @@ class _UsfxRenderer {
       // Whitespace-only text nodes at the top level are ignored.
     }
 
-    return _wrapDocument(styles, bodyHtml.toString(), langCode, scriptDirection);
+    return _wrapDocument(
+      styles,
+      bodyHtml.toString(),
+      langCode,
+      scriptDirection,
+    );
   }
 
   // ---- Block-level element rendering ----
@@ -385,8 +417,11 @@ class _UsfxRenderer {
         // Major section heading as a standalone <ms> element. Some USFX
         // converters use this form instead of <p style="ms1">.
         // Omitted when showSectionHeadings is false.
-        if (!showSectionHeadings) return '';
-        final msText = _extractTextOnly(el);
+        if (!showSectionHeadings) {
+          _renderHeadingContent(el);
+          return '';
+        }
+        final msText = _renderHeadingContent(el);
         if (msText.isEmpty) return '';
         final msPx = (baseFontSizePx * 0.95).toStringAsFixed(1);
         return '<p style="'
@@ -400,8 +435,11 @@ class _UsfxRenderer {
       case 'mr':
         // Major section range reference (e.g. "Psalms 1–41").
         // Omitted when showSectionHeadings is false.
-        if (!showSectionHeadings) return '';
-        final mrText = _extractTextOnly(el);
+        if (!showSectionHeadings) {
+          _renderHeadingContent(el);
+          return '';
+        }
+        final mrText = _renderHeadingContent(el);
         if (mrText.isEmpty) return '';
         return '<p style="'
             'color:$headingColorCss;'
@@ -414,8 +452,11 @@ class _UsfxRenderer {
       case 'sr':
         // Section cross-reference range (e.g. "(Matthew 5:1–7:29)").
         // Omitted when showSectionHeadings is false.
-        if (!showSectionHeadings) return '';
-        final srText = _extractTextOnly(el);
+        if (!showSectionHeadings) {
+          _renderHeadingContent(el);
+          return '';
+        }
+        final srText = _renderHeadingContent(el);
         if (srText.isEmpty) return '';
         return '<p style="'
             'color:$dHeadingColorCss;'
@@ -431,11 +472,17 @@ class _UsfxRenderer {
         return _renderPoetry(el);
       case 's':
         // Section heading. Omitted when showSectionHeadings is false.
-        if (!showSectionHeadings) return '';
+        if (!showSectionHeadings) {
+          _renderHeadingContent(el);
+          return '';
+        }
         return _renderSectionHeading(el);
       case 'd':
         // Psalm descriptive heading. Omitted when showSectionHeadings is false.
-        if (!showSectionHeadings) return '';
+        if (!showSectionHeadings) {
+          _renderHeadingContent(el);
+          return '';
+        }
         return _renderDescriptiveHeading(el);
       case 'b':
         // Blank-line separator between poetry stanzas (1,070 uses in WEB).
@@ -445,7 +492,7 @@ class _UsfxRenderer {
       case 'qs':
         // "Selah" / meditation marker — right-aligned italic at end of stanza.
         // Appears 74 times in the Psalms (e.g. "Selah.", "Meditation. Selah.").
-        final text = _extractTextOnly(el);
+        final text = _renderHeadingContent(el);
         if (text.isEmpty) return '';
         return '<p style="'
             'color:$dHeadingColorCss;'
@@ -502,8 +549,9 @@ class _UsfxRenderer {
         // Render the verse-number superscript for this verse start.
         buf.write(_renderInline(node));
       } else if (node is XmlElement && node.name.local == 've') {
-        // Verse-end milestone — no visible output; segment boundary is the
-        // start of the next <v>, not the <ve> marker.
+        // Clear verse association even though the visible segment continues
+        // until the next <v>; a following heading may have its own note.
+        _renderInline(node);
       } else if (node is XmlText) {
         if (currentId != null) buf.write(_escapeHtml(node.value));
       } else if (node is XmlElement) {
@@ -520,11 +568,14 @@ class _UsfxRenderer {
     return segments.map((s) {
       final (id, inner) = s;
       if (id != highlightedVerseId) return s;
-      return (id, '<span style="'
-          'background-color:$highlightedVerseBackgroundCss;'
-          'border-radius:3px;'
-          'padding:0 2px;'
-          '">$inner</span>');
+      return (
+        id,
+        '<span style="'
+            'background-color:$highlightedVerseBackgroundCss;'
+            'border-radius:3px;'
+            'padding:0 2px;'
+            '">$inner</span>',
+      );
     }).toList();
   }
 
@@ -604,9 +655,8 @@ class _UsfxRenderer {
       final msPx = (baseFontSizePx * sizeScale).toStringAsFixed(1);
 
       // Major section heading — centred bold block.
-      // Text-only extraction is used so that accidental verse-number markers
-      // inside the heading element are excluded from the heading text.
-      final text = _extractTextOnly(el);
+      // Heading rendering suppresses verse milestones but keeps note markers.
+      final text = _renderHeadingContent(el);
       if (text.isEmpty) return '';
       return '<p style="'
           'color:$headingColorCss;'
@@ -623,7 +673,7 @@ class _UsfxRenderer {
       final level = _styleLevel(style);
       final sizeScale = level <= 1 ? 1.05 : (level == 2 ? 1.00 : 0.95);
       final mtPx = (baseFontSizePx * sizeScale).toStringAsFixed(1);
-      final text = _extractTextOnly(el);
+      final text = _renderHeadingContent(el);
       if (text.isEmpty) return '';
       return '<p style="'
           'color:$headingColorCss;'
@@ -636,7 +686,7 @@ class _UsfxRenderer {
 
     if (style == 'r') {
       // Parallel-reference / right-side reference line.
-      final text = _extractTextOnly(el);
+      final text = _renderHeadingContent(el);
       if (text.isEmpty) return '';
       return '<p style="'
           'color:$dHeadingColorCss;'
@@ -649,7 +699,7 @@ class _UsfxRenderer {
 
     if (style == 'sp') {
       // Speaker identification line in poetic/dialogue material.
-      final text = _extractTextOnly(el);
+      final text = _renderHeadingContent(el);
       if (text.isEmpty) return '';
       return '<p style="'
           'color:$bodyColorCss;'
@@ -660,7 +710,7 @@ class _UsfxRenderer {
 
     if (style == 'cl' || style == 'cd') {
       // Chapter labels and chapter-descriptive labels.
-      final text = _extractTextOnly(el);
+      final text = _renderHeadingContent(el);
       if (text.isEmpty) return '';
       final italic = style == 'cd' ? 'font-style:italic;' : '';
       return '<p style="'
@@ -699,7 +749,7 @@ class _UsfxRenderer {
       // Liturgical note / congregational response. Checked BEFORE startsWith('li')
       // to prevent it from being caught by the 'li' indented-paragraph branch.
       // Uses text-only extraction so verse numbers are excluded.
-      final litText = _extractTextOnly(el);
+      final litText = _renderHeadingContent(el);
       if (litText.isEmpty) return '';
       return '<p style="'
           'color:$dHeadingColorCss;'
@@ -713,7 +763,11 @@ class _UsfxRenderer {
       // Indented prose/list paragraph — support arbitrary level suffixes.
       final level = _styleLevel(style);
       final indent = '${(level * 1.5).toStringAsFixed(1)}em';
-      return _proseBlock(el, 'margin:0 0 0.5em $indent', 'margin:0 0 0.5em $indent');
+      return _proseBlock(
+        el,
+        'margin:0 0 0.5em $indent',
+        'margin:0 0 0.5em $indent',
+      );
     }
 
     if (style == 'pr') {
@@ -744,7 +798,7 @@ class _UsfxRenderer {
 
     if (style.startsWith('is')) {
       // Introduction section heading (is1, is2).
-      final isText = _extractTextOnly(el);
+      final isText = _renderHeadingContent(el);
       if (isText.isEmpty) return '';
       return '<p style="'
           'color:$headingColorCss;'
@@ -758,9 +812,9 @@ class _UsfxRenderer {
     if (style.startsWith('imt')) {
       // Introduction main title (imt1, imt2) — styled like book title (mt).
       final level = _styleLevel(style);
-      final imtPx =
-          (baseFontSizePx * (level <= 1 ? 1.05 : 1.00)).toStringAsFixed(1);
-      final imtText = _extractTextOnly(el);
+      final imtPx = (baseFontSizePx * (level <= 1 ? 1.05 : 1.00))
+          .toStringAsFixed(1);
+      final imtText = _renderHeadingContent(el);
       if (imtText.isEmpty) return '';
       return '<p style="'
           'color:$headingColorCss;'
@@ -787,8 +841,8 @@ class _UsfxRenderer {
     // own visually separated paragraph line.
     return _proseBlock(
       el,
-      'margin:0;text-indent:1.5em',  // paragraph mode: indent, no gap
-      'margin:0 0 0.5em 0',          // verse-list mode: gap between verses
+      'margin:0;text-indent:1.5em', // paragraph mode: indent, no gap
+      'margin:0 0 0.5em 0', // verse-list mode: gap between verses
     );
   }
 
@@ -819,7 +873,8 @@ class _UsfxRenderer {
 
       if (isHeader && isRight) {
         cellBuf.write(
-            '<strong><span style="float:right;">$cellContent</span></strong>');
+          '<strong><span style="float:right;">$cellContent</span></strong>',
+        );
       } else if (isHeader) {
         cellBuf.write('<strong>$cellContent</strong>');
       } else if (isRight) {
@@ -889,10 +944,9 @@ class _UsfxRenderer {
   /// notes a future display option to hide them; that toggle is deferred to the
   /// settings step. For now they are always shown.
   ///
-  /// Text-only extraction is used so that any inline markup inside the heading
-  /// element does not produce verse numbers or footnote markers in the title.
+  /// Heading text omits verse milestones but retains inline footnote markers.
   String _renderSectionHeading(XmlElement el) {
-    final text = _extractTextOnly(el);
+    final text = _renderHeadingContent(el);
     if (text.isEmpty) return '';
     return '<p style="'
         'color:$headingColorCss;'
@@ -909,13 +963,45 @@ class _UsfxRenderer {
   /// the USFX XML. They were absent from the plain-text verse list in Step 1.10
   /// — this method resolves that known content gap.
   String _renderDescriptiveHeading(XmlElement el) {
-    final text = _extractTextOnly(el);
+    final text = _renderHeadingContent(el);
     if (text.isEmpty) return '';
     return '<p style="'
         'color:$dHeadingColorCss;'
         'font-style:italic;'
         'margin:0 0 0.6em 0;'
         '">$text</p>';
+  }
+
+  /// Renders heading text and footnote markers without leaking note bodies.
+  ///
+  /// Traversing hidden headings as well keeps per-verse ordinals synchronized
+  /// with stored notes when a later visible note belongs to the same verse.
+  String _renderHeadingContent(XmlElement el) {
+    final buffer = StringBuffer();
+
+    void visit(XmlNode node) {
+      if (node is XmlText) {
+        buffer.write(_escapeHtml(node.value));
+      } else if (node is XmlElement) {
+        switch (node.name.local) {
+          case 'f':
+            buffer.write(_renderInline(node));
+          case 'x':
+          case 'v':
+          case 've':
+            break;
+          default:
+            for (final child in node.children) {
+              visit(child);
+            }
+        }
+      }
+    }
+
+    for (final child in el.children) {
+      visit(child);
+    }
+    return buffer.toString().trim();
   }
 
   // ---- Inline element rendering ----
@@ -935,14 +1021,16 @@ class _UsfxRenderer {
     // If the highlighted verse started in a previous block and has not ended
     // yet, open a fresh wrapper for this block so markup remains balanced.
     if (_openHighlightVerseId != null) {
-      buf.write('<span style="'
-          'background-color:$highlightedVerseBackgroundCss;'
-          'border-radius:3px;'
-          'padding:0 2px;'
-          '">');
+      buf.write(
+        '<span style="'
+        'background-color:$highlightedVerseBackgroundCss;'
+        'border-radius:3px;'
+        'padding:0 2px;'
+        '">',
+      );
       isHighlightOpenInThisBlock = true;
     }
-    
+
     for (final node in parent.children) {
       if (node is XmlText) {
         // Escape all four HTML special characters to prevent markup injection.
@@ -954,7 +1042,7 @@ class _UsfxRenderer {
         if (node.name.local == 'v' && highlightedVerseId != null) {
           final id = node.getAttribute('id') ?? '';
           final isHighlighted = id.isNotEmpty && highlightedVerseId == id;
-          
+
           // Close previous highlight if we're starting a different verse.
           if (_openHighlightVerseId != null && _openHighlightVerseId != id) {
             if (isHighlightOpenInThisBlock) {
@@ -963,14 +1051,16 @@ class _UsfxRenderer {
             }
             _openHighlightVerseId = null;
           }
-          
+
           // Open highlight for this verse if it's the target and not already open.
           if (isHighlighted && _openHighlightVerseId == null) {
-            buf.write('<span style="'
-                'background-color:$highlightedVerseBackgroundCss;'
-                'border-radius:3px;'
-                'padding:0 2px;'
-                '">');
+            buf.write(
+              '<span style="'
+              'background-color:$highlightedVerseBackgroundCss;'
+              'border-radius:3px;'
+              'padding:0 2px;'
+              '">',
+            );
             isHighlightOpenInThisBlock = true;
             _openHighlightVerseId = id;
           }
@@ -992,7 +1082,7 @@ class _UsfxRenderer {
     if (isHighlightOpenInThisBlock) {
       buf.write('</span>');
     }
-    
+
     return buf.toString();
   }
 
@@ -1013,13 +1103,15 @@ class _UsfxRenderer {
         // implicitly close the enclosing <p> tag, breaking paragraph flow.
         final id = el.getAttribute('id') ?? '';
         if (id.isEmpty) return '';
+        _currentVerseId = id;
 
         // When showVerseNumbers is false, suppress the visual superscript and
         // bookmark glyph. Position tracking still works via the <div data-cbv>
         // block markers emitted by _proseBlock (those are always emitted).
         if (!showVerseNumbers) return '';
 
-        final sup = '<sup id="v${_escapeHtml(id)}" style="'
+        final sup =
+            '<sup id="v${_escapeHtml(id)}" style="'
             'color:$verseNumColorCss;'
             'font-size:${_smallPx}px;'
             'font-weight:bold;'
@@ -1031,18 +1123,20 @@ class _UsfxRenderer {
         // verse superscript when this verse (or its chapter, mapped to '1')
         // has a saved bookmark.  Chapter-level bookmarks use verse = '' and
         // are displayed on verse 1 as a stand-in for the whole chapter.
-        final isBookmarked = bookmarkedVerses.contains(id) ||
+        final isBookmarked =
+            bookmarkedVerses.contains(id) ||
             (id == '1' && bookmarkedVerses.contains(''));
         if (isBookmarked) {
           // The bookmark glyph is styled to match the verse-number color for
           // visual consistency. font-size slightly larger than the superscript
           // so it reads clearly without dominating the verse number.
-          final glyph = '<span style="'
+          final glyph =
+              '<span style="'
               'color:$verseNumColorCss;'
               'font-size:${(baseFontSizePx * 0.75).toStringAsFixed(1)}px;'
               'vertical-align:middle;'
               'margin-right:3px;'
-              '" aria-label="bookmarked"'  // screen-reader label
+              '" aria-label="bookmarked"' // screen-reader label
               '>\uD83D\uDD16</span>';
           return '$sup$glyph';
         }
@@ -1050,6 +1144,7 @@ class _UsfxRenderer {
 
       case 've':
         // Verse end milestone — purely structural, produces no visible output.
+        _currentVerseId = null;
         return '';
 
       // ---- Words of Jesus ---------------------------------------------------
@@ -1069,22 +1164,37 @@ class _UsfxRenderer {
       // ---- Footnotes and cross-references -----------------------------------
 
       case 'f':
-        // Footnote — only the `caller` symbol (e.g. '+', '*', 'a') is shown
-        // as a superscript. The full footnote text pop-up is deferred to
-        // Step 2.1, but preserving the caller keeps distinct notes
-        // distinguishable even before tap interaction is added.
+        // Keep the marker in the scripture flow, but give it a stable address
+        // that the screen can resolve to the separately stored footnote row.
         final caller = el.getAttribute('caller') ?? '*';
-        final marker = caller.trim().isEmpty ? '*' : _escapeHtml(caller);
-        return '<sup style="'
-            'color:$footnoteColorCss;'
-            'font-size:${_smallPx}px;'
-            'vertical-align:super;'
-            '">$marker</sup>';
+        final callerMarker = caller.trim().isEmpty ? '*' : caller.trim();
+        final verseId =
+            _currentVerseId ?? _verseIdFromFootnoteReference(el, chapterNumber);
+        if (verseId == null || bookCode == null || chapterNumber == null) {
+          return '<sup data-cb-footnote="${_escapeHtml(callerMarker)}" style="'
+              'color:$footnoteColorCss;'
+              'font-size:${_smallPx}px;'
+              'vertical-align:super;'
+              '">${_escapeHtml(callerMarker)}</sup>';
+        }
+
+        final ordinal = _nextFootnoteOrdinalByVerse[verseId] ?? 0;
+        _nextFootnoteOrdinalByVerse[verseId] = ordinal + 1;
+        final marker =
+            footnoteLabelBuilder?.call(verseId, ordinal) ?? callerMarker;
+
+        // The marker is intentionally static; full note content and reference
+        // actions are available in the accessible chapter-end footnotes list.
+        return '<sup data-cb-footnote="${_escapeHtml(marker)}" '
+            'style="color:$footnoteColorCss;'
+            'font-size:${_smallPx}px;vertical-align:super;">'
+            '${_escapeHtml(marker)}</sup>';
 
       case 'fr':
       case 'ft':
         // Footnote sub-elements (reference label and body text) — suppressed
-        // because the parent `<f>` already emits only the caller symbol.
+        // because the parent `<f>` emits its marker and the note is listed
+        // separately at the end of the chapter.
         return '';
 
       case 'x':
@@ -1185,24 +1295,173 @@ class _UsfxRenderer {
   }
 }
 
+/// A structurally identified scripture target inside a USFX `<ref>` element.
+class FootnoteScriptureTarget {
+  /// Three-character USFX/Paratext book identifier.
+  final String bookCode;
+
+  /// 1-based chapter number.
+  final int chapter;
+
+  /// Exact string verse identifier, including segments or bridges.
+  final String verse;
+
+  const FootnoteScriptureTarget({
+    required this.bookCode,
+    required this.chapter,
+    required this.verse,
+  });
+
+  /// Parses a supported `BOOK.CHAPTER.VERSE` USFX target.
+  ///
+  /// Invalid or unsupported targets return null so note text remains readable
+  /// without presenting a broken or guessed navigation link.
+  static FootnoteScriptureTarget? tryParse(String value) {
+    final match = RegExp(
+      r'^([A-Z0-9]{3})\.([1-9][0-9]*)\.'
+      r'([0-9]+[a-zA-Z]?(?:-[0-9]+[a-zA-Z]?)?)$',
+    ).firstMatch(value.trim());
+    if (match == null) return null;
+
+    final chapter = int.tryParse(match.group(2)!);
+    if (chapter == null) return null;
+
+    return FootnoteScriptureTarget(
+      bookCode: match.group(1)!,
+      chapter: chapter,
+      verse: match.group(3)!,
+    );
+  }
+}
+
+/// A supported scripture reference found inside a stored USFX footnote.
+class FootnoteScriptureReference {
+  /// Target passage parsed from the reference's structural `tgt` attribute.
+  final FootnoteScriptureTarget target;
+
+  /// Human-readable text from the source `<ref>` element.
+  final String label;
+
+  const FootnoteScriptureReference({required this.target, required this.label});
+}
+
+/// Extracts supported structural scripture references from a stored footnote.
+///
+/// References without a valid `BOOK.CHAPTER.VERSE` target are omitted, so
+/// callers can present only destinations that are safe to validate and open.
+List<FootnoteScriptureReference> extractFootnoteScriptureReferences(
+  String rawUsfx,
+) {
+  final document = XmlDocument.parse('<footnote-root>$rawUsfx</footnote-root>');
+  final footnote = document.rootElement.findElements('f').firstOrNull;
+  if (footnote == null) {
+    throw const FormatException('Stored footnote fragment has no <f> element.');
+  }
+
+  final references = <FootnoteScriptureReference>[];
+
+  void visit(XmlNode node) {
+    if (node is! XmlElement) return;
+    if (node.name.local == 'ref') {
+      final target = FootnoteScriptureTarget.tryParse(
+        node.getAttribute('tgt') ?? '',
+      );
+      if (target != null) {
+        final label = node.innerText.trim();
+        final targetLabel =
+            '${target.bookCode}.${target.chapter}.${target.verse}';
+        references.add(
+          FootnoteScriptureReference(
+            target: target,
+            label: label.isEmpty ? targetLabel : label,
+          ),
+        );
+      }
+    }
+    for (final child in node.children) {
+      visit(child);
+    }
+  }
+
+  for (final child in footnote.children) {
+    visit(child);
+  }
+  return references;
+}
+
+/// Renders one stored USFX footnote fragment as safe, styled HTML.
+///
+/// The `<fr>` source-location label is omitted because the reader presents the
+/// note's verse separately. Scripture references remain ordinary text here;
+/// [extractFootnoteScriptureReferences] supplies them as full-size actions.
+String renderFootnoteToHtml(String rawUsfx, {required String bodyColorCss}) {
+  final document = XmlDocument.parse('<footnote-root>$rawUsfx</footnote-root>');
+  final footnote = document.rootElement.findElements('f').firstOrNull;
+  if (footnote == null) {
+    throw const FormatException('Stored footnote fragment has no <f> element.');
+  }
+
+  final body = StringBuffer();
+  for (final child in footnote.children) {
+    body.write(_renderFootnoteNode(child));
+  }
+  return '<!DOCTYPE html><html><head><meta charset="utf-8">'
+      '<meta name="viewport" content="width=device-width,initial-scale=1">'
+      '<style>body{margin:0;padding:0;color:$bodyColorCss;line-height:1.55;}</style>'
+      '</head><body>$body</body></html>';
+}
+
+/// Converts a footnote node to HTML while retaining its useful inline markup.
+String _renderFootnoteNode(XmlNode node) {
+  if (node is XmlText) return _escapeHtml(node.value);
+  if (node is! XmlElement) return '';
+
+  final tag = node.name.local;
+  if (tag == 'fr') return '';
+
+  if (tag == 'ref') {
+    return node.children.map(_renderFootnoteNode).join();
+  }
+
+  final children = node.children.map(_renderFootnoteNode).join();
+  switch (tag) {
+    case 'fq':
+    case 'fqa':
+    case 'it':
+    case 'em':
+    case 'tl':
+      return '<em>$children</em>';
+    case 'bd':
+      return '<strong>$children</strong>';
+    case 'bdit':
+      return '<strong><em>$children</em></strong>';
+    case 'sc':
+      return '<span style="font-variant:small-caps;">$children</span>';
+    case 'sup':
+      return '<sup>$children</sup>';
+    case 'sub':
+      return '<sub>$children</sub>';
+    default:
+      return children;
+  }
+}
+
+/// Resolves a footnote outside an active verse milestone through its `<fr>`.
+String? _verseIdFromFootnoteReference(XmlElement footnote, int? chapter) {
+  if (chapter == null) return null;
+  final reference = footnote.findElements('fr').firstOrNull?.innerText;
+  if (reference == null) return null;
+  final normalized = reference.replaceAll(RegExp(r'\s+'), ' ').trim();
+  final match = RegExp(
+    '^${RegExp.escape(chapter.toString())}:'
+    r'([0-9]+[a-zA-Z]?(?:-[0-9]+[a-zA-Z]?)?)$',
+  ).firstMatch(normalized);
+  return match?.group(1);
+}
+
 // ---------------------------------------------------------------------------
 // Utility helpers (top-level — no theme state needed)
 // ---------------------------------------------------------------------------
-
-/// Extracts all descendant text from [el] as a plain, HTML-escaped string,
-/// skipping all element wrappers.
-///
-/// Used for headings (`<s>`, `<ms>`, `<d>`) where inner elements such as
-/// verse-number milestones or footnote markers should not appear in the title.
-String _extractTextOnly(XmlElement el) {
-  final buf = StringBuffer();
-  for (final node in el.descendants) {
-    if (node is XmlText) {
-      buf.write(_escapeHtml(node.value));
-    }
-  }
-  return buf.toString().trim();
-}
 
 /// Escapes the four HTML characters that could break generated markup or open
 /// injection vectors if left un-escaped.

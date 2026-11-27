@@ -147,4 +147,13 @@
   "oldTestament": "ਪੁਰਾਣੇ ਨੇਮ",
   "newTestament": "ਨਵਾਂ ਨੇਮ",
   "deuterocanonApocrypha": "ਡਿਊਟਰੋਕੈਨਨ / ਐਪੋਕ੍ਰਿਫਾ"
+,
+  "footnoteTitle": "Footnote {caller}"
+,
+  "closeFootnote": "Close footnote"
+,
+  "couldNotOpenFootnote": "Could not open footnote {reference}.",
+  "chapterFootnotesTitle": "Footnotes",
+  "openScriptureReference": "Open {reference}",
+  "couldNotLoadFootnotes": "Could not load footnotes. Please try again."
 }

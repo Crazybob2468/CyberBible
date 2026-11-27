@@ -27,14 +27,14 @@ const _fontSize = 17.0;
 
 /// Helper that calls [renderChapterToHtml] with the shared test fixture values.
 String _render(String usfx) => renderChapterToHtml(
-      usfx,
-      bodyColorCss: _bodyColor,
-      verseNumColorCss: _verseNumColor,
-      headingColorCss: _headingColor,
-      dHeadingColorCss: _dHeadingColor,
-      footnoteColorCss: _footnoteColor,
-      baseFontSizePx: _fontSize,
-    );
+  usfx,
+  bodyColorCss: _bodyColor,
+  verseNumColorCss: _verseNumColor,
+  headingColorCss: _headingColor,
+  dHeadingColorCss: _dHeadingColor,
+  footnoteColorCss: _footnoteColor,
+  baseFontSizePx: _fontSize,
+);
 
 void main() {
   // ---------------------------------------------------------------------------
@@ -204,48 +204,55 @@ void main() {
 
     /// Optional highlighted verse styling is used after quick-nav jumps to
     /// help users visually re-orient to the target verse.
-    test('highlightedVerseId adds inline highlight style to matching verse output', () {
-      final html = renderChapterToHtml(
-        '<p style="p"><v id="8" bcv="GEN.1.8"/>Text.<ve/></p>',
-        bodyColorCss: _bodyColor,
-        verseNumColorCss: _verseNumColor,
-        headingColorCss: _headingColor,
-        dHeadingColorCss: _dHeadingColor,
-        footnoteColorCss: _footnoteColor,
-        highlightedVerseId: '8',
-        highlightedVerseBackgroundCss: 'rgba(255, 235, 59, 0.45)',
-      );
-      expect(html, contains('background-color:rgba(255, 235, 59, 0.45)'));
-      expect(html, contains('id="v8"'));
-    });
+    test(
+      'highlightedVerseId adds inline highlight style to matching verse output',
+      () {
+        final html = renderChapterToHtml(
+          '<p style="p"><v id="8" bcv="GEN.1.8"/>Text.<ve/></p>',
+          bodyColorCss: _bodyColor,
+          verseNumColorCss: _verseNumColor,
+          headingColorCss: _headingColor,
+          dHeadingColorCss: _dHeadingColor,
+          footnoteColorCss: _footnoteColor,
+          highlightedVerseId: '8',
+          highlightedVerseBackgroundCss: 'rgba(255, 235, 59, 0.45)',
+        );
+        expect(html, contains('background-color:rgba(255, 235, 59, 0.45)'));
+        expect(html, contains('id="v8"'));
+      },
+    );
 
     /// When a highlighted verse spans multiple USFX blocks in verse-list mode,
     /// only the block that contains the verse-start milestone is highlighted.
     /// The continuation block (no <v> milestone, only <ve/>) is a separate
     /// _proseBlock segment and does not receive a highlight span.
-    test('highlighted verse spanning blocks keeps highlight in verse-start block', () {
-      final html = renderChapterToHtml(
-        '<p style="p"><v id="8" bcv="GEN.1.8"/>Line A.</p>'
-        '<p style="p">Line B.<ve/></p>',
-        bodyColorCss: _bodyColor,
-        verseNumColorCss: _verseNumColor,
-        headingColorCss: _headingColor,
-        dHeadingColorCss: _dHeadingColor,
-        footnoteColorCss: _footnoteColor,
-        highlightedVerseId: '8',
-        highlightedVerseBackgroundCss: 'rgba(255, 235, 59, 0.45)',
-        paragraphMode: false,
-      );
+    test(
+      'highlighted verse spanning blocks keeps highlight in verse-start block',
+      () {
+        final html = renderChapterToHtml(
+          '<p style="p"><v id="8" bcv="GEN.1.8"/>Line A.</p>'
+          '<p style="p">Line B.<ve/></p>',
+          bodyColorCss: _bodyColor,
+          verseNumColorCss: _verseNumColor,
+          headingColorCss: _headingColor,
+          dHeadingColorCss: _dHeadingColor,
+          footnoteColorCss: _footnoteColor,
+          highlightedVerseId: '8',
+          highlightedVerseBackgroundCss: 'rgba(255, 235, 59, 0.45)',
+          paragraphMode: false,
+        );
 
-      // In verse-list mode, _splitByVerse emits one highlight span per verse
-      // segment. The continuation paragraph (Line B.) has no <v> milestone, so
-      // it falls back to plain _renderInlineChildren without a highlight.
-      final highlightStylePattern =
-          RegExp(r'background-color:rgba\(255, 235, 59, 0\.45\);');
-      expect(highlightStylePattern.allMatches(html).length, 1);
-      expect(html, contains('Line A.'));
-      expect(html, contains('Line B.'));
-    });
+        // In verse-list mode, _splitByVerse emits one highlight span per verse
+        // segment. The continuation paragraph (Line B.) has no <v> milestone, so
+        // it falls back to plain _renderInlineChildren without a highlight.
+        final highlightStylePattern = RegExp(
+          r'background-color:rgba\(255, 235, 59, 0\.45\);',
+        );
+        expect(highlightStylePattern.allMatches(html).length, 1);
+        expect(html, contains('Line A.'));
+        expect(html, contains('Line B.'));
+      },
+    );
   });
 
   // ---------------------------------------------------------------------------
@@ -434,9 +441,7 @@ void main() {
 
     /// Major section heading (ms1) — used for Psalm book divisions.
     test('<p style="ms1"> renders with bold centred inline style', () {
-      final html = _render(
-        '<p sfm="ms" style="ms1">BOOK 1</p>',
-      );
+      final html = _render('<p sfm="ms" style="ms1">BOOK 1</p>');
       expect(html, contains('font-weight:bold'));
       expect(html, contains('text-align:center'));
       expect(html, contains(_headingColor));
@@ -509,8 +514,8 @@ void main() {
   // ---------------------------------------------------------------------------
 
   group('footnotes', () {
-    /// Only the caller symbol should appear in the output — the footnote body
-    /// text is suppressed until Step 2.1 adds the pop-up interaction.
+    /// Without a chapter-label callback, the source caller is the fallback;
+    /// note bodies are displayed separately after the chapter.
     test('<f> renders only the caller superscript', () {
       final html = _render(
         '<p style="p"><v id="3" bcv="JHN.3.3"/>Text.'
@@ -854,7 +859,8 @@ void main() {
     /// Right-aligned paragraph — used in some liturgical/poetic layouts.
     test('pr paragraph is right-aligned', () {
       final html = _render(
-          '<p style="pr"><v id="1" bcv="X.1.1"/>Right text.<ve/></p>');
+        '<p style="pr"><v id="1" bcv="X.1.1"/>Right text.<ve/></p>',
+      );
       expect(html, contains('text-align:right'));
       expect(html, contains('Right text.'));
     });
@@ -862,7 +868,8 @@ void main() {
     /// Hanging-indent paragraph — positive left margin + negative text-indent.
     test('ph1 paragraph has hanging indent', () {
       final html = _render(
-          '<p style="ph1"><v id="1" bcv="X.1.1"/>Hanging.<ve/></p>');
+        '<p style="ph1"><v id="1" bcv="X.1.1"/>Hanging.<ve/></p>',
+      );
       expect(html, contains('margin:0 0 0.5em 1.5em'));
       expect(html, contains('text-indent:-1.5em'));
       expect(html, contains('Hanging.'));
@@ -870,8 +877,9 @@ void main() {
 
     /// Epistle signature line — italic, body colour.
     test('sig paragraph is italic', () {
-      final html =
-          _render('<p style="sig"><v id="23" bcv="GAL.6.18"/>Grace.<ve/></p>');
+      final html = _render(
+        '<p style="sig"><v id="23" bcv="GAL.6.18"/>Grace.<ve/></p>',
+      );
       expect(html, contains('font-style:italic'));
       expect(html, contains('Grace.'));
     });
@@ -915,7 +923,8 @@ void main() {
     /// Introduction paragraph — regular plain paragraph.
     test('ip renders as plain paragraph', () {
       final html = _render(
-          '<p style="ip"><v id="1" bcv="MAT.1.1"/>Intro text.<ve/></p>');
+        '<p style="ip"><v id="1" bcv="MAT.1.1"/>Intro text.<ve/></p>',
+      );
       expect(html, contains('<p style='));
       expect(html, contains('Intro text.'));
     });
@@ -947,28 +956,32 @@ void main() {
     /// OT quotation in NT context — italic.
     test('qt renders as italic em', () {
       final html = _render(
-          '<p style="p"><v id="1" bcv="X.1.1"/><qt>It is written.</qt><ve/></p>');
+        '<p style="p"><v id="1" bcv="X.1.1"/><qt>It is written.</qt><ve/></p>',
+      );
       expect(html, contains('<em>It is written.</em>'));
     });
 
     /// Transliteration — italic.
     test('tl renders as italic em', () {
       final html = _render(
-          '<p style="p"><v id="1" bcv="X.1.1"/><tl>Maranatha</tl><ve/></p>');
+        '<p style="p"><v id="1" bcv="X.1.1"/><tl>Maranatha</tl><ve/></p>',
+      );
       expect(html, contains('<em>Maranatha</em>'));
     });
 
     /// Secondary-language source — italic.
     test('sls renders as italic em', () {
       final html = _render(
-          '<p style="p"><v id="1" bcv="X.1.1"/><sls>shalom</sls><ve/></p>');
+        '<p style="p"><v id="1" bcv="X.1.1"/><sls>shalom</sls><ve/></p>',
+      );
       expect(html, contains('<em>shalom</em>'));
     });
 
     /// Ordinal suffix — superscript.
     test('ord renders as superscript', () {
       final html = _render(
-          '<p style="p"><v id="1" bcv="X.1.1"/>21<ord>st</ord><ve/></p>');
+        '<p style="p"><v id="1" bcv="X.1.1"/>21<ord>st</ord><ve/></p>',
+      );
       expect(html, contains('<sup>st</sup>'));
     });
   });
@@ -977,28 +990,32 @@ void main() {
     /// Language-specific wrappers must pass text through unchanged.
     test('wh renders text transparently', () {
       final html = _render(
-          '<p style="p"><v id="1" bcv="X.1.1"/><wh>YHWH</wh><ve/></p>');
+        '<p style="p"><v id="1" bcv="X.1.1"/><wh>YHWH</wh><ve/></p>',
+      );
       expect(html, contains('YHWH'));
       expect(html, isNot(contains('<wh>')));
     });
 
     test('wg renders text transparently', () {
       final html = _render(
-          '<p style="p"><v id="1" bcv="X.1.1"/><wg>logos</wg><ve/></p>');
+        '<p style="p"><v id="1" bcv="X.1.1"/><wg>logos</wg><ve/></p>',
+      );
       expect(html, contains('logos'));
       expect(html, isNot(contains('<wg>')));
     });
 
     test('wa renders text transparently', () {
       final html = _render(
-          '<p style="p"><v id="1" bcv="X.1.1"/><wa>abba</wa><ve/></p>');
+        '<p style="p"><v id="1" bcv="X.1.1"/><wa>abba</wa><ve/></p>',
+      );
       expect(html, contains('abba'));
     });
 
     /// Book title reference — transparent.
     test('bk renders text transparently', () {
       final html = _render(
-          '<p style="p"><v id="1" bcv="X.1.1"/><bk>Genesis</bk><ve/></p>');
+        '<p style="p"><v id="1" bcv="X.1.1"/><bk>Genesis</bk><ve/></p>',
+      );
       expect(html, contains('Genesis'));
       expect(html, isNot(contains('<bk>')));
     });
@@ -1006,14 +1023,16 @@ void main() {
     /// Proper name — transparent.
     test('pn renders text transparently', () {
       final html = _render(
-          '<p style="p"><v id="1" bcv="X.1.1"/><pn>David</pn><ve/></p>');
+        '<p style="p"><v id="1" bcv="X.1.1"/><pn>David</pn><ve/></p>',
+      );
       expect(html, contains('David'));
     });
 
     /// Geographic proper name — transparent.
     test('png renders text transparently', () {
       final html = _render(
-          '<p style="p"><v id="1" bcv="X.1.1"/><png>Jerusalem</png><ve/></p>');
+        '<p style="p"><v id="1" bcv="X.1.1"/><png>Jerusalem</png><ve/></p>',
+      );
       expect(html, contains('Jerusalem'));
     });
   });
@@ -1022,10 +1041,188 @@ void main() {
     /// <cp> is a structural marker that must produce no visible output.
     test('cp is suppressed from output', () {
       final html = _render(
-          '<p style="p"><v id="1" bcv="X.1.1"/><cp>A</cp>Text.<ve/></p>');
+        '<p style="p"><v id="1" bcv="X.1.1"/><cp>A</cp>Text.<ve/></p>',
+      );
       // The letter "A" inside <cp> must not appear in the body.
       expect(html, isNot(contains('>A<')));
       expect(html, contains('Text.'));
+    });
+  });
+
+  group('chapter-end footnotes', () {
+    // Greek Daniel 3 has a heading note after verse 23 ends and before 24.
+    test('heading after a verse uses its own footnote association', () {
+      for (final paragraphMode in [true, false]) {
+        final html = renderChapterToHtml(
+          '<p><v id="23"/>Verse 23.<ve/></p>'
+          '<s>Song heading<f caller="+"><fr>3:24</fr>'
+          '<ft>Heading note.</ft></f></s>'
+          '<p><v id="24"/>Verse 24.<ve/></p>',
+          bodyColorCss: _bodyColor,
+          verseNumColorCss: _verseNumColor,
+          headingColorCss: _headingColor,
+          dHeadingColorCss: _dHeadingColor,
+          footnoteColorCss: _footnoteColor,
+          bookCode: 'DAG',
+          chapterNumber: 3,
+          paragraphMode: paragraphMode,
+          footnoteLabelBuilder: (verse, ordinal) =>
+              verse == '24' && ordinal == 0 ? 'A' : null,
+        );
+
+        expect(
+          html,
+          contains('Song heading<sup data-cb-footnote="A"'),
+          reason: 'paragraphMode: $paragraphMode',
+        );
+        expect(html, isNot(contains('Heading note.')));
+      }
+    });
+
+    // Psalm 90 has a note in its superscription before the first verse.
+    test('heading footnotes render markers without leaking their bodies', () {
+      final html = renderChapterToHtml(
+        '<d>A Prayer by Moses.<f caller="+"><fr>90:0</fr>'
+        '<ft>Heading note body.</ft></f></d>'
+        '<q><v id="1"/>Lord,<f caller="+"><fr>90:1</fr>'
+        '<ft>Verse note body.</ft></f><ve/></q>',
+        bodyColorCss: _bodyColor,
+        verseNumColorCss: _verseNumColor,
+        headingColorCss: _headingColor,
+        dHeadingColorCss: _dHeadingColor,
+        footnoteColorCss: _footnoteColor,
+        bookCode: 'PSA',
+        chapterNumber: 90,
+        footnoteLabelBuilder: (verse, ordinal) => verse == '0' ? 'A' : 'B',
+      );
+
+      expect(html, contains('A Prayer by Moses.<sup data-cb-footnote="A"'));
+      expect(html, contains('data-cb-footnote="B"'));
+      expect(html, isNot(contains('Heading note body.')));
+      expect(html, isNot(contains('Verse note body.')));
+      expect(html, isNot(contains('90:0')));
+    });
+
+    // A hidden heading can share an association with a later visible note.
+    test('hidden heading notes still advance their verse ordinal', () {
+      final html = renderChapterToHtml(
+        '<s>Heading<f><fr>1:1</fr><ft>Hidden note.</ft></f></s>'
+        '<p><v id="1"/>Verse<f><ft>Visible note.</ft></f><ve/></p>',
+        bodyColorCss: _bodyColor,
+        verseNumColorCss: _verseNumColor,
+        headingColorCss: _headingColor,
+        dHeadingColorCss: _dHeadingColor,
+        footnoteColorCss: _footnoteColor,
+        bookCode: 'GEN',
+        chapterNumber: 1,
+        showSectionHeadings: false,
+        footnoteLabelBuilder: (verse, ordinal) => ['A', 'B'][ordinal],
+      );
+
+      expect(html, isNot(contains('Heading')));
+      expect(html, isNot(contains('data-cb-footnote="A"')));
+      expect(html, contains('data-cb-footnote="B"'));
+      expect(html, isNot(contains('Visible note.')));
+    });
+
+    test('chapter markers display labels without tap links', () {
+      final html = renderChapterToHtml(
+        '<p style="p"><v id="1" bcv="GEN.1.1"/>Text.'
+        '<f caller="a"><ft>First note.</ft></f>'
+        '<f caller="a"><ft>Second note.</ft></f><ve/></p>',
+        bodyColorCss: _bodyColor,
+        verseNumColorCss: _verseNumColor,
+        headingColorCss: _headingColor,
+        dHeadingColorCss: _dHeadingColor,
+        footnoteColorCss: _footnoteColor,
+        bookCode: 'GEN',
+        chapterNumber: 1,
+        footnoteLabelBuilder: (verseId, ordinal) {
+          expect(verseId, '1');
+          return ['A', 'B'][ordinal];
+        },
+      );
+
+      expect(html, contains('<sup'));
+      expect(html, contains('>A</sup>'));
+      expect(html, contains('>B</sup>'));
+      expect(html, isNot(contains('cyberbible-footnote:')));
+      expect(html, isNot(contains('&nbsp;&nbsp;&nbsp;&nbsp;')));
+      expect(html, isNot(contains('font-size:48px')));
+    });
+
+    test('marker stays plain when its verse cannot be resolved', () {
+      final html = renderChapterToHtml(
+        '<p style="p"><f caller="*"><ft>Unattached note.</ft></f></p>',
+        bodyColorCss: _bodyColor,
+        verseNumColorCss: _verseNumColor,
+        headingColorCss: _headingColor,
+        dHeadingColorCss: _dHeadingColor,
+        footnoteColorCss: _footnoteColor,
+        bookCode: 'GEN',
+        chapterNumber: 1,
+      );
+
+      expect(html, contains('<sup'));
+      expect(html, isNot(contains('cyberbible-footnote:')));
+    });
+
+    test('unresolved caller text is safely escaped', () {
+      final html = renderChapterToHtml(
+        '<p><f caller="&lt;&amp;"><ft>Note.</ft></f></p>',
+        bodyColorCss: _bodyColor,
+        verseNumColorCss: _verseNumColor,
+        headingColorCss: _headingColor,
+        dHeadingColorCss: _dHeadingColor,
+        footnoteColorCss: _footnoteColor,
+      );
+
+      expect(html, contains('&lt;&amp;</sup>'));
+    });
+
+    test('reference parser accepts structural targets and exact verse IDs', () {
+      final target = FootnoteScriptureTarget.tryParse('1MA.2.1a');
+
+      expect(target, isNotNull);
+      expect(target!.bookCode, '1MA');
+      expect(target.chapter, 2);
+      expect(target.verse, '1a');
+      expect(FootnoteScriptureTarget.tryParse('1MA.2.1a-2'), isNotNull);
+      expect(FootnoteScriptureTarget.tryParse('Genesis 2:1'), isNull);
+      expect(FootnoteScriptureTarget.tryParse('1ma.2.1'), isNull);
+      expect(
+        FootnoteScriptureTarget.tryParse('GEN.999999999999999999999999.1'),
+        isNull,
+      );
+    });
+
+    test('footnote body leaves scripture references as plain text', () {
+      final html = renderFootnoteToHtml(
+        '<f caller="a"><fr>1:1</fr><ft>See <ref tgt="GEN.1.1">'
+        'Genesis 1:1</ref>, but not Genesis 2:1.</ft></f>',
+        bodyColorCss: _bodyColor,
+      );
+
+      expect(html, contains('Genesis 1:1'));
+      expect(html, contains('Genesis 2:1'));
+      expect(html, isNot(contains('cyberbible-reference:')));
+      expect(html, isNot(contains('<fr>')));
+    });
+
+    test('extracts only structurally supported scripture references', () {
+      final references = extractFootnoteScriptureReferences(
+        '<f caller="a"><ft>See <ref tgt="GEN.1.1">Genesis 1:1</ref>, '
+        '<ref tgt="GEN.1">Genesis 1</ref>, and '
+        '<ref tgt="JHN.3.16">John 3:16</ref>.</ft></f>',
+      );
+
+      expect(references, hasLength(2));
+      expect(references[0].target.bookCode, 'GEN');
+      expect(references[0].target.chapter, 1);
+      expect(references[0].target.verse, '1');
+      expect(references[0].label, 'Genesis 1:1');
+      expect(references[1].target.bookCode, 'JHN');
+      expect(references[1].target.verse, '16');
     });
   });
 }

@@ -27,13 +27,15 @@ The phase also adopts the user-approved quality policy: UI translations may be m
 - Flutter `gen-l10n` configuration, English template ARB, generated localization classes, and app localization delegates.
 - Persisted system-language preference and manual language override.
 - Searchable local language catalog with native names, aliases, installed status, and module provenance/schema metadata.
-- 185 installed local modules. Each active ARB has 147 non-locale keys matching English and exact ICU placeholder parity.
-- Haryanvi (`bgc`) retains 8 English fallbacks; Asu (`asa`) 5. Ligurian 2, Lombard 8, Chiga 3, Silesian 8, and Tamazight 7 also retain documented fallbacks.
+- 185 installed local modules. Each active ARB has 153 non-locale keys matching English and exact ICU placeholder parity.
+- Phase 2.2's original three footnote UI strings are present in every active and pending catalog. Best-effort target-language wording is included for 19 locales; the other catalogs use English for these strings.
+- The chapter-end footnote redesign added three more keys to every active and pending catalog. English fallback wording is currently used outside English and Spanish.
+- Haryanvi (`bgc`) retains 11 English fallbacks; Asu (`asa`) 8. Ligurian 5, Lombard 11, Chiga 6, Silesian 11, and Tamazight 10 also retain documented fallbacks.
 - Aghem (`agq`), Anii (`blo`), Masai (`mas`), Meru (`mer`), Makhuwa-Meetto (`mgh`), North Ndebele (`nd`), Ngiemboon (`nnh`), N’Ko (`nqo`), Cherokee (`chr`), Swampy Cree (`csw`), Lakota (`lkt`), and Sichuan Yi (`ii`) remain visible in the catalog as pending, not installed. Their drafts are incomplete or not yet verified in the target language.
-- AI first-draft work has started on the original 12 pending drafts. Current coverage is 103 of 147 messages for North Ndebele, two for Cherokee, and one each for Swampy Cree and Lakota; the other eight bundles remain English fallbacks. They remain pending until best-effort target-language drafts are available; paid or volunteer human review is not an activation requirement.
-- Dutch (`nl`), Vietnamese (`vi`), Ukrainian (`uk`), Turkish (`tr`), and Polish (`pl`) received best-effort AI first drafts for all 147 messages and are now selectable. These drafts have not been reviewed by fluent speakers; wording quality can be improved later as time and community feedback allow.
+- AI first-draft work has started on the original 12 pending drafts. Current coverage is 103 of 150 messages for North Ndebele, two for Cherokee, and one each for Swampy Cree and Lakota; the other eight bundles remain English fallbacks. They remain pending until best-effort target-language drafts are available; paid or volunteer human review is not an activation requirement.
+- Dutch (`nl`), Vietnamese (`vi`), Ukrainian (`uk`), Turkish (`tr`), and Polish (`pl`) received best-effort AI first drafts for all 150 messages and are now selectable. These drafts have not been reviewed by fluent speakers; wording quality can be improved later as time and community feedback allow.
 - In those five drafts, the only values exactly matching English are the shared language name “Español” and the standard `px` size unit; all other UI messages have target-language text.
-- Nigerian Pidgin (`pcm`) received a distinct best-effort AI first draft for all 147 messages and is now selectable. The draft keeps recognizable Pidgin phrasing, although many shared English-derived UI terms remain; it has not been reviewed by a fluent speaker.
+- Nigerian Pidgin (`pcm`) received a distinct best-effort AI first draft for the original 147 messages and is now selectable. The three newly added footnote strings currently use English; the draft keeps recognizable Pidgin phrasing, although many shared English-derived UI terms remain. It has not been reviewed by a fluent speaker.
 - Pending ARB drafts are kept in `docs/localization/pending/`, outside Flutter's `lib/l10n/` input directory. They remain covered by the ARB key/placeholder contract test but are not generated into runtime localization classes or shipped as selectable locales.
 - Localization of the app shell, Settings, home, book and chapter selection, reading, bookmarks, themes, navigation, error messages, accessibility labels, and testament section labels.
 - Runtime OS locale matching, unsupported-locale fallback, and regression tests for locale ordering and overrides.
@@ -58,18 +60,18 @@ counts ARB messages whose current value is exactly the English source value.
 
 | Language | Code | English-valued keys | Non-English draft keys |
 |----------|------|---------------------|------------------------|
-| Aghem | `agq` | 147/147 | 0 |
-| Anii | `blo` | 147/147 | 0 |
-| Maasai | `mas` | 147/147 | 0 |
-| Meru | `mer` | 147/147 | 0 |
-| Makhuwa-Meetto | `mgh` | 147/147 | 0 |
-| North Ndebele | `nd` | 44/147 | 103 |
-| Ngiemboon | `nnh` | 147/147 | 0 |
-| N’Ko | `nqo` | 147/147 | 0 |
-| Cherokee | `chr` | 145/147 | 2 |
-| Swampy Cree | `csw` | 146/147 | 1 |
-| Lakota | `lkt` | 146/147 | 1 |
-| Sichuan Yi (Nuosu) | `ii` | 147/147 | 0 |
+| Aghem | `agq` | 150/150 | 0 |
+| Anii | `blo` | 150/150 | 0 |
+| Maasai | `mas` | 150/150 | 0 |
+| Meru | `mer` | 150/150 | 0 |
+| Makhuwa-Meetto | `mgh` | 150/150 | 0 |
+| North Ndebele | `nd` | 47/150 | 103 |
+| Ngiemboon | `nnh` | 150/150 | 0 |
+| N’Ko | `nqo` | 150/150 | 0 |
+| Cherokee | `chr` | 148/150 | 2 |
+| Swampy Cree | `csw` | 149/150 | 1 |
+| Lakota | `lkt` | 149/150 | 1 |
+| Sichuan Yi (Nuosu) | `ii` | 150/150 | 0 |
 
 ### Additional catalog-quality holds
 
@@ -98,7 +100,7 @@ unchanged.
 
 | Language | Code | English-valued keys |
 |----------|------|---------------------|
-| Standard Moroccan Tamazight | `zgh` | 120/147 |
+| Standard Moroccan Tamazight | `zgh` | 123/150 |
 
 The English-valued-key count is a warning signal rather than a translation
 quality score: product names and loanwords may legitimately match English.

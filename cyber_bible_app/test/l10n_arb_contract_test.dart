@@ -13,6 +13,40 @@ Set<String> _placeholders(String value) {
 }
 
 void main() {
+  // Keep the new footnote messages translated in the catalogs updated for 2.2.
+  test('translated footnote messages do not fall back to English', () {
+    final english =
+        jsonDecode(File('lib/l10n/app_en.arb').readAsStringSync())
+            as Map<String, dynamic>;
+    const keys = <String>[
+      'chapterFootnotesTitle',
+      'openScriptureReference',
+      'couldNotLoadFootnotes',
+    ];
+    for (final code in <String>[
+      'es',
+      'fr',
+      'de',
+      'it',
+      'pt',
+      'ar',
+      'zh',
+      'ja',
+      'ko',
+      'ru',
+      'nl',
+      'uk',
+      'pl',
+    ]) {
+      final catalog =
+          jsonDecode(File('lib/l10n/app_$code.arb').readAsStringSync())
+              as Map<String, dynamic>;
+      for (final key in keys) {
+        expect(catalog[key], isNot(english[key]), reason: '$code: $key');
+      }
+    }
+  });
+
   test(
     'active locales do not reuse another locale complete message catalog',
     () {

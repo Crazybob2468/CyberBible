@@ -505,4 +505,29 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get deuterocanonApocrypha => 'Đệ nhị kinh / Ngụy thư';
+
+  @override
+  String footnoteTitle(Object caller) {
+    return 'Chú thích chân trang $caller';
+  }
+
+  @override
+  String get closeFootnote => 'Đóng chú thích';
+
+  @override
+  String couldNotOpenFootnote(Object reference) {
+    return 'Không thể mở chú thích $reference.';
+  }
+
+  @override
+  String get chapterFootnotesTitle => 'Footnotes';
+
+  @override
+  String openScriptureReference(Object reference) {
+    return 'Open $reference';
+  }
+
+  @override
+  String get couldNotLoadFootnotes =>
+      'Could not load footnotes. Please try again.';
 }

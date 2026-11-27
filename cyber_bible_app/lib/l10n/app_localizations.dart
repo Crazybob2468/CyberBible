@@ -1345,6 +1345,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Deuterocanon / Apocrypha'**
   String get deuterocanonApocrypha;
+
+  /// No description provided for @footnoteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Footnote {caller}'**
+  String footnoteTitle(Object caller);
+
+  /// No description provided for @closeFootnote.
+  ///
+  /// In en, this message translates to:
+  /// **'Close footnote'**
+  String get closeFootnote;
+
+  /// No description provided for @couldNotOpenFootnote.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open footnote {reference}.'**
+  String couldNotOpenFootnote(Object reference);
+
+  /// No description provided for @chapterFootnotesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Footnotes'**
+  String get chapterFootnotesTitle;
+
+  /// No description provided for @openScriptureReference.
+  ///
+  /// In en, this message translates to:
+  /// **'Open {reference}'**
+  String openScriptureReference(Object reference);
+
+  /// No description provided for @couldNotLoadFootnotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load footnotes. Please try again.'**
+  String get couldNotLoadFootnotes;
 }
 
 class _AppLocalizationsDelegate
